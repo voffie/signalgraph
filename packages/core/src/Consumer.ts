@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import * as Message from "./Message.ts";
+import * as  Envelope from "./Envelope.ts";
 
 export interface Consumer<
   Name extends string,
@@ -8,7 +9,7 @@ export interface Consumer<
   readonly _tag: "Consumer";
   readonly name: Name;
   readonly message: TMessage;
-  readonly handler: (payload: Message.PayloadOf<TMessage>) => Effect.Effect<void>;
+  readonly handler: (envelope: Envelope.Envelope<TMessage>) => Effect.Effect<void>;
 }
 
 export const make = <
@@ -17,7 +18,7 @@ export const make = <
 >(options: {
   readonly name: Name;
   readonly message: TMessage;
-  readonly handler: (payload: Message.PayloadOf<TMessage>) => Effect.Effect<void>;
+  readonly handler: (envelope: Envelope.Envelope<TMessage>) => Effect.Effect<void>;
 }): Consumer<Name, TMessage> => ({
   _tag: "Consumer",
   name: options.name,

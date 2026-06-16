@@ -1,8 +1,8 @@
 import type * as Consumer from "./Consumer.ts";
 import type * as Message from "./Message.ts";
 
-export type AnyConsumer = Consumer.Consumer<string, Message.Message<string, unknown>>;
 export type AnyMessage = Message.Message<string, unknown>;
+export type AnyConsumer = Consumer.Consumer<string, AnyMessage>;
 
 export interface Topology<
   TConsumers extends ReadonlyArray<AnyConsumer>

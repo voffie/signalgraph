@@ -6,7 +6,7 @@
     "rootDir": "${configDir}/src",
     "incremental": true,
     "composite": true,
-    "target": "ES2022",
+    "target": "ES2025",
     "module": "NodeNext",
     "moduleDetection": "force",
     "verbatimModuleSyntax": true,

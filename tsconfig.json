@@ -17,6 +17,20 @@
     "types": [
       "node"
     ],
+    "paths": {
+      "@signalgraph/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@signalgraph/core/*": [
+        "./packages/core/src/*.ts"
+      ],
+      "@signalgraph/memory": [
+        "./packages/memory/src/index.ts"
+      ],
+      "@signalgraph/memory/*": [
+        "./packages/memory/src/*.ts"
+      ]
+    },
     "plugins": [
       {
         "name": "@effect/language-service"

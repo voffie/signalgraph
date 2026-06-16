@@ -27,6 +27,18 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  examples:
+    dependencies:
+      '@signalgraph/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@signalgraph/memory':
+        specifier: workspace:*
+        version: link:../packages/memory
+      effect:
+        specifier: 4.0.0-beta.83
+        version: 4.0.0-beta.83
+
   packages/core:
     devDependencies:
       effect:

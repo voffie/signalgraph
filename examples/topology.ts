@@ -1,9 +1,6 @@
-import { Effect, Schema } from "effect";
-import * as Message from "@signalgraph/core/Message";
-import * as Consumer from "@signalgraph/core/Consumer.ts";
-import * as Topology from "@signalgraph/core/Topology.ts";
-import * as Messaging from "@signalgraph/core/Messaging.ts";
+import { Message, Consumer, Topology, Messaging } from "@signalgraph/core";
 import { MemoryDriver } from "@signalgraph/memory";
+import { Effect, Schema } from "effect";
 
 const OrderCreated = Message.make({
   name: "orders.created",

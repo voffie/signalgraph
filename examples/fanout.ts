@@ -1,5 +1,6 @@
 import { Message, Consumer, Topology, Messaging } from "@signalgraph/core";
 import { MemoryDriver } from "@signalgraph/memory";
+import { Effect, Schema } from "effect";
 
 const OrderCreated = Message.make({
   name: "orders.created",

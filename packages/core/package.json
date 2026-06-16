@@ -8,8 +8,7 @@
     "./Consumer": "./src/Consumer.ts",
     "./Topology": "./src/Topology.ts",
     "./Driver": "./src/Driver.ts",
-    "./Envelope": "src/Envelope.ts",
-    "./Metadata": "src/Metadata.ts"
+    "./Messaging": "src/Messaging.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -35,13 +34,9 @@
         "types": "./dist/Driver.d.mts",
         "import": "./dist/Driver.mjs"
       },
-      "./Envelope": {
-        "types": "./dist/Envelope.d.mts",
-        "import": "./dist/Envelope.mjs"
-      },
-      "./Metadata": {
-        "types": "./dist/Metadata.d.mts",
-        "import": "./dist/Metadata.mjs"
+      "./Messaging": {
+        "types": "./dist/Messaging.d.mts",
+        "import": "./dist/Messaging.mjs"
       }
     }
   },

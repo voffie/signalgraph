@@ -1,10 +1,9 @@
 import { Effect } from "effect";
 import * as Message from "./Message.ts";
-import type { AnyMessage } from "./Topology.ts";
 
 export interface Consumer<
   Name extends string,
-  TMessage extends AnyMessage
+  TMessage extends Message.AnyMessage
 > {
   readonly _tag: "Consumer";
   readonly name: Name;
@@ -14,7 +13,7 @@ export interface Consumer<
 
 export const make = <
   const Name extends string,
-  TMessage extends AnyMessage
+  TMessage extends Message.AnyMessage
 >(options: {
   readonly name: Name;
   readonly message: TMessage;
@@ -25,3 +24,5 @@ export const make = <
   message: options.message,
   handler: options.handler
 });
+
+export type AnyConsumer = Consumer<string, Message.AnyMessage>;

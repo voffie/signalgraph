@@ -24,4 +24,6 @@ export const make = <
 export type PayloadOf<T> =
   T extends Message<string, infer Payload>
   ? Payload
-  : never
+  : never;
+
+export type AnyMessage = Message<string, unknown>;

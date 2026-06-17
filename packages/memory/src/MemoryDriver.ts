@@ -1,13 +1,19 @@
 import { Driver } from "@signalgraph/core/Driver";
 import { Console, Effect, Layer } from "effect";
-import type * as Topology from "@signalgraph/core/Topology";
+import type * as Consumer from "@signalgraph/core/Consumer";
+import type * as Message from "@signalgraph/core/Message";
 
 export const MemoryDriver = Layer.sync(
   Driver,
   () => {
-    const backend: Map<string, Set<Topology.AnyConsumer>> = new Map();
+    const backend: Map<string, Set<Consumer.AnyConsumer>> = new Map();
 
-    const publish = (message: Topology.AnyMessage, payload: unknown) => Effect.gen(function* () {
+    const publish = <
+      TMessage extends Message.AnyMessage
+    >(
+      message: TMessage,
+      payload: unknown
+    ) => Effect.gen(function* () {
       const consumers = backend.get(message.name);
       if (consumers) {
         for (const consumer of consumers) {
@@ -16,7 +22,7 @@ export const MemoryDriver = Layer.sync(
       }
     });
 
-    const subscribe = (consumer: Topology.AnyConsumer) =>
+    const subscribe = (consumer: Consumer.AnyConsumer) =>
       Effect.gen(function* () {
         yield* Console.log("Creating subscription:", { consumer: consumer.name, message: consumer.message.name });
         const existing = backend.get(consumer.message.name);

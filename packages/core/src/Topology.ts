@@ -1,23 +1,21 @@
 import type * as Consumer from "./Consumer.ts";
 import type * as Message from "./Message.ts";
 
-export type AnyMessage = Message.Message<string, unknown>;
-export type AnyConsumer = Consumer.Consumer<string, AnyMessage>;
 
 export interface Topology<
-  TConsumers extends ReadonlyArray<AnyConsumer>
+  TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 > {
   readonly _tag: "Topology";
   readonly consumers: TConsumers;
 }
 
 export interface GraphEdge {
-  readonly message: AnyMessage;
-  readonly consumer: AnyConsumer;
+  readonly message: Message.AnyMessage;
+  readonly consumer: Consumer.AnyConsumer;
 }
 
 export const make = <
-  const TConsumers extends ReadonlyArray<AnyConsumer>
+  const TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 >(options: {
   readonly consumers: TConsumers;
 }): Topology<TConsumers> => ({
@@ -26,20 +24,20 @@ export const make = <
 });
 
 export const consumers = <
-  TConsumers extends ReadonlyArray<AnyConsumer>
+  TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 >(
   topology: Topology<TConsumers>
 ): TConsumers => topology.consumers;
 
 export const messages = <
-  TConsumers extends ReadonlyArray<AnyConsumer>
+  TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 >(
   topology: Topology<TConsumers>
-): ReadonlyArray<AnyMessage> =>
+): ReadonlyArray<Message.AnyMessage> =>
   topology.consumers.map((consumer) => consumer.message);
 
 export const graph = <
-  TConsumers extends ReadonlyArray<AnyConsumer>
+  TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 >(
   topology: Topology<TConsumers>
 ): ReadonlyArray<GraphEdge> =>

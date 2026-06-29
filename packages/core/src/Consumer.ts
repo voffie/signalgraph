@@ -1,9 +1,9 @@
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import * as Message from "./Message.ts";
 
 export interface Consumer<
   Name extends string,
-  TMessage extends Message.AnyMessage
+  TMessage extends Message.AnyMessage,
 > {
   readonly _tag: "Consumer";
   readonly name: Name;
@@ -25,4 +25,5 @@ export const make = <
   handler: options.handler
 });
 
-export type AnyConsumer = Consumer<string, Message.AnyMessage>;
+export type AnyConsumer<PayloadSchema extends Schema.Top = Schema.Top> =
+  Consumer<string, Message.AnyMessage<PayloadSchema>>;

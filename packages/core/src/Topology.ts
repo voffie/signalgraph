@@ -1,7 +1,6 @@
 import type * as Consumer from "./Consumer.ts";
 import type * as Message from "./Message.ts";
 
-
 export interface Topology<
   TConsumers extends ReadonlyArray<Consumer.AnyConsumer>
 > {

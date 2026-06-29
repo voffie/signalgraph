@@ -1,29 +1,23 @@
 import { Schema } from "effect";
 
-export interface Message<
-  Name extends string,
-  Payload
-> {
+export interface Message<Name extends string, PayloadSchema extends Schema.Top> {
   readonly _tag: "Message";
   readonly name: Name;
-  readonly schema: Schema.Schema<Payload>;
+  readonly schema: PayloadSchema;
 }
 
 export const make = <
   const Name extends string,
-  Payload
+  PayloadSchema extends Schema.Top
 >(options: {
   readonly name: Name;
-  readonly schema: Schema.Schema<Payload>;
-}): Message<Name, Payload> => ({
+  readonly schema: PayloadSchema;
+}): Message<Name, PayloadSchema> => ({
   _tag: "Message",
   name: options.name,
   schema: options.schema
 });
 
-export type PayloadOf<T> =
-  T extends Message<string, infer Payload>
-  ? Payload
-  : never;
+export type AnyMessage<PayloadSchema extends Schema.Top = Schema.Top> = Message<string, PayloadSchema>;
 
-export type AnyMessage = Message<string, unknown>;
+export type PayloadOf<TMessage extends AnyMessage> = TMessage["schema"]["Type"]

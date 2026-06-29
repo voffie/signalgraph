@@ -21,7 +21,7 @@ const topology = Topology.make({ consumers: [Billing] });
 
 const program = Effect.gen(function* () {
   yield* Messaging.start(topology);
-  Effect.log(topology.graph());
+  yield* Effect.log(Topology.graph(topology));
 });
 
 Effect.runPromise(program.pipe(Effect.provide(MemoryDriver)))

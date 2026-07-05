@@ -5,11 +5,14 @@ import type * as Message from "./Message.ts";
 import type * as Consumer from "./Consumer.ts";
 import * as Errors from "./Errors.ts";
 
-export const start = (topology: Topology.Topology<ReadonlyArray<Consumer.AnyConsumer>>): Effect.Effect<void, unknown, Driver.Driver> =>
+export const start = (topology: Topology.Topology<ReadonlyArray<Consumer.AnyConsumer>>): Effect.Effect<void, Errors.InvalidMessagePayload, Driver.Driver> =>
   Effect.gen(function* () {
     const driver = yield* Driver.Driver;
     for (const consumer of topology.consumers) {
-      yield* driver.subscribe(consumer);
+      yield* driver.subscribe({
+        messageName: consumer.message.name,
+        handler: consumer.handler
+      });
     }
   });
 

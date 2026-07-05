@@ -1,6 +1,6 @@
 import { Context, Effect } from "effect";
 import type * as Message from "./Message.ts";
-import type * as Consumer from "./Consumer.ts";
+import type { Receiver } from "./internal/Receiver.ts";
 
 export class Driver extends Context.Service<Driver, {
   readonly publish: <TMessage extends Message.AnyMessage> (
@@ -9,6 +9,6 @@ export class Driver extends Context.Service<Driver, {
   ) => Effect.Effect<void>;
 
   readonly subscribe: (
-    consumer: Consumer.AnyConsumer
+    receiver: Receiver
   ) => Effect.Effect<void>;
 }>()("@signalgraph/Driver") { }

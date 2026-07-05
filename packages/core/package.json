@@ -8,7 +8,8 @@
     "./Consumer": "./src/Consumer.ts",
     "./Topology": "./src/Topology.ts",
     "./Driver": "./src/Driver.ts",
-    "./Messaging": "src/Messaging.ts"
+    "./Messaging": "./src/Messaging.ts",
+    "./internal/Receiver": "./src/internal/Receiver.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -43,7 +44,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "check": "tsc -b"
+    "check": "tsc --noEmit"
   },
   "peerDependencies": {
     "effect": "^4.0.0"

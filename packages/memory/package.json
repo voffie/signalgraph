@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "check": "tsc -b"
+    "check": "tsc --noEmit"
   },
   "peerDependencies": {
     "@signalgraph/core": "workspace:*",

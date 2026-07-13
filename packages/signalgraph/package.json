@@ -1,0 +1,30 @@
+{
+  "name": "signalgraph",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0"
+  },
+  "devDependencies": {
+    "effect": "4.0.0-beta.83",
+    "@effect/platform-node": "4.0.0-beta.83"
+  }
+}

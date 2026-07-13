@@ -2,6 +2,6 @@ import { defineConfig } from "./src/index";
 
 export default defineConfig({
   out: "out",
-  schema: "schema",
+  schema: "./src/schema/schema.ts",
   broker: "broker"
 })

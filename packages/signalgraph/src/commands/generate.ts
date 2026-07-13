@@ -2,16 +2,21 @@ import { Command } from "effect/unstable/cli";
 import { Console, Effect } from "effect";
 import { loadConfig } from "../project/loadConfig.ts";
 import { register } from "tsx/esm/api";
+import { loadSchema } from "../project/loadSchema.ts";
 
 export const generate = Command.make(
   "generate",
   {},
   Effect.fn(function* () {
-    yield* Console.log("Called generate command!");
     const unregister = register();
-    const loaded = yield* loadConfig();
 
-    yield* Console.log(loaded.config);
+    yield* Console.log("Called generate command!");
+
+    const loadedConfig = yield* loadConfig();
+    const loadedSchema = yield* loadSchema(loadedConfig.config.schema);
+
+    yield* Console.log(loadedSchema);
+
     unregister();
   })
 ).pipe(

@@ -1,9 +1,9 @@
 import { Effect, Schema } from "effect";
 import { importModule } from "./importModule.ts";
-import type { Message } from "../message.ts";
-import type { Consumer } from "../consumer.ts";
+import type { Message } from "./message.ts";
+import type { Consumer } from "./consumer.ts";
 
-interface Project {
+export interface SchemaData {
   messages: Message<string, Schema.Decoder<unknown, never>>[],
   consumers: Consumer<string, Message<string, Schema.Decoder<unknown, never>>>[];
 }
@@ -14,21 +14,24 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
   const consumers = [];
 
   for (const value of Object.values(module)) {
-    if (value._tag === "Consumer") {
-      consumers.push(value);
-    } else if (value._tag === "Message") {
-      messages.push(value);
-    } else {
-      return yield* Effect.fail(
-        new Error(
-          "Schema containing unsupported module"
-        )
-      );
+    switch (value._tag) {
+      case "Message":
+        messages.push(value);
+        break;
+      case "Consumer":
+        consumers.push(value);
+        break;
+      default:
+        return yield* Effect.fail(
+          new Error(
+            "Schema containing unsupported module"
+          )
+        );
     }
   }
 
   return {
     messages,
     consumers
-  } as Project;
+  } as SchemaData;
 })

@@ -18,4 +18,3 @@ export const Inventory = consumer({
   name: "inventory",
   message: OrderCreated
 });
-

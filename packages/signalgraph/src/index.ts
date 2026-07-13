@@ -2,6 +2,11 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 import { generate } from "./commands/generate.ts";
+import type { Config } from "./project/loadConfig.ts";
+
+export function defineConfig(config: Config) {
+  return config;
+}
 
 const root = Command.make("signalgraph").pipe(
   Command.withDescription("SignalGraph CLI")

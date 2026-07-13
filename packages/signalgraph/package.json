@@ -23,6 +23,9 @@
   "peerDependencies": {
     "effect": "^4.0.0"
   },
+  "dependencies": {
+    "tsx": "4.23.0"
+  },
   "devDependencies": {
     "effect": "4.0.0-beta.83",
     "@effect/platform-node": "4.0.0-beta.83"

@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Path } from "effect";
 
-export interface ProjectRoot {
+export interface Project {
   root: string;
   configPath: string;
 }

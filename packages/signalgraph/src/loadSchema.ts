@@ -10,16 +10,21 @@ export interface SchemaData {
 
 export const loadSchema = Effect.fn(function* (schemaPath: string) {
   const module = yield* importModule(schemaPath);
-  const messages = [];
-  const consumers = [];
+  const messages = new Map<string, Message<string, Schema.Decoder<unknown, never>>>();
+  const consumers = new Map<string, Consumer<string, Message<string, Schema.Decoder<unknown, never>>>>();
 
   for (const value of Object.values(module)) {
     switch (value._tag) {
       case "Message":
-        messages.push(value);
+        if (!messages.has(value.name)) {
+          messages.set(value.name, value);
+        }
         break;
       case "Consumer":
-        consumers.push(value);
+        if (!messages.has(value.message.name)) {
+          messages.set(value.message.name, value.message);
+        }
+        consumers.set(value.name, value);
         break;
       default:
         return yield* Effect.fail(
@@ -31,7 +36,7 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
   }
 
   return {
-    messages,
-    consumers
+    messages: [...messages.values()],
+    consumers: [...consumers.values()]
   } as SchemaData;
 })

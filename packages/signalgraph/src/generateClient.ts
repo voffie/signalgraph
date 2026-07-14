@@ -1,11 +1,16 @@
-import { Effect, FileSystem, Path } from "effect";
+import { Effect, FileSystem, Path, Schema, SchemaRepresentation } from "effect";
 import type { SchemaData } from "./loadSchema.ts";
 import type { Project } from "./findProjectRoot.ts";
 
-const toCamelCase = (name: string) =>
-  name
+const toCamelCase = (text: string) =>
+  text
     .split(".")
     .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
+    .join("");
+
+const toPascalCase = (text: string) =>
+  text.split(".")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
     .join("");
 
 const indent = (text: string, spaces = 2) =>
@@ -14,22 +19,38 @@ const indent = (text: string, spaces = 2) =>
     .map((line) => " ".repeat(spaces) + line)
     .join("\n");
 
+function schemaType(schema: Schema.Decoder<unknown, never>) {
+  const document = SchemaRepresentation.fromAST(schema.ast);
+  const multi = SchemaRepresentation.toMultiDocument(document);
+  const code = SchemaRepresentation.toCodeDocument(multi);
+
+  return code.codes[0].Type;
+};
+
 function generateMessages(messages: SchemaData["messages"]) {
   return messages.map((message) => `
 ${toCamelCase(message.name)}: {
-  publish(payload: never) {
+  publish(payload: ${toPascalCase(message.name)}Payload) {
+    throw new Error("Not implemented");
+  }
+}`.trim());
+};
+
+function generateConsumers(consumers: SchemaData["consumers"]) {
+  return consumers.map((consumer) => `
+${toCamelCase(consumer.name)}: {
+  handle(handler: (ctx: {
+    payload: ${toPascalCase(consumer.message.name)}Payload
+  }) => void) {
     throw new Error("Not implemented");
   }
 }`.trim());
 }
 
-function generateConsumers(consumers: SchemaData["consumers"]) {
-  return consumers.map((consumer) => `
-${toCamelCase(consumer.name)}: {
-  handle(handler: never) {
-    throw new Error("Not implemented");
-  }
-}`.trim());
+function generateTypeAliases(messages: SchemaData["messages"]) {
+  return messages.map((message) => `
+type ${toPascalCase(message.name)}Payload = ${schemaType(message.schema)}
+`.trim());
 }
 
 export const generateClient = Effect.fn(function* (project: Project, data: SchemaData) {
@@ -52,6 +73,8 @@ export const generateClient = Effect.fn(function* (project: Project, data: Schem
 
   const source = [
     header,
+    ...generateTypeAliases(data.messages),
+    "\n",
     "export const client = {",
     indent(entries.join(",\n\n")),
     "}"

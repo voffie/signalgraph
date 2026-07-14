@@ -31,7 +31,19 @@ function generateMessages(messages: SchemaData["messages"]) {
   return messages.map((message) => `
 ${toCamelCase(message.name)}: {
   publish(payload: ${toPascalCase(message.name)}Payload) {
-    throw new Error("Not implemented");
+    const consumers = routing.${toCamelCase(message.name)};
+
+    for (const consumer of consumers) {
+      const list = handlers.get(consumer);
+
+      if (!list) continue;
+
+      for (const handler of list) {
+        handler({
+          payload
+        });
+      }
+    }
   }
 }`.trim());
 };
@@ -42,7 +54,11 @@ ${toCamelCase(consumer.name)}: {
   handle(handler: (ctx: {
     payload: ${toPascalCase(consumer.message.name)}Payload
   }) => void) {
-    throw new Error("Not implemented");
+    const list = handlers.get("${consumer.name}") ?? [];
+
+    list.push(handler);
+
+    handlers.set("${consumer.name}", list);
   }
 }`.trim());
 }
@@ -50,6 +66,13 @@ ${toCamelCase(consumer.name)}: {
 function generateTypeAliases(messages: SchemaData["messages"]) {
   return messages.map((message) => `
 type ${toPascalCase(message.name)}Payload = ${schemaType(message.schema)}
+`.trim());
+}
+
+function generateRouting(data: SchemaData) {
+  return data.messages.map((message) => `
+${toCamelCase(message.name)}: [${data.consumers.map((consumer) =>
+    consumer.message.name === message.name ? '"' + consumer.name + '"' : null).filter(Boolean)}]
 `.trim());
 }
 
@@ -75,6 +98,10 @@ export const generateClient = Effect.fn(function* (project: Project, data: Schem
     header,
     ...generateTypeAliases(data.messages),
     "\n",
+    "const routing = {",
+    indent([...generateRouting(data)].join(",\n")),
+    "};",
+    "\nconst handlers = new Map();\n",
     "export const client = {",
     indent(entries.join(",\n\n")),
     "}"

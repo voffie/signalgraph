@@ -25,7 +25,6 @@ export const Inventory = consumer({
   message: OrderCreated
 });
 
-// Need to figure out how this should work (is not collected as a message)
 export const temp = consumer({
   name: "temp",
   message: message({

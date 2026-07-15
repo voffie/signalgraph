@@ -1,5 +1,7 @@
 packages:
   - packages/*
-  - examples
+  - examples/*
+strictDepBuilds: false
 allowBuilds:
+  esbuild: false,
   msgpackr-extract: false

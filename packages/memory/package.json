@@ -22,10 +22,10 @@
   },
   "peerDependencies": {
     "@signalgraph/core": "workspace:*",
-    "effect": "^4.0.0"
+    "effect": "4.0.0-beta.98"
   },
   "devDependencies": {
     "@signalgraph/core": "workspace:*",
-    "effect": "4.0.0-beta.83"
+    "effect": "4.0.0-beta.98"
   }
 }

@@ -1,8 +1,81 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "import",
+    "oxc",
+    "node"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    // Import rules
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+    "typescript/no-import-type-side-effects": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-empty-named-blocks": "error",
+    // TypeScript cleanup
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-useless-empty-export": "error",
+    "oxc/misrefactored-assign-op": "error",
+    // Unicorn
+    "oxc/no-map-spread": "off",
+    "no-dangling-underscore": "off",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-empty-interface": "off",
+    "typescript/ban-ts-comment": "off",
+    "typescript/no-namespace": "off",
+    "typescript/no-non-null-assertion": "off",
+    "typescript/no-dynamic-delete": "off",
+    "typescript/no-invalid-void-type": "off",
+    "typescript/no-unsafe-function-type": "off",
+    "typescript/unified-signatures": "off",
+    "typescript/no-empty-object-type": "off",
+    "typescript/no-confusing-non-null-assertion": "off",
+    "typescript/array-type": [
+      "error",
+      {
+        "default": "generic",
+        "readonly": "generic"
+      }
+    ],
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
+  },
   "ignorePatterns": [
     "**/dist",
     "**/build",
+    "**/docs",
     "**/.tsbuildinfo"
+  ],
+  "jsPlugins": [
+    "@effect/oxc/oxlint"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "**/{test,examples}/**"
+      ],
+      "rules": {
+        "effect/no-bigint-literals": "off",
+        "eslint/no-console": "off",
+        "effect/no-import-from-barrel-package": "off"
+      }
+    }
   ]
 }

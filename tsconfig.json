@@ -1,6 +1,15 @@
 {
   "$schema": "http://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
+  "references": [
+    {
+      "path": "tsconfig.packages.json"
+    }
+  ],
+  "include": [
+    "**/vitest.*.ts",
+    "./packages/*/test/**/*.ts"
+  ],
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
@@ -25,7 +34,20 @@
     },
     "plugins": [
       {
-        "name": "@effect/language-service"
+        "name": "@effect/language-service",
+        "namespaceImportPackages": [],
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectWarningsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": true,
+        "options": {
+          "diagnosticSeverity": {
+            "floatingEffect": "off"
+          }
+        },
+        "diagnosticSeverity": {
+          "unknownInEffectCatch": "off",
+          "multipleEffectProvide": "off"
+        }
       }
     ]
   }

@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Path, Schema, SchemaRepresentation } from "effect";
 import type { SchemaData } from "./loadSchema.ts";
-import type { Project } from "./findProjectRoot.ts";
+import type { Config } from "./loadConfig.ts";
 
 const toCamelCase = (text: string) =>
   text
@@ -71,16 +71,19 @@ type ${toPascalCase(message.name)}Payload = ${schemaType(message.schema)}
 
 function generateRouting(data: SchemaData) {
   return data.messages.map((message) => `
-${toCamelCase(message.name)}: [${data.consumers.map((consumer) =>
-    consumer.message.name === message.name ? '"' + consumer.name + '"' : null).filter(Boolean)}]
+${toCamelCase(message.name)}: [${data.consumers
+      .map((consumer) => (consumer.message.name === message.name ? '"' + consumer.name + '"' : ""))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+    }]
 `.trim());
 }
 
-export const generateClient = Effect.fn(function* (project: Project, data: SchemaData) {
+export const generateClient = Effect.fn(function* (config: Config, data: SchemaData) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
 
-  const outputPath = project.root + "/generated/signalgraph/index.ts";
+  const outputPath = config.out + "/index.ts";
   const outputDir = path.dirname(outputPath);
 
   yield* fs.makeDirectory(outputDir, { recursive: true });

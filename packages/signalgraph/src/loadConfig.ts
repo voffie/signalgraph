@@ -1,5 +1,4 @@
 import { Effect, Path } from "effect";
-import { findProjectRoot } from "./findProjectRoot.ts";
 import { importModule } from "./importModule.ts";
 
 export type Config = {
@@ -8,10 +7,9 @@ export type Config = {
   broker: string;
 };
 
-export const loadConfig = Effect.fn(function* () {
+export const loadConfig = Effect.fn(function* (configPath: string) {
   const path = yield* Path.Path;
-  const project = yield* findProjectRoot();
-  const module = yield* importModule(project.configPath);
+  const module = yield* importModule(configPath);
 
   if (!module.default) {
     return yield* Effect.fail(
@@ -21,14 +19,13 @@ export const loadConfig = Effect.fn(function* () {
     );
   }
 
-  const data = module.default as Config;
+  const data = module.default;
+
+  const configDir = path.dirname(configPath);
 
   return {
-    project,
-    config: {
-      ...module,
-      schema: path.resolve(project.root, data.schema),
-      out: path.resolve(project.root, data.schema)
-    }
-  };
+    ...data,
+    schema: path.resolve(configDir, data.schema),
+    out: path.resolve(configDir, data.out)
+  } as Config;
 })

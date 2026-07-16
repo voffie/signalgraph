@@ -1,0 +1,25 @@
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
+import { NodeServices } from "@effect/platform-node";
+import { fileURLToPath } from "node:url";
+
+import { loadSchema } from "signalgraph/loadSchema";
+
+const schemaPath = new URL("./fixtures/basic/schema.ts", import.meta.url);
+
+describe("loadSchema", () => {
+  it.effect("loads exported messages and consumers", () =>
+    loadSchema(fileURLToPath(schemaPath)).pipe(
+      Effect.provide(NodeServices.layer),
+      Effect.tap((schema) =>
+        Effect.sync(() => {
+          expect(schema.messages).toHaveLength(1);
+          expect(schema.consumers).toHaveLength(1);
+
+          expect(schema.messages[0].name).toBe("orders.created");
+          expect(schema.consumers[0].name).toBe("billing");
+        })
+      )
+    )
+  );
+})

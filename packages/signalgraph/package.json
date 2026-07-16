@@ -15,7 +15,10 @@
   "tags": [],
   "keywords": [],
   "exports": {
-    ".": "./src/index.ts"
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./*": "./src/*.ts"
   },
   "files": [
     "src/**/*.ts",
@@ -28,16 +31,23 @@
     "access": "public",
     "provenance": true,
     "exports": {
+      "./package.json": "./package.json",
       ".": {
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
-      }
+      },
+      "./config": {
+        "types": "./dist/config.d.mts",
+        "import": "./dist/config.mjs"
+      },
+      "./*": "./dist/*.js"
     }
   },
   "scripts": {
     "build": "tsdown",
     "check": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "coverage": "vitest --coverage"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.98"

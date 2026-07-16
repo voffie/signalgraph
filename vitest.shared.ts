@@ -3,9 +3,6 @@ import aliases from "vite-tsconfig-paths";
 import type { ViteUserConfig } from "vitest/config";
 
 const config: ViteUserConfig = {
-  oxc: {
-    target: "es2020"
-  },
   plugins: [aliases()],
   test: {
     exclude: [

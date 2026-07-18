@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { importModule } from "./importModule.ts";
 import type { Message, MessageSchema } from "./message.ts";
 import type { Consumer } from "./consumer.ts";
+import { InvalidSchemaError } from "./errors.ts";
 
 export interface SchemaData {
   messages: Message<string, MessageSchema>[],
@@ -13,7 +14,11 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
   const messages = new Map<string, Message<string, MessageSchema>>();
   const consumers = new Map<string, Consumer<string, Message<string, MessageSchema>>>();
 
-  for (const value of Object.values(module)) {
+  for (const [key, value] of Object.entries(module)) {
+    if (key === "default") {
+      continue;
+    }
+
     switch (value._tag) {
       case "Message":
         if (!messages.has(value.name)) {
@@ -27,11 +32,10 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
         consumers.set(value.name, value);
         break;
       default:
-        return yield* Effect.fail(
-          new Error(
-            "Schema containing unsupported module"
-          )
-        );
+        return yield* new InvalidSchemaError({
+          path: schemaPath,
+          reason: `Unsupported export: "${key}". Expected a Message or Consumer.`
+        });
     }
   }
 

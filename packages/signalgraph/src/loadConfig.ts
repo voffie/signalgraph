@@ -1,5 +1,6 @@
 import { Effect, Path } from "effect";
 import { importModule } from "./importModule.ts";
+import { InvalidConfigError } from "./errors.ts";
 
 export type Config = {
   schema: string;
@@ -12,11 +13,10 @@ export const loadConfig = Effect.fn(function* (configPath: string) {
   const module = yield* importModule(configPath);
 
   if (!module.default) {
-    return yield* Effect.fail(
-      new Error(
-        "signalgraph.config.ts must have a default export."
-      )
-    );
+    return yield* new InvalidConfigError({
+      path: configPath,
+      reason: "Expected a default export."
+    });
   }
 
   const data = module.default;

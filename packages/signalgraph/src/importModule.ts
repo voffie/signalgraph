@@ -1,4 +1,5 @@
 import { Effect, Path } from "effect";
+import { ModuleImportError } from "./errors.ts";
 
 export const importModule = Effect.fn(function* (url: string) {
   const path = yield* Path.Path;
@@ -6,7 +7,10 @@ export const importModule = Effect.fn(function* (url: string) {
   const fileUrl = yield* path.toFileUrl(url);
   const module = yield* Effect.tryPromise({
     try: () => import(fileUrl.href),
-    catch: (e) => new Error(`Failed to load module: ${e}`)
+    catch: (cause) => new ModuleImportError({
+      path: fileUrl.href,
+      cause
+    })
   });
 
   return module;

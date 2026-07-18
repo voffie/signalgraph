@@ -4,16 +4,7 @@
   "include": [],
   "references": [
     {
-      "path": "packages/adapter-memory"
-    },
-    {
-      "path": "packages/client"
-    },
-    {
-      "path": "packages/core"
-    },
-    {
-      "path": "packages/memory"
+      "path": "packages/runtime"
     },
     {
       "path": "packages/signalgraph"

@@ -1,17 +1,17 @@
-import { Effect, Schema } from "effect";
+import { Effect } from "effect";
 import { importModule } from "./importModule.ts";
-import type { Message } from "./message.ts";
+import type { Message, MessageSchema } from "./message.ts";
 import type { Consumer } from "./consumer.ts";
 
 export interface SchemaData {
-  messages: Message<string, Schema.Decoder<unknown, never>>[],
-  consumers: Consumer<string, Message<string, Schema.Decoder<unknown, never>>>[];
+  messages: Message<string, MessageSchema>[],
+  consumers: Consumer<string, Message<string, MessageSchema>>[];
 }
 
 export const loadSchema = Effect.fn(function* (schemaPath: string) {
   const module = yield* importModule(schemaPath);
-  const messages = new Map<string, Message<string, Schema.Decoder<unknown, never>>>();
-  const consumers = new Map<string, Consumer<string, Message<string, Schema.Decoder<unknown, never>>>>();
+  const messages = new Map<string, Message<string, MessageSchema>>();
+  const consumers = new Map<string, Consumer<string, Message<string, MessageSchema>>>();
 
   for (const value of Object.values(module)) {
     switch (value._tag) {

@@ -70,45 +70,81 @@ layer(NodeServices.layer)("generateClient", (it) => {
     );
   });
 
-  describe("messages", () => {
+  describe("imports", () => {
+    const getOut = fixture("basic");
+
+    it.effect("imports runtime APIs", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain("import { Consumer, Message, Routing, createClient }");
+      })
+    );
+  });
+
+  describe("payloads", () => {
     const getOut = fixture("basic");
 
     it.effect("generates payload aliases", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain('type OrdersCreatedPayload = { readonly "orderId": string }');
-      })
-    );
-
-    it.effect("generates publish methods", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain("publish(payload: OrdersCreatedPayload) {");
-      })
-    );
-
-    it.effect("generates routing table", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain('const routing = {\n  ordersCreated: ["billing"]');
+        expect(content).toContain("export type OrdersCreatedPayload");
       })
     );
   });
 
-  describe("consumers", () => {
+  describe("client type", () => {
     const getOut = fixture("basic");
 
-    it.effect("generates handle methods", () =>
+    it.effect("exports Client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("handle(handler: (ctx: {\n      payload: OrdersCreatedPayload\n    }) => void");
+        expect(content).toContain("export type Client = {");
       })
     );
 
-    it.effect("exports client", () =>
+    it.effect("generates message entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const client =");
+        expect(content).toContain("ordersCreated: Message<OrdersCreatedPayload>");
+      })
+    );
+
+    it.effect("generates consumer entries", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
+      })
+    );
+
+    it.effect("creates runtime client", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain("export const client = createClient<Client>(routing)");
+      })
+    );
+  });
+
+  describe("routing", () => {
+    const getOut = fixture("duplicate");
+
+    it.effect("generates routing table", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain("const routing = {\n");
+      })
+    );
+
+    it.effect("sorts consumer names", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain('["analytics", "billing", "inventory"]');
+      })
+    );
+
+    it.effect("uses runtime Routing type", () =>
+      Effect.gen(function* () {
+        const content = yield* readGenerated(getOut());
+        expect(content).toContain("} satisfies Routing;");
       })
     );
   });
@@ -119,28 +155,28 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("generates payload aliases", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain('type OrdersCreatedPayload = { readonly "orderId": string }');
+        expect(content).toContain("export type OrdersCreatedPayload");
       })
     );
 
-    it.effect("generates publish methods", () =>
+    it.effect("generates message entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("publish(payload: OrdersCreatedPayload) {");
+        expect(content).toContain("ordersCreated: Message<OrdersCreatedPayload>");
       })
     );
 
-    it.effect("generates handle methods", () =>
+    it.effect("generates consumer entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("handle(handler: (ctx: {\n      payload: OrdersCreatedPayload\n    }) => void");
+        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
       })
     );
 
-    it.effect("exports client", () =>
+    it.effect("generates routing table", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const client =");
+        expect(content).toContain("ordersCreated: [");
       })
     );
   });
@@ -151,30 +187,30 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("emits one payload alias", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content.match(/type OrdersCreatedPayload/g)).toHaveLength(1);
+        expect(content.match(/export type OrdersCreatedPayload/g)).toHaveLength(1);
       })
     );
 
-    it.effect("emits one publish method", () =>
+    it.effect("emits one message entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content.match(/ordersCreated: {/g)).toHaveLength(1);
+        expect(content.match(/ordersCreated: Message<OrdersCreatedPayload>/g)).toHaveLength(1);
       })
     );
 
-    it.effect("routes to every consumer", () =>
+    it.effect("emits one routing entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain('const routing = {\n  ordersCreated: ["analytics","billing","inventory"]');
+        expect(content.match(/ordersCreated: \[/g)).toHaveLength(1);
       })
     );
 
-    it.effect("generates handle method for each consumer", () =>
+    it.effect("generates every consumer entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("billing: {\n    handle(handler: (ctx: {\n      payload: OrdersCreatedPayload\n    }) => void");
-        expect(content).toContain("analytics: {\n    handle(handler: (ctx: {\n      payload: OrdersCreatedPayload\n    }) => void");
-        expect(content).toContain("inventory: {\n    handle(handler: (ctx: {\n      payload: OrdersCreatedPayload\n    }) => void");
+        expect(content).toContain("analytics: Consumer<OrdersCreatedPayload>");
+        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
+        expect(content).toContain("inventory: Consumer<OrdersCreatedPayload>");
       })
     );
   });

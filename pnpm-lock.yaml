@@ -42,17 +42,11 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(vite@7.3.6(@types/node@26.1.1)(tsx@4.23.0)(yaml@2.9.0))
 
-  packages/core:
+  packages/runtime:
     devDependencies:
-      effect:
+      '@effect/platform-node':
         specifier: 4.0.0-beta.98
-        version: 4.0.0-beta.98
-
-  packages/memory:
-    devDependencies:
-      '@signalgraph/core':
-        specifier: workspace:*
-        version: link:../core
+        version: 4.0.0-beta.98(effect@4.0.0-beta.98)(ioredis@5.11.1)
       effect:
         specifier: 4.0.0-beta.98
         version: 4.0.0-beta.98

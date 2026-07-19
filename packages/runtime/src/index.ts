@@ -48,7 +48,9 @@ export function createClient<T extends ClientShape>(routing: Routing): T {
 
   for (const consumer of consumerNames) {
     client[consumer] = {
-      handle(handler: Handler) {
+      handle(handler: (ctx: {
+        readonly payload: unknown;
+      }) => void) {
         const list = handlers.get(consumer) ?? [];
 
         list.push(handler);

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "@effect/vitest";
-
+import { expect, layer } from "@effect/vitest";
+import { Effect } from "effect";
 import { type Consumer, type Message, createClient } from "@signalgraph/runtime";
+import { MemoryBroker } from "@signalgraph/adapter-memory";
 
 type Order = {
   orderId: string;
@@ -15,78 +16,101 @@ const createTestClient = () =>
     ordersCreated: ["analytics", "billing"]
   });
 
-describe("createClient", () => {
-  it("creates message resources", () => {
-    const client = createTestClient();
-    expect(client.ordersCreated).toBeDefined();
-  });
+layer(MemoryBroker)("createClient", (it) => {
+  it.effect("creates message resources", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      expect(client.ordersCreated).toBeDefined();
+    })
+  );
 
-  it("creates consumer resources", () => {
-    const client = createTestClient();
-    expect(client.billing).toBeDefined();
-    expect(client.analytics).toBeDefined();
-  });
+  it.effect("creates consumer resources", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      expect(client.billing).toBeDefined();
+      expect(client.analytics).toBeDefined();
+    })
+  );
 
-  it("publish reaches consumer", () => {
-    let received: Order | undefined;
-    const client = createTestClient();
+  it.effect("publish reaches consumer", () =>
+    Effect.gen(function* () {
+      let received: Order | undefined;
 
-    client.billing.handle(({ payload }) => {
-      received = payload;
-    });
+      const client = yield* createTestClient();
 
-    client.ordersCreated.publish({
-      orderId: "123"
-    });
+      yield* client.billing.handle(({ payload }) =>
+        Effect.sync(() => {
+          received = payload;
+        })
+      );
 
-    expect(received).toEqual({
-      orderId: "123"
-    });
-  });
+      yield* client.ordersCreated.publish({
+        orderId: "123"
+      });
 
-  it("supports multiple consumers", () => {
-    let analytics = false;
-    let billing = false;
-    const client = createTestClient();
+      expect(received).toEqual({
+        orderId: "123"
+      });
+    })
+  );
 
-    client.analytics.handle(() => {
-      analytics = true;
-    });
+  it.effect("supports multiple consumers", () =>
+    Effect.gen(function* () {
+      let analytics = false;
+      let billing = false;
+      const client = yield* createTestClient();
 
-    client.billing.handle(() => {
-      billing = true;
-    });
+      yield* client.analytics.handle(() =>
+        Effect.sync(() => {
+          analytics = true;
+        })
+      );
 
-    client.ordersCreated.publish({
-      orderId: "123"
-    });
+      yield* client.billing.handle(() =>
+        Effect.sync(() => {
+          billing = true;
+        })
+      );
 
-    expect(analytics).toBe(true);
-    expect(billing).toBe(true);
-  });
+      yield* client.ordersCreated.publish({
+        orderId: "123"
+      });
 
-  it("supports multiple handlers", () => {
-    let output = 0;
-    const client = createTestClient();
+      expect(analytics).toBe(true);
+      expect(billing).toBe(true);
+    })
+  );
 
-    client.analytics.handle(() => {
-      output += 1;
-    });
+  it.effect("supports multiple handlers", () =>
+    Effect.gen(function* () {
+      let output = 0;
+      const client = yield* createTestClient();
 
-    client.analytics.handle(() => {
-      output += 1;
-    });
+      yield* client.analytics.handle(() =>
+        Effect.sync(() => {
+          output += 1;
+        })
+      );
 
-    client.ordersCreated.publish({
-      orderId: "123"
-    });
+      yield* client.analytics.handle(() =>
+        Effect.sync(() => {
+          output += 1;
+        })
+      );
 
-    expect(output).toBe(2);
-  });
+      yield* client.ordersCreated.publish({
+        orderId: "123"
+      });
 
-  it("ignores consumers without handlers", () => {
-    const client = createTestClient();
+      expect(output).toBe(2);
+    })
+  );
 
-    expect(() => client.ordersCreated.publish({ orderId: "123" })).not.toThrow();
-  });
+  it.effect("ignores consumers without handlers", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+
+      yield* client.ordersCreated.publish({ orderId: "123" });
+    })
+  );
 });

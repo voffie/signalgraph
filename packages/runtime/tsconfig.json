@@ -8,5 +8,10 @@
     "types": [
       "node"
     ]
-  }
+  },
+  "references": [
+    {
+      "path": "../runtime"
+    }
+  ]
 }

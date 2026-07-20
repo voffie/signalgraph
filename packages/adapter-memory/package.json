@@ -1,0 +1,56 @@
+{
+  "name": "@signalgraph/adapter-memory",
+  "type": "module",
+  "version": "0.0.0",
+  "license": "MIT",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/adapter-memory"
+  },
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "tags": [],
+  "keywords": [],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      },
+      "./*": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "tsc --noEmit",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@signalgraph/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "4.0.0-beta.98"
+  },
+  "devDependencies": {
+    "effect": "4.0.0-beta.98"
+  }
+}

@@ -18,6 +18,26 @@
     "types": [
       "node"
     ],
+    "paths": {
+      "signalgraph": [
+        "./packages/signalgraph/src/index.ts"
+      ],
+      "signalgraph/*": [
+        "./packages/signalgraph/src/*.ts"
+      ],
+      "@signalgraph/runtime": [
+        "./packages/runtime/src/index.ts"
+      ],
+      "@signalgraph/runtime/*": [
+        "./packages/runtime/src/*.ts"
+      ],
+      "@signalgraph/adapter-memory": [
+        "./packages/adapter-memory/src/index.ts"
+      ],
+      "@signalgraph/adapter-memory/*": [
+        "./packages/adapter-memory/src/*.ts"
+      ]
+    },
     "plugins": [
       {
         "name": "@effect/language-service",

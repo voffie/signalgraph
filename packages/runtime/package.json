@@ -44,13 +44,11 @@
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
-  "dependencies": {
-    "@signalgraph/adapter-memory": "workspace:*"
-  },
   "peerDependencies": {
     "effect": "4.0.0-beta.98"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-beta.98",
+    "@signalgraph/adapter-memory": "workspace:*"
   }
 }

@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Path, SchemaRepresentation } from "effect";
 import type { SchemaData } from "./loadSchema.ts";
-import type { Config } from "./loadConfig.ts";
+import type { Config } from "./config.ts";
 import type { MessageSchema } from "./message.ts";
 
 const toCamelCase = (text: string) =>
@@ -71,7 +71,9 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
   ];
 
   const imports =
-    'import { Consumer, Message, Routing, createClient } from "@signalgraph/runtime";';
+    'import { Effect } from "effect";' +
+    '\nimport { Consumer, Message, Routing, createClient } from "@signalgraph/runtime";' +
+    `\nimport { ${config.broker.layer} } from "${config.broker.package}";`;
 
   const aliases = generateTypeAliases(data.messages).join("\n\n");
 
@@ -89,7 +91,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       "} satisfies Routing;"
     ].join("\n");
 
-  const exportClient = "export const client = createClient<Client>(routing);";
+  const exportClient = `export const client = createClient<Client>(routing).pipe(Effect.provide(${config.broker.layer}));`;
 
   const source = [
     header,

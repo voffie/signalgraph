@@ -31,3 +31,10 @@ export const MemoryBroker = Layer.sync(Broker, () => {
     consume
   };
 });
+
+export function memory() {
+  return {
+    package: "@signalgraph/adapter-memory",
+    layer: "MemoryBroker"
+  } as const;
+}

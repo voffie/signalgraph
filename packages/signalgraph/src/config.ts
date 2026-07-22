@@ -1,5 +1,21 @@
-import type { Config } from "./loadConfig.ts";
+import { Schema } from "effect";
+import { InvalidConfigError } from "./errors.ts";
 
-export function defineConfig(config: Config) {
-  return config;
+const ConfigSchema = Schema.Struct({
+  schema: Schema.String,
+  out: Schema.String,
+  broker: Schema.Struct({
+    package: Schema.String,
+    layer: Schema.String
+  })
+});
+
+export type Config = Schema.Schema.Type<typeof ConfigSchema>;
+
+export function defineConfig(config: unknown): Config {
+  try {
+    return Schema.decodeUnknownSync(ConfigSchema)(config);
+  } catch (cause) {
+    throw new InvalidConfigError({ cause });
+  }
 }

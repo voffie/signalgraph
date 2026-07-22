@@ -8,6 +8,11 @@ export class ConfigNotFoundError extends Schema.TaggedErrorClass<ConfigNotFoundE
 
 export class InvalidConfigError extends Schema.TaggedErrorClass<InvalidConfigError>
   ()("InvalidConfigError", {
+    cause: Schema.Unknown
+  }) { }
+
+export class InvalidConfigExportError extends Schema.TaggedErrorClass<InvalidConfigExportError>
+  ()("InvalidConfigExportError", {
     path: Schema.String,
     reason: Schema.String,
   }) { }

@@ -1,6 +1,5 @@
 import { Schema } from "effect";
-import { message } from "signalgraph/message";
-import { consumer } from "signalgraph/consumer";
+import { consumer, message } from "signalgraph";
 
 export const Billing = consumer({
   name: "billing",

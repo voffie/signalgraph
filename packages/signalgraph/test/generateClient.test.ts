@@ -76,7 +76,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("imports runtime APIs", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("import { Consumer, Message, Routing, createClient }");
+        expect(content).toContain("import { type Consumer, type Message, type Routing, createClient }");
       })
     );
   });
@@ -119,7 +119,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("creates runtime client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const client = createClient<Client>(routing)");
+        expect(content).toContain("export const makeClient = createClient<Client>(routing)");
       })
     );
   });

@@ -50,7 +50,7 @@ function generateRouting(data: SchemaData) {
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b))
       .join(", ")
-    }],`);
+    }]`);
 }
 
 export const generateClient = Effect.fn(function* (config: Config, data: SchemaData) {
@@ -72,7 +72,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
 
   const imports =
     'import { Effect } from "effect";' +
-    '\nimport { Consumer, Message, Routing, createClient } from "@signalgraph/runtime";' +
+    '\nimport { type Consumer, type Message, type Routing, createClient } from "@signalgraph/runtime";' +
     `\nimport { ${config.broker.layer} } from "${config.broker.package}";`;
 
   const aliases = generateTypeAliases(data.messages).join("\n\n");
@@ -91,7 +91,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       "} satisfies Routing;"
     ].join("\n");
 
-  const exportClient = `export const client = createClient<Client>(routing).pipe(Effect.provide(${config.broker.layer}));`;
+  const exportClient = `export const makeClient = createClient<Client>(routing).pipe(Effect.provide(${config.broker.layer}));`;
 
   const source = [
     header,

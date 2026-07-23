@@ -1,6 +1,5 @@
 import { Schema } from "effect";
-import { consumer } from "signalgraph/consumer";
-import { message } from "signalgraph/message";
+import { consumer, message } from "signalgraph";
 
 export const OrderCreated = message({
   name: "orders.created",

@@ -1,0 +1,15 @@
+{
+  "name": "@signalgraph/adapter-memory-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "signalgraph generate",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "effect": "4.0.0-beta.98",
+    "signalgraph": "workspace:*",
+    "@signalgraph/runtime": "workspace:*",
+    "@signalgraph/adapter-memory": "workspace:*"
+  }
+}

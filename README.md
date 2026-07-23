@@ -131,7 +131,7 @@ is published. It exposes a `payload` value which is typed to the consumer-specif
 This example is a snippet of `examples/adapter-memory`
 
 ```ts
-# schema.ts
+// schema.ts
 import { Schema } from "effect";
 import { consumer, message } from "signalgraph";
 
@@ -165,7 +165,7 @@ export const Email = consumer({
 })
 ```
 ```ts
-# index.ts
+// index.ts
 import { Console, Effect } from "effect";
 import { makeClient } from "../generated/index.ts";
 

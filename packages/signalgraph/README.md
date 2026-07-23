@@ -1,4 +1,4 @@
-`signalgraph`
+# `signalgraph`
 
 CLI & schema.
 

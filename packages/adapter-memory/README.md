@@ -1,4 +1,4 @@
-`@signalgraph/adapter-memory`
+# `@signalgraph/adapter-memory`
 
 In-memory broker implementation.
 

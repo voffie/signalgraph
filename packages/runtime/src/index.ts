@@ -1,1 +1,6 @@
-export * from "./client.ts"
+export {
+  type Consumer,
+  type Message,
+  type Routing,
+  createClient
+} from "./client.ts";

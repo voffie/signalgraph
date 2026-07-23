@@ -1,47 +1,20 @@
 {
   "name": "signalgraph",
-  "type": "module",
   "version": "0.0.0",
-  "license": "MIT",
   "description": "",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/voffie/signalgraph.git",
-    "directory": "packages/signalgraph"
-  },
-  "bugs": {
-    "url": "https://github.com/voffie/signalgraph/issues"
-  },
-  "tags": [],
-  "keywords": [],
+  "type": "module",
   "exports": {
-    "./package.json": "./package.json",
-    ".": "./src/index.ts",
-    "./config": "./src/config.ts",
-    "./*": "./src/*.ts"
+    ".": "./dist/index.mjs",
+    "./config": "./dist/config.mjs",
+    "./package.json": "./package.json"
   },
   "files": [
-    "src/**/*.ts",
-    "dist/**/*.js",
-    "dist/**/*.js.map",
-    "dist/**/*.d.ts",
-    "dist/**/*.d.ts.map"
+    "src/**",
+    "dist/**",
+    "bin/**"
   ],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true,
-    "exports": {
-      "./package.json": "./package.json",
-      ".": {
-        "types": "./dist/index.d.mts",
-        "import": "./dist/index.mjs"
-      },
-      "./config": {
-        "types": "./dist/config.d.mts",
-        "import": "./dist/config.mjs"
-      },
-      "./*": "./dist/*.js"
-    }
+  "bin": {
+    "signalgraph": "./bin/signalgraph"
   },
   "scripts": {
     "build": "tsdown",
@@ -49,14 +22,21 @@
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
+  "dependencies": {
+    "tsx": "4.23.0",
+    "@effect/platform-node": "4.0.0-beta.98"
+  },
+  "devDependencies": {
+    "effect": "4.0.0-beta.98"
+  },
   "peerDependencies": {
     "effect": "4.0.0-beta.98"
   },
-  "dependencies": {
-    "tsx": "4.23.0"
-  },
-  "devDependencies": {
-    "effect": "4.0.0-beta.98",
-    "@effect/platform-node": "4.0.0-beta.98"
+  "keywords": [],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/signalgraph"
   }
 }

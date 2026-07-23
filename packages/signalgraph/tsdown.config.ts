@@ -1,9 +1,28 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: "src/index.ts",
+  entry: {
+    index: "src/index.ts",
+    config: "src/config.ts"
+  },
   format: ["esm"],
+  platform: "node",
   clean: true,
   sourcemap: true,
-  dts: true
+  dts: true,
+  deps: {
+    onlyBundle: []
+  },
+  treeshake: {
+    moduleSideEffects: false
+  },
+  publint: "ci-only",
+  attw: "ci-only",
+  failOnWarn: "ci-only",
+  exports: {
+    customExports: (exports) => ({
+      ...exports,
+      "./package.json": "./package.json"
+    })
+  }
 })

@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+import { NodeRuntime } from "@effect/platform-node";
+
+const { program } = await import ("../src/cli.ts")
+
+NodeRuntime.runMain(program)

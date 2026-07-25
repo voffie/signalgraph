@@ -1,12 +1,14 @@
 import { Effect } from "effect";
 import { importModule } from "./importModule.ts";
-import type { Message, MessageSchema } from "./message.ts";
+import type { AnyMessage, Message, MessageSchema } from "./message.ts";
 import type { Consumer } from "./consumer.ts";
 import { InvalidSchemaError } from "./errors.ts";
 
+type SchemaExports = AnyMessage | Consumer<string, AnyMessage>;
+
 export interface SchemaData {
-  messages: Message<string, MessageSchema>[],
-  consumers: Consumer<string, Message<string, MessageSchema>>[];
+  messages: Array<Message<string, MessageSchema>>,
+  consumers: Array<Consumer<string, Message<string, MessageSchema>>>;
 }
 
 export const loadSchema = Effect.fn(function* (schemaPath: string) {
@@ -19,17 +21,19 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
       continue;
     }
 
-    switch (value._tag) {
+    const candidate = value as SchemaExports;
+
+    switch (candidate._tag) {
       case "Message":
-        if (!messages.has(value.name)) {
-          messages.set(value.name, value);
+        if (!messages.has(candidate.name)) {
+          messages.set(candidate.name, candidate);
         }
         break;
       case "Consumer":
-        if (!messages.has(value.message.name)) {
-          messages.set(value.message.name, value.message);
+        if (!messages.has(candidate.message.name)) {
+          messages.set(candidate.message.name, candidate.message);
         }
-        consumers.set(value.name, value);
+        consumers.set(candidate.name, candidate);
         break;
       default:
         return yield* new InvalidSchemaError({

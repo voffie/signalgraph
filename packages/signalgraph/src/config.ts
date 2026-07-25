@@ -10,7 +10,7 @@ const ConfigSchema = Schema.Struct({
   })
 });
 
-export type Config = Schema.Schema.Type<typeof ConfigSchema>;
+export type Config = typeof ConfigSchema.Type;
 
 export function defineConfig(config: unknown): Config {
   try {

@@ -1,4 +1,4 @@
-import { Context, Effect } from "effect";
+import { Context, type Effect } from "effect";
 
 type RawHandler = (
   payload: unknown

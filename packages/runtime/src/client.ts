@@ -15,7 +15,7 @@ export interface Consumer<P> {
   handle(handler: Handler<P>): Effect.Effect<void>;
 }
 
-export type Routing = Record<string, readonly string[]>;
+export type Routing = Record<string, ReadonlyArray<string>>;
 
 type ClientShape = Record<
   string,

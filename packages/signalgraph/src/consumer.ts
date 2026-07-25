@@ -1,4 +1,4 @@
-import * as Message from "./message.ts";
+import type * as Message from "./message.ts";
 
 export interface Consumer<
   Name extends string,

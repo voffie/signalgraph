@@ -1,4 +1,7 @@
 # `@signalgraph/runtime`
 
-Low-level runtime primitives used by generated SignalGraph clients and adapters.
-Most applications don't interact with this package directly.
+Runtime primitives used by generated SignalGraph clients and adapters.
+
+This package provides the runtime that generated clients execute against.
+
+See the root README for installation and usage.

@@ -218,6 +218,32 @@ orders.created
 | `@signalgraph/runtime`         | Runtime primitives   |
 | `@signalgraph/adapter-memory`  | In-memory transport  |
 
+## Roadmap
+
+### Core
+
+- [x] Schema DSL
+- [x] Client generation
+- [x] Memory adapter
+- [ ] First production adapter
+
+### Developer Experience
+
+- [x] Watch mode
+- [ ] Smarter watch mode
+- [ ] Better diagnostics
+
+### Tooling
+
+- [ ] Graph visualization
+- [ ] Interactive schema explorer
+- [ ] Mermaid export
+- [ ] Graphviz export
+
+### Future
+
+- [ ] DevTools
+
 ## License
 
 MIT

@@ -1,5 +1,5 @@
 # `signalgraph`
 
-CLI & schema.
+CLI & schema DSL for SignalGraph.
 
-See the root README for full documentation.
+See the root README for installation, examples and documentation.

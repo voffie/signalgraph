@@ -1,8 +1,14 @@
 {
   "name": "@signalgraph/runtime",
   "version": "0.0.0",
-  "description": "",
+  "description": "Runtime primitives for generated SignalGraph clients",
   "type": "module",
+  "sideEffects": false,
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "homepage": "https://github.com/voffie/signalgraph#readme",
   "exports": {
     ".": "./dist/index.mjs",
     "./broker": "./dist/broker.mjs",
@@ -25,11 +31,20 @@
   "peerDependencies": {
     "effect": "4.0.0-beta.98"
   },
-  "keywords": [],
+  "keywords": [
+    "effect",
+    "typescript",
+    "runtime",
+    "event-driven",
+    "message-broker"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/voffie/signalgraph.git",
     "directory": "packages/runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

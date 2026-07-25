@@ -1,8 +1,14 @@
 {
   "name": "signalgraph",
   "version": "0.0.0",
-  "description": "",
+  "description": "Type-safe event-driven architecture for TypeScript built on Effect",
   "type": "module",
+  "sideEffects": false,
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "homepage": "https://github.com/voffie/signalgraph#readme",
   "exports": {
     ".": "./dist/index.mjs",
     "./config": "./dist/config.mjs",
@@ -32,11 +38,21 @@
   "peerDependencies": {
     "effect": "4.0.0-beta.98"
   },
-  "keywords": [],
+  "keywords": [
+    "effect",
+    "typescript",
+    "event-driven",
+    "message-broker",
+    "codegen",
+    "cli"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/voffie/signalgraph.git",
     "directory": "packages/signalgraph"
+  },
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

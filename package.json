@@ -8,8 +8,10 @@
     "lint": "oxlint .",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "test": "vitest",
-    "coverage": "vitest --coverage"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest --coverage",
+    "verify": "pnpm lint && pnpm check && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",

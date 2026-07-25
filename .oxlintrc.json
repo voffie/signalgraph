@@ -12,7 +12,6 @@
     "perf": "error"
   },
   "rules": {
-    // Import rules
     "typescript/consistent-type-imports": [
       "error",
       {
@@ -23,14 +22,11 @@
     "import/no-duplicates": "error",
     "import/no-self-import": "error",
     "import/no-empty-named-blocks": "error",
-    // TypeScript cleanup
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-useless-empty-export": "error",
     "oxc/misrefactored-assign-op": "error",
-    // Unicorn
     "oxc/no-map-spread": "off",
-    "no-dangling-underscore": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-empty-interface": "off",
     "typescript/ban-ts-comment": "off",
@@ -55,6 +51,14 @@
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_"
       }
+    ],
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": [
+          "_tag"
+        ]
+      }
     ]
   },
   "ignorePatterns": [
@@ -63,18 +67,13 @@
     "**/docs",
     "**/.tsbuildinfo"
   ],
-  "jsPlugins": [
-    "@effect/oxc/oxlint"
-  ],
   "overrides": [
     {
       "files": [
         "**/{test,examples}/**"
       ],
       "rules": {
-        "effect/no-bigint-literals": "off",
-        "eslint/no-console": "off",
-        "effect/no-import-from-barrel-package": "off"
+        "eslint/no-console": "off"
       }
     }
   ]

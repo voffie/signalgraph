@@ -23,6 +23,19 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           })
         ));
 
+      const channel = yield* Effect.acquireRelease(
+        Effect.tryPromise({
+          try: () => conn.createChannel(),
+          catch: (cause) => new Error(`Failed to create channel: ${cause}`)
+        }),
+        (connection) => Effect.promise(() => connection.close())
+      ).pipe(
+        Effect.tap((connection) =>
+          Effect.sync(() => {
+            connection.on("close", () => console.log("RabbitMQ channel connection closed"));
+          })
+        ));
+
       return {
         deliver: () => Effect.void,
         consume: () => Effect.void

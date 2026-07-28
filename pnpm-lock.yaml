@@ -74,6 +74,10 @@ importers:
         version: 4.0.0-beta.98
 
   packages/runtime:
+    dependencies:
+      signalgraph:
+        specifier: workspace:*
+        version: link:../signalgraph
     devDependencies:
       '@signalgraph/adapter-memory':
         specifier: workspace:*

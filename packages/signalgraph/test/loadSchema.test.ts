@@ -15,9 +15,11 @@ describe("loadSchema", () => {
         Effect.sync(() => {
           expect(schema.messages).toHaveLength(1);
           expect(schema.consumers).toHaveLength(1);
+          expect(schema.messageExportNames).toHaveLength(1);
 
-          expect(schema.messages[0].name).toBe("orders.created");
-          expect(schema.consumers[0].name).toBe("billing");
+          expect(schema.messageExportNames.has("orders.created")).toBe(true);
+          expect(schema.messages.has("orders.created")).toBe(true);
+          expect(schema.consumers.has("billing")).toBe(true);
         })
       )
     )

@@ -1,11 +1,17 @@
 import { expect, layer } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
+import { message } from "signalgraph";
 import { type Consumer, type Message, createClient } from "@signalgraph/runtime";
 import { MemoryBroker } from "@signalgraph/adapter-memory";
 
-type Order = {
-  orderId: string;
-};
+const OrderCreated = message({
+  name: "orders.created",
+  schema: Schema.Struct({
+    orderId: Schema.String
+  })
+});
+
+type Order = typeof OrderCreated.schema.Type;
 
 const createTestClient = () =>
   createClient<{
@@ -13,7 +19,10 @@ const createTestClient = () =>
     billing: Consumer<Order>;
     analytics: Consumer<Order>;
   }>({
-    ordersCreated: ["analytics", "billing"]
+    ordersCreated: {
+      consumers: ["analytics", "billing"],
+      definition: OrderCreated
+    }
   });
 
 layer(MemoryBroker)("createClient", (it) => {

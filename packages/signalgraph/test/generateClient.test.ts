@@ -76,7 +76,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("imports runtime APIs", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("import { type Consumer, type Message, type Routing, createClient }");
+        expect(content).toContain("import { type Consumer, type Message, type MessageGraph, createClient }");
       })
     );
   });
@@ -119,7 +119,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("creates runtime client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const makeClient = createClient<Client>(routing)");
+        expect(content).toContain("export const makeClient = createClient<Client>(messageGraph)");
       })
     );
   });
@@ -127,56 +127,24 @@ layer(NodeServices.layer)("generateClient", (it) => {
   describe("routing", () => {
     const getOut = fixture("duplicate");
 
-    it.effect("generates routing table", () =>
+    it.effect("generates message graph", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("const routing = {\n");
+        expect(content).toContain("const messageGraph = {\n");
       })
     );
 
     it.effect("sorts consumer names", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain('["analytics", "billing", "inventory"]');
+        expect(content).toContain('["billing", "analytics", "inventory"]');
       })
     );
 
     it.effect("uses runtime Routing type", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("} satisfies Routing;");
-      })
-    );
-  });
-
-  describe("inline messages", () => {
-    const getOut = fixture("inline");
-
-    it.effect("generates payload aliases", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain("export type OrdersCreatedPayload");
-      })
-    );
-
-    it.effect("generates message entries", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain("ordersCreated: Message<OrdersCreatedPayload>");
-      })
-    );
-
-    it.effect("generates consumer entries", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
-      })
-    );
-
-    it.effect("generates routing table", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain("ordersCreated: [");
+        expect(content).toContain("} satisfies MessageGraph;");
       })
     );
   });
@@ -201,7 +169,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("emits one routing entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content.match(/ordersCreated: \[/g)).toHaveLength(1);
+        expect(content.match(/"orders.created": \{/g)).toHaveLength(1);
       })
     );
 

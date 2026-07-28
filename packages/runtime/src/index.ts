@@ -1,6 +1,6 @@
 export {
   type Consumer,
   type Message,
-  type Routing,
+  type MessageGraph,
   createClient
 } from "./client.ts";

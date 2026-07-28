@@ -24,6 +24,9 @@
     "test": "vitest",
     "coverage": "vitest --coverage"
   },
+  "dependencies": {
+    "signalgraph": "workspace:*"
+  },
   "devDependencies": {
     "effect": "4.0.0-beta.98",
     "@signalgraph/adapter-memory": "workspace:*"

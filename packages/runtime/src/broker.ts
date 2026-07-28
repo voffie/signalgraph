@@ -1,8 +1,8 @@
 import { Context, type Effect } from "effect";
 
-type RawHandler = (
+type RawHandler<E = never> = (
   payload: unknown
-) => Effect.Effect<void>;
+) => Effect.Effect<void, E>;
 
 export class Broker extends Context.Service<Broker, {
   readonly deliver: (
@@ -10,8 +10,8 @@ export class Broker extends Context.Service<Broker, {
     payload: unknown
   ) => Effect.Effect<void>;
 
-  readonly consume: (
+  consume<E>(
     consumer: string,
-    handler: RawHandler
-  ) => Effect.Effect<void>;
+    handler: RawHandler<E>
+  ): Effect.Effect<void>;
 }>()("@signalgraph/runtime/Broker") { }

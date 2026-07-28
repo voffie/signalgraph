@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "watch": "tsdown --watch",
     "check": "tsc --noEmit",
     "test": "vitest",
     "coverage": "vitest --coverage"

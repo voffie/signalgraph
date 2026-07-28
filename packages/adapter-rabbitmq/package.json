@@ -1,0 +1,53 @@
+{
+  "name": "@signalgraph/adapter-rabbitmq",
+  "version": "0.0.0",
+  "description": "RabbitMQ broker adapter for SignalGraph",
+  "type": "module",
+  "sideEffects": false,
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/**",
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "check": "tsc --noEmit",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@signalgraph/runtime": "workspace:*",
+    "amqplib": "2.0.1"
+  },
+  "devDependencies": {
+    "effect": "4.0.0-beta.98"
+  },
+  "peerDependencies": {
+    "effect": "4.0.0-beta.98"
+  },
+  "keywords": [
+    "effect",
+    "typescript",
+    "rabbitmq",
+    "adapter",
+    "testing",
+    "message-broker"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/adapter-rabbitmq"
+  },
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  }
+}

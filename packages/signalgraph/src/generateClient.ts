@@ -89,9 +89,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       : "";
 
   const imports = [
-    'import { Effect } from "effect";',
     'import { type Consumer, type Message, type MessageGraph, createClient } from "@signalgraph/runtime";',
-    `import { ${config.broker.layer} } from "${config.broker.package}";`,
     schemaImport
   ]
     .filter(Boolean)
@@ -113,7 +111,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       "} satisfies MessageGraph;"
     ].join("\n");
 
-  const exportClient = `export const makeClient = createClient<Client>(messageGraph).pipe(Effect.provide(${config.broker.layer}));`;
+  const exportClient = `export const Client = createClient<Client>(messageGraph);`;
 
   const source = [
     header,

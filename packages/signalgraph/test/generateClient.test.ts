@@ -119,7 +119,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("creates runtime client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const makeClient = createClient<Client>(messageGraph)");
+        expect(content).toContain("export const Client = createClient<Client>(messageGraph)");
       })
     );
   });

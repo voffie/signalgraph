@@ -21,6 +21,8 @@ const program = Effect.gen(function* () {
   yield* client.ordersCreated.publish({
     orderId: "123"
   });
+
+  yield* client.listen();
 });
 
 Effect.runPromise(

@@ -89,7 +89,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       : "";
 
   const imports = [
-    'import { type Consumer, type Message, type MessageGraph, createClient } from "@signalgraph/runtime";',
+    'import { type Consumer, type Message, type MessageGraph, type RuntimeClient, createClient } from "@signalgraph/runtime";',
     schemaImport
   ]
     .filter(Boolean)
@@ -99,9 +99,11 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
 
   const client =
     [
-      "export type Client = {",
-      indent(entries.join("\n")),
-      "};"
+      "export type Client =",
+      indent("RuntimeClient &"),
+      indent("{"),
+      indent(entries.join("\n"), 4),
+      indent("};"),
     ].join("\n");
 
   const messageGraph =

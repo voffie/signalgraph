@@ -24,10 +24,9 @@ type MessageDefinition = {
 
 export type MessageGraph = Record<string, MessageDefinition>;
 
-type ClientShape = Record<
-  string,
-  Message<unknown> | Consumer<unknown>
->;
+export type RuntimeClient = {
+  listen(): Effect.Effect<void>;
+};
 
 const toCamelCase = (text: string) =>
   text
@@ -35,18 +34,22 @@ const toCamelCase = (text: string) =>
     .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
     .join("");
 
-export function createClient<T extends ClientShape>(
+export function createClient<T extends object>(
   graph: MessageGraph
 ) {
-  return Effect.gen(function* () {
-    const broker = yield* Broker;
-
+  return Effect.sync(() => {
     const client: Record<string, unknown> = {};
+    const handlers = new Map<
+      string,
+      Array<(payload: unknown) => Effect.Effect<void, InvalidPayloadError>>
+    >();
 
     for (const [exportIdentifier, exportData] of Object.entries(graph)) {
       client[toCamelCase(exportIdentifier)] = {
         publish(payload: unknown) {
           return Effect.gen(function* () {
+            const broker = yield* Broker;
+
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
             yield* Effect.forEach(
@@ -62,25 +65,42 @@ export function createClient<T extends ClientShape>(
       for (const consumer of exportData.consumers) {
         client[consumer] = {
           handle(handler: Handler<unknown>) {
-            return broker.consume(
-              consumer,
-              (payload) => Effect.gen(function* () {
-                const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(payload).pipe(
-                  Effect.mapError((cause) =>
-                    new InvalidPayloadError({
-                      message: "Incoming payload does not match defined message schema",
-                      cause
-                    })
-                  )
-                );
+            return Effect.sync(() => {
+              const list = handlers.get(consumer) ?? [];
 
-                return yield* handler({ payload: decoded });
-              })
-            );
+              list.push((payload) =>
+                Effect.gen(function* () {
+                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(payload).pipe(
+                    Effect.mapError((cause) =>
+                      new InvalidPayloadError({
+                        message: "Incoming payload does not match defined message schema",
+                        cause
+                      })
+                    )
+                  );
+
+                  return yield* handler({
+                    payload: decoded
+                  });
+                })
+              );
+
+              handlers.set(consumer, list);
+            });
           }
         };
-      }
+      };
     };
+
+    client.listen = () =>
+      Effect.gen(function* () {
+        const broker = yield* Broker;
+
+        yield* broker.listen({
+          graph,
+          handlers
+        });
+      });
 
     return client as T;
   });

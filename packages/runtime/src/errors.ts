@@ -19,3 +19,8 @@ export class InitializationError extends Schema.TaggedErrorClass<InitializationE
   message: Schema.String,
   cause: Schema.Unknown
 }) { }
+
+export class ValidationError extends Schema.TaggedErrorClass<ValidationError>()("ValidationError", {
+  message: Schema.String,
+  area: Schema.String
+}) { }

@@ -1,8 +1,7 @@
-import { Effect, Layer, Schema } from "effect";
-import { Broker } from "@signalgraph/runtime/broker";
-import { ConnectionError, InitializationError, type InvalidPayloadError, type MessageGraph } from "@signalgraph/runtime";
+import { Effect, Layer, Queue, Schema } from "effect";
+import { Broker, type HandlerRegistry } from "@signalgraph/runtime/broker";
+import { ConnectionError, InitializationError, type MessageGraph } from "@signalgraph/runtime";
 import * as amqp from "amqplib";
-import * as Console from "effect/Console";
 
 type RabbitMQOptions = {
   url: string;
@@ -45,30 +44,41 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         ));
 
       const deliver = (
-        consumer: string,
+        message: string,
         payload: unknown
       ) => Effect.gen(function* () {
-        const jsonString = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(payload);
-        const buffer = Buffer.from(jsonString, "utf-8");
-        yield* Effect.sync(() => {
-          channel.sendToQueue(consumer, buffer);
-        });
-      }).pipe(
-        Effect.catch((cause) => Effect.sync(() => console.error(cause)))
-      );
+        const json = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(payload);
 
-      const listen = (
-        args: {
-          graph: MessageGraph,
-          handlers: Map<
-            string,
-            Array<(payload: unknown) => Effect.Effect<void, InvalidPayloadError>>
-          >;
-        }) => Effect.gen(function* () {
-          const { handlers } = args;
+        yield* Effect.sync(() =>
+          channel.publish(message, "", Buffer.from(json, "utf-8"))
+        );
+      });
 
-          for (const consumer of handlers.keys()) {
-            yield* Console.log(`Creating queue for ${consumer}`);
+      // TODO:
+      // RabbitMQ currently uses a single channel for all consumers.
+      // This means QoS settings (prefetch, flow control, etc.) are shared.
+      // Consider switching to one channel per consumer if isolation or
+      // per-consumer configuration becomes necessary.
+      const start = ({
+        graph,
+        handlers
+      }: {
+        graph: MessageGraph;
+        handlers: HandlerRegistry;
+      }) => Effect.gen(function* () {
+        for (const [messageName, messageDef] of Object.entries(graph)) {
+          yield* Effect.tryPromise({
+            try: () =>
+              channel.assertExchange(messageName, "fanout", {
+                durable: true
+              }),
+            catch: (cause) => new InitializationError({
+              cause,
+              message: `Failed to create exchange for ${messageName}`
+            })
+          });
+
+          for (const consumer of messageDef.consumers) {
             yield* Effect.tryPromise({
               try: () =>
                 channel.assertQueue(consumer, {
@@ -79,15 +89,69 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 message: `Failed to create queue for ${consumer}`
               })
             });
-            yield* Console.log(`✓ Created queue for ${consumer}`);
+
+            yield* Effect.tryPromise({
+              try: () =>
+                channel.bindQueue(consumer, messageName, ""),
+              catch: (cause) => new InitializationError({
+                cause,
+                message: `Failed to bind queue ${consumer} to exchange ${messageName}`
+              })
+            });
+
+            const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
+
+            yield* Effect.tryPromise({
+              try: () =>
+                channel.consume(consumer, (msg) => {
+                  if (msg) {
+                    Queue.offerUnsafe(messages, msg);
+                  }
+                }),
+              catch: (cause) => new InitializationError({
+                cause,
+                message: `Failed to start consuming ${consumer}`
+              })
+            });
+
+            const processMessage = Effect.gen(function* () {
+              const msg = yield* Queue.take(messages);
+
+              yield* Effect.gen(function* () {
+                const payload = yield* Schema.decodeUnknownEffect(
+                  Schema.UnknownFromJsonString
+                )(msg.content.toString("utf-8"));
+
+                const list = handlers.get(consumer) ?? [];
+
+                for (const handler of list) {
+                  yield* handler(payload);
+                }
+              }).pipe(
+                Effect.matchEffect({
+                  onSuccess: () => Effect.sync(() => channel.ack(msg)),
+                  onFailure: () => Effect.sync(() => channel.nack(msg))
+                })
+              );
+            });
+
+            yield* Effect.forkChild(
+              Effect.forever(processMessage).pipe(
+                Effect.catchCause(Effect.logError)
+              )
+            );
           }
-        });
+        }
+
+        return yield* Effect.never;
+      });
 
       return {
         deliver,
-        listen
+        start
       };
-    }));
+    })
+  );
 }
 
 export function rabbitmq() {

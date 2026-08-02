@@ -1,20 +1,24 @@
 import { Effect, Schema } from "effect";
-import { Broker } from "./broker.ts";
+import {
+  Broker,
+  type HandlerRegistry,
+} from "./broker.ts";
 import { InvalidPayloadError } from "./errors.ts";
 import type { AnyMessage } from "signalgraph";
+import { validateRuntime } from "./validation.ts";
 
 export interface Message<P> {
   publish(payload: P): Effect.Effect<void>;
 }
 
-export type Handler<P> = (
+export type UserHandler<P> = (
   ctx: {
     readonly payload: P;
   }
 ) => Effect.Effect<void>;
 
 export interface Consumer<P> {
-  handle(handler: Handler<P>): Effect.Effect<void>;
+  handle(handler: UserHandler<P>): Effect.Effect<void>;
 }
 
 type MessageDefinition = {
@@ -25,7 +29,7 @@ type MessageDefinition = {
 export type MessageGraph = Record<string, MessageDefinition>;
 
 export type RuntimeClient = {
-  listen(): Effect.Effect<void>;
+  start(): Effect.Effect<void>;
 };
 
 const toCamelCase = (text: string) =>
@@ -34,15 +38,13 @@ const toCamelCase = (text: string) =>
     .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
     .join("");
 
+
 export function createClient<T extends object>(
   graph: MessageGraph
 ) {
   return Effect.sync(() => {
     const client: Record<string, unknown> = {};
-    const handlers = new Map<
-      string,
-      Array<(payload: unknown) => Effect.Effect<void, InvalidPayloadError>>
-    >();
+    const handlers: HandlerRegistry = new Map();
 
     for (const [exportIdentifier, exportData] of Object.entries(graph)) {
       client[toCamelCase(exportIdentifier)] = {
@@ -52,11 +54,9 @@ export function createClient<T extends object>(
 
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
-            yield* Effect.forEach(
-              exportData.consumers,
-              consumer =>
-                broker.deliver(consumer, encoded),
-              { discard: true }
+            yield* broker.deliver(
+              exportIdentifier,
+              encoded
             );
           });
         }
@@ -64,7 +64,7 @@ export function createClient<T extends object>(
 
       for (const consumer of exportData.consumers) {
         client[consumer] = {
-          handle(handler: Handler<unknown>) {
+          handle(handler: UserHandler<unknown>) {
             return Effect.sync(() => {
               const list = handlers.get(consumer) ?? [];
 
@@ -92,11 +92,13 @@ export function createClient<T extends object>(
       };
     };
 
-    client.listen = () =>
+    client.start = () =>
       Effect.gen(function* () {
         const broker = yield* Broker;
 
-        yield* broker.listen({
+        yield* validateRuntime(graph);
+
+        yield* broker.start({
           graph,
           handlers
         });

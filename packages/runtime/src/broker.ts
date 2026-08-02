@@ -1,18 +1,23 @@
 import { Context, type Effect } from "effect";
 import type { MessageGraph } from "./client.ts";
-import type { InitializationError, InvalidPayloadError } from "./errors.ts";
+
+export type BrokerHandler = (
+  payload: unknown
+) => Effect.Effect<void, unknown>;
+
+export type HandlerRegistry = Map<
+  string,
+  Array<BrokerHandler>
+>;
 
 export class Broker extends Context.Service<Broker, {
   readonly deliver: (
-    consumer: string,
+    message: string,
     payload: unknown
-  ) => Effect.Effect<void>;
+  ) => Effect.Effect<void, unknown>;
 
-  listen(args: {
+  readonly start: (args: {
     graph: MessageGraph,
-    handlers: Map<
-      string,
-      Array<(payload: unknown) => Effect.Effect<void, InvalidPayloadError>>
-    >;
-  }): Effect.Effect<void, InitializationError>;
+    handlers: HandlerRegistry;
+  }) => Effect.Effect<void, unknown>;
 }>()("@signalgraph/runtime/Broker") { }

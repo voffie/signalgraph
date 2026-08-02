@@ -1,7 +1,12 @@
 import { expect, layer } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 import { message } from "signalgraph";
-import { type Consumer, type Message, createClient } from "@signalgraph/runtime";
+import {
+  type Consumer,
+  type Message,
+  type RuntimeClient,
+  createClient
+} from "@signalgraph/runtime";
 import { MemoryBroker } from "@signalgraph/adapter-memory";
 
 const OrderCreated = message({
@@ -14,16 +19,17 @@ const OrderCreated = message({
 type Order = typeof OrderCreated.schema.Type;
 
 const createTestClient = () =>
-  createClient<{
-    ordersCreated: Message<Order>;
-    billing: Consumer<Order>;
-    analytics: Consumer<Order>;
-  }>({
-    ordersCreated: {
-      consumers: ["analytics", "billing"],
-      definition: OrderCreated
-    }
-  });
+  createClient<
+    RuntimeClient & {
+      ordersCreated: Message<Order>;
+      billing: Consumer<Order>;
+      analytics: Consumer<Order>;
+    }>({
+      ordersCreated: {
+        consumers: ["analytics", "billing"],
+        definition: OrderCreated
+      }
+    });
 
 layer(MemoryBroker)("createClient", (it) => {
   it.effect("creates message resources", () =>
@@ -53,6 +59,8 @@ layer(MemoryBroker)("createClient", (it) => {
         })
       );
 
+      yield* client.start();
+
       yield* client.ordersCreated.publish({
         orderId: "123"
       });
@@ -81,6 +89,8 @@ layer(MemoryBroker)("createClient", (it) => {
         })
       );
 
+      yield* client.start();
+
       yield* client.ordersCreated.publish({
         orderId: "123"
       });
@@ -106,6 +116,8 @@ layer(MemoryBroker)("createClient", (it) => {
           output += 1;
         })
       );
+
+      yield* client.start();
 
       yield* client.ordersCreated.publish({
         orderId: "123"

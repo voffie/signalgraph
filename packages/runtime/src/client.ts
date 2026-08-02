@@ -5,6 +5,7 @@ import {
 } from "./broker.ts";
 import { InvalidPayloadError } from "./errors.ts";
 import type { AnyMessage } from "signalgraph";
+import { toPropertyName } from "signalgraph/internal";
 import { validateRuntime } from "./validation.ts";
 
 export interface Message<P> {
@@ -32,13 +33,6 @@ export type RuntimeClient = {
   start(): Effect.Effect<void>;
 };
 
-const toCamelCase = (text: string) =>
-  text
-    .split(".")
-    .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
-    .join("");
-
-
 export function createClient<T extends object>(
   graph: MessageGraph
 ) {
@@ -47,7 +41,7 @@ export function createClient<T extends object>(
     const handlers: HandlerRegistry = new Map();
 
     for (const [exportIdentifier, exportData] of Object.entries(graph)) {
-      client[toCamelCase(exportIdentifier)] = {
+      client[toPropertyName(exportIdentifier)] = {
         publish(payload: unknown) {
           return Effect.gen(function* () {
             const broker = yield* Broker;

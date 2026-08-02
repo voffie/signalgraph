@@ -3,17 +3,7 @@ import type { SchemaData } from "./loadSchema.ts";
 import type { Config } from "./config.ts";
 import type { AnyMessage, MessageSchema } from "./message.ts";
 import type { Consumer } from "./consumer.ts";
-
-const toCamelCase = (text: string) =>
-  text
-    .split(".")
-    .map((part, i) => (i === 0 ? part : part[0].toUpperCase() + part.slice(1)))
-    .join("");
-
-const toPascalCase = (text: string) =>
-  text.split(".")
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join("");
+import { toPropertyName, toTypeName } from "./internal/naming.ts";
 
 const indent = (text: string, spaces = 2) =>
   text
@@ -31,20 +21,20 @@ function generateSchemaType(schema: MessageSchema) {
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) => `${toCamelCase(message.name)}: Message<${toPascalCase(message.name)}Payload>;`
+    (message) => `${toPropertyName(message.name)}: Message<${toTypeName(message.name)}Payload>;`
   );
 }
 
 function generateConsumerEntries(consumers: Iterable<Consumer<string, AnyMessage>>) {
   return [...consumers].map(
-    (consumer) => `${toCamelCase(consumer.name)}: Consumer<${toPascalCase(consumer.message.name)}Payload>;`
+    (consumer) => `${toPropertyName(consumer.name)}: Consumer<${toTypeName(consumer.message.name)}Payload>;`
   );
 }
 
 function generateTypeAliases(messages: Iterable<AnyMessage>) {
   return [...messages].map(
     (message) =>
-      `export type ${toPascalCase(message.name)}Payload = ${generateSchemaType(message.schema)}`
+      `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`
   );
 }
 

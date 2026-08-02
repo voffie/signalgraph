@@ -2,22 +2,17 @@ import { Schema } from "effect";
 import { consumer, message } from "signalgraph";
 
 export const OrderCreated = message({
-  name: "orders.created",
+  name: "order.created",
   schema: Schema.Struct({
-    orderId: Schema.String
+    orderId: Schema.Number
   })
 });
 
-export const BillingCompleted = message({
-  name: "billing.completed",
+export const OrderCompleted = message({
+  name: "order.completed",
   schema: Schema.Struct({
-    orderId: Schema.String
+    orderId: Schema.Number
   })
-});
-
-export const Billing = consumer({
-  name: "billing",
-  message: OrderCreated
 });
 
 export const Analytics = consumer({
@@ -25,7 +20,7 @@ export const Analytics = consumer({
   message: OrderCreated
 });
 
-export const Email = consumer({
-  name: "email",
-  message: BillingCompleted
-})
+export const Shipping = consumer({
+  name: "billing",
+  message: OrderCompleted
+});

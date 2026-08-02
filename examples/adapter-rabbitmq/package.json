@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "generate": "signalgraph generate",
-    "dev": "tsx src/index.ts"
+    "consume": "tsx src/handlers.ts",
+    "send": "tsx src/publish.ts"
   },
   "dependencies": {
     "effect": "4.0.0-beta.98",

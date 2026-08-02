@@ -5,8 +5,6 @@ import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
 const program = Effect.gen(function* () {
   const client = yield* Client;
 
-  yield* Console.log("Starting handlers");
-
   yield* client.analytics.handle(({ payload }) =>
     Effect.gen(function* () {
       yield* Console.log("Analytics received: ", payload);

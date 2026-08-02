@@ -4,7 +4,15 @@ This example demonstrates how to use the RabbitMQ adapter with SignalGraph
 
 ## Getting started
 
-Make sure Docker is running, then follow these steps.
+1. Generate the SignalGraph client
+```bash
+pnpm generate
+```
+
+This runs the SignalGraph client generator using the configuration and schema to
+produce the generated client used by the example.
+
+**Make sure Docker is running, then continue with these steps.**
 
 1. Start RabbitMQ
 ```bash

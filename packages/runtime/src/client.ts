@@ -92,6 +92,7 @@ export function createClient<T extends object>(
         const broker = yield* Broker;
 
         yield* validateRuntime(graph);
+        yield* validateConsumers(graph);
 
         yield* broker.start({
           graph,

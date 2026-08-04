@@ -7,6 +7,7 @@ export interface Consumer<
   readonly _tag: "Consumer";
   readonly name: Name;
   readonly message: TMessage;
+  readonly prefetch?: number;
 }
 
 export const consumer = <
@@ -15,8 +16,10 @@ export const consumer = <
 >(options: {
   readonly name: Name;
   readonly message: TMessage;
-}) => ({
+  readonly prefetch?: number;
+}): Consumer<Name, TMessage> => ({
   _tag: "Consumer",
   name: options.name,
   message: options.message,
+  ...(options.prefetch !== undefined ? { prefetch: options.prefetch } : {})
 });

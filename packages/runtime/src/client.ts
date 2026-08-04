@@ -31,6 +31,7 @@ export type MessageGraph = Record<string, MessageNode>;
 
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
+  listen(): Effect.Effect<void>;
 };
 
 export function createClient<T extends object>(
@@ -95,6 +96,31 @@ export function createClient<T extends object>(
         yield* broker.start({
           graph,
           handlers
+        });
+      });
+
+    client.listen = () =>
+      Effect.gen(function* () {
+        yield* (client as RuntimeClient).start();
+
+        // Suspend until SIGINT/SIGTERM, then resolve normally - this is
+        // what keeps the process alive without the caller ever seeing it.
+        yield* Effect.callback<void>((resume) => {
+          const onSignal = () => {
+            process.removeListener("SIGINT", onSignal);
+            process.removeListener("SIGTERM", onSignal);
+            resume(Effect.void);
+          };
+
+          process.once("SIGINT", onSignal);
+          process.once("SIGTERM", onSignal);
+
+          // Runs if this Effect is interrupted from elsewhere (e.g. a
+          // test wraps run() in a timeout) - avoids leaking listeners.
+          return Effect.sync(() => {
+            process.removeListener("SIGINT", onSignal);
+            process.removeListener("SIGTERM", onSignal);
+          });
         });
       });
 

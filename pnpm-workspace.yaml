@@ -3,5 +3,8 @@ packages:
   - examples/*
 strictDepBuilds: false
 allowBuilds:
+  cpu-features: false
   esbuild: false,
   msgpackr-extract: false
+  protobufjs: false
+  ssh2: false

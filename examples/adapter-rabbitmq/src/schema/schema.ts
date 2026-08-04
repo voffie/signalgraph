@@ -21,6 +21,6 @@ export const Analytics = consumer({
 });
 
 export const Shipping = consumer({
-  name: "billing",
+  name: "shipping",
   message: OrderCompleted
 });

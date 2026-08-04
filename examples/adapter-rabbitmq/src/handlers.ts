@@ -8,24 +8,22 @@ const program = Effect.gen(function* () {
   yield* client.analytics.handle(({ payload }) =>
     Effect.gen(function* () {
       yield* Console.log("Analytics received: ", payload);
-
       yield* client.orderCompleted.publish(payload);
     })
   );
 
-  yield* client.billing.handle(({ payload }) =>
+  yield* client.shipping.handle(({ payload }) =>
     Effect.gen(function* () {
-      yield* Console.log("Email received: ", payload);
+      yield* Console.log("Shipping received: ", payload);
       yield* client.orderCreated.publish({ orderId: payload.orderId + 1 });
     })
   );
 
-  yield* client.start();
+  yield* client.listen();
 });
 
 Effect.runPromise(
   program.pipe(
-    Effect.scoped,
     Effect.provide(
       RabbitMQBroker({
         url: "amqp://localhost",

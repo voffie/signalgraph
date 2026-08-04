@@ -1,9 +1,9 @@
 import { expect, layer } from "@effect/vitest";
 import { Effect, Schema } from "effect";
-import { message } from "signalgraph";
+import { consumer, message } from "signalgraph";
 import {
-  type Consumer,
-  type Message,
+  type RuntimeConsumer,
+  type RuntimeMessage,
   type RuntimeClient,
   createClient
 } from "@signalgraph/runtime";
@@ -16,17 +16,27 @@ const OrderCreated = message({
   })
 });
 
+const analytics = consumer({
+  name: "analytics",
+  message: OrderCreated
+});
+
+const billing = consumer({
+  name: "billing",
+  message: OrderCreated
+});
+
 type Order = typeof OrderCreated.schema.Type;
 
 const createTestClient = () =>
   createClient<
     RuntimeClient & {
-      ordersCreated: Message<Order>;
-      billing: Consumer<Order>;
-      analytics: Consumer<Order>;
+      ordersCreated: RuntimeMessage<Order>;
+      billing: RuntimeConsumer<Order>;
+      analytics: RuntimeConsumer<Order>;
     }>({
       ordersCreated: {
-        consumers: ["analytics", "billing"],
+        consumers: [analytics, billing],
         definition: OrderCreated
       }
     });
@@ -73,19 +83,19 @@ layer(MemoryBroker)("createClient", (it) => {
 
   it.effect("supports multiple consumers", () =>
     Effect.gen(function* () {
-      let analytics = false;
-      let billing = false;
+      let analyticsHandled = false;
+      let billingHandled = false;
       const client = yield* createTestClient();
 
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
-          analytics = true;
+          analyticsHandled = true;
         })
       );
 
       yield* client.billing.handle(() =>
         Effect.sync(() => {
-          billing = true;
+          billingHandled = true;
         })
       );
 
@@ -95,8 +105,8 @@ layer(MemoryBroker)("createClient", (it) => {
         orderId: "123"
       });
 
-      expect(analytics).toBe(true);
-      expect(billing).toBe(true);
+      expect(analyticsHandled).toBe(true);
+      expect(billingHandled).toBe(true);
     })
   );
 

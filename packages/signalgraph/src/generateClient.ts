@@ -21,13 +21,13 @@ function generateSchemaType(schema: MessageSchema) {
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) => `${toPropertyName(message.name)}: Message<${toTypeName(message.name)}Payload>;`
+    (message) => `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`
   );
 }
 
 function generateConsumerEntries(consumers: Iterable<Consumer<string, AnyMessage>>) {
   return [...consumers].map(
-    (consumer) => `${toPropertyName(consumer.name)}: Consumer<${toTypeName(consumer.message.name)}Payload>;`
+    (consumer) => `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`
   );
 }
 
@@ -79,7 +79,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       : "";
 
   const imports = [
-    'import { type Consumer, type Message, type MessageGraph, type RuntimeClient, createClient } from "@signalgraph/runtime";',
+    'import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient } from "@signalgraph/runtime";',
     schemaImport
   ]
     .filter(Boolean)

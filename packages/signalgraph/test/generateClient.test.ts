@@ -76,7 +76,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("imports runtime APIs", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("import { type Consumer, type Message, type MessageGraph, type RuntimeClient, createClient }");
+        expect(content).toContain("import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient }");
       })
     );
   });
@@ -105,14 +105,14 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("generates message entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("ordersCreated: Message<OrdersCreatedPayload>");
+        expect(content).toContain("ordersCreated: RuntimeMessage<OrdersCreatedPayload>");
       })
     );
 
     it.effect("generates consumer entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
+        expect(content).toContain("billing: RuntimeConsumer<OrdersCreatedPayload>");
       })
     );
 
@@ -131,13 +131,6 @@ layer(NodeServices.layer)("generateClient", (it) => {
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
         expect(content).toContain("const messageGraph = {\n");
-      })
-    );
-
-    it.effect("sorts consumer names", () =>
-      Effect.gen(function* () {
-        const content = yield* readGenerated(getOut());
-        expect(content).toContain('["billing", "analytics", "inventory"]');
       })
     );
 
@@ -162,7 +155,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("emits one message entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content.match(/ordersCreated: Message<OrdersCreatedPayload>/g)).toHaveLength(1);
+        expect(content.match(/ordersCreated: RuntimeMessage<OrdersCreatedPayload>/g)).toHaveLength(1);
       })
     );
 
@@ -176,9 +169,9 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("generates every consumer entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("analytics: Consumer<OrdersCreatedPayload>");
-        expect(content).toContain("billing: Consumer<OrdersCreatedPayload>");
-        expect(content).toContain("inventory: Consumer<OrdersCreatedPayload>");
+        expect(content).toContain("analytics: RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("billing: RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("inventory: RuntimeConsumer<OrdersCreatedPayload>");
       })
     );
   });

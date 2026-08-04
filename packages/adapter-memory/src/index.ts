@@ -13,7 +13,7 @@ export const MemoryBroker = Layer.sync(Broker, () => {
     const consumers = graph?.[message].consumers ?? [];
 
     for (const consumer of consumers) {
-      const list = handlers?.get(consumer) ?? [];
+      const list = handlers?.get(consumer.name) ?? [];
 
       for (const handler of list) {
         yield* handler(payload);

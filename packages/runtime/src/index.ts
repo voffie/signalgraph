@@ -1,6 +1,6 @@
 export {
-  type Consumer,
-  type Message,
+  type RuntimeConsumer,
+  type RuntimeMessage,
   type MessageGraph,
   type RuntimeClient,
   createClient

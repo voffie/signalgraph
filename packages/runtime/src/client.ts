@@ -4,11 +4,11 @@ import {
   type HandlerRegistry,
 } from "./broker.ts";
 import { InvalidPayloadError } from "./errors.ts";
-import type { AnyMessage } from "signalgraph";
+import type { AnyMessage, Consumer } from "signalgraph";
 import { toPropertyName } from "signalgraph/internal";
-import { validateRuntime } from "./validation.ts";
+import { validateRuntime, validateConsumers } from "./validation.ts";
 
-export interface Message<P> {
+export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
 }
 
@@ -18,16 +18,16 @@ export type UserHandler<P> = (
   }
 ) => Effect.Effect<void>;
 
-export interface Consumer<P> {
+export interface RuntimeConsumer<P> {
   handle(handler: UserHandler<P>): Effect.Effect<void>;
 }
 
-type MessageDefinition = {
+type MessageNode = {
   definition: AnyMessage;
-  consumers: ReadonlyArray<string>;
+  consumers: ReadonlyArray<Consumer<string, AnyMessage>>;
 };
 
-export type MessageGraph = Record<string, MessageDefinition>;
+export type MessageGraph = Record<string, MessageNode>;
 
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
@@ -57,10 +57,10 @@ export function createClient<T extends object>(
       };
 
       for (const consumer of exportData.consumers) {
-        client[consumer] = {
+        client[consumer.name] = {
           handle(handler: UserHandler<unknown>) {
             return Effect.sync(() => {
-              const list = handlers.get(consumer) ?? [];
+              const list = handlers.get(consumer.name) ?? [];
 
               list.push((payload) =>
                 Effect.gen(function* () {
@@ -79,7 +79,7 @@ export function createClient<T extends object>(
                 })
               );
 
-              handlers.set(consumer, list);
+              handlers.set(consumer.name, list);
             });
           }
         };

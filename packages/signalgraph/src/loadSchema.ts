@@ -10,6 +10,7 @@ export interface SchemaData {
   messages: Map<string, AnyMessage>;
   consumers: Map<string, Consumer<string, AnyMessage>>;
   messageExportNames: Map<string, string>;
+  consumerExportNames: Map<string, string>;
 }
 
 export const loadSchema = Effect.fn(function* (schemaPath: string) {
@@ -19,6 +20,7 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
   const messages = new Map<string, AnyMessage>();
   const consumers = new Map<string, Consumer<string, AnyMessage>>();
   const messageExportNames = new Map<string, string>();
+  const consumerExportNames = new Map<string, string>();
 
   const exportNameByMessage = new Map<AnyMessage, string>();
   for (const [key, value] of entries) {
@@ -27,6 +29,7 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
       exportNameByMessage.set(candidate, key);
     }
   }
+
   for (const [key, value] of entries) {
     const candidate = value as SchemaExports;
 
@@ -52,6 +55,7 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
           messages.set(candidate.message.name, candidate.message);
           messageExportNames.set(candidate.message.name, exportName);
         }
+        consumerExportNames.set(candidate.name, key);
         consumers.set(candidate.name, candidate);
         break;
       }
@@ -63,5 +67,5 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
     }
   }
 
-  return { messages, consumers, messageExportNames } as SchemaData;
+  return { messages, consumers, messageExportNames, consumerExportNames } as SchemaData;
 })

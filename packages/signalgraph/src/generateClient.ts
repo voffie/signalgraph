@@ -43,7 +43,7 @@ function generateMessageGraph(data: SchemaData) {
     const exportName = data.messageExportNames.get(message.name);
     const consumerNames = [...data.consumers.values()]
       .filter((consumer) => consumer.message.name === message.name)
-      .map((consumer) => `"${consumer.name}"`)
+      .map((consumer) => data.consumerExportNames.get(consumer.name))
       .join(", ");
     return `"${message.name}": {
   definition: ${exportName},
@@ -72,7 +72,7 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
   if (!schemaRelativePath.startsWith(".")) {
     schemaRelativePath = "./" + schemaRelativePath;
   }
-  const schemaExportNames = [...new Set(data.messageExportNames.values())];
+  const schemaExportNames = [...data.messageExportNames.values(), ...data.consumerExportNames.values()];
   const schemaImport =
     schemaExportNames.length > 0
       ? `import {\n${indent(schemaExportNames.join(",\n"))}\n} from "${schemaRelativePath}";`

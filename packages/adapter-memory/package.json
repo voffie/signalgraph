@@ -28,10 +28,10 @@
     "@signalgraph/runtime": "workspace:*"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-beta.103"
   },
   "peerDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-beta.103"
   },
   "keywords": [
     "effect",

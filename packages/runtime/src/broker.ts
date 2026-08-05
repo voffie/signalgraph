@@ -1,5 +1,6 @@
 import { Context, type Effect } from "effect";
-import type { MessageGraph, MessageMetadata } from "./client.ts";
+import type { MessageGraph } from "./client.ts";
+import type { MessageMetadata } from "./metadata.ts";
 
 export interface BrokerMessage {
   readonly payload: unknown;

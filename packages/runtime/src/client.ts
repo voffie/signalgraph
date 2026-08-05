@@ -7,18 +7,11 @@ import { InvalidPayloadError } from "./errors.ts";
 import type { AnyMessage, Consumer } from "signalgraph";
 import { toPropertyName } from "signalgraph/internal";
 import { validateRuntime, validateConsumers } from "./validation.ts";
+import type { MessageMetadata } from "./metadata.ts";
 
 export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
 }
-
-interface MessageTraceContext { }
-
-export interface MessageMetadata {
-  readonly messageId: string;
-  readonly correlationId: string;
-  readonly traceContext?: MessageTraceContext;
-};
 
 export type UserHandler<P> = (
   ctx: {

@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { currentOtelSpan } from "@effect/opentelemetry/OtelTracer";
 import {
   Broker,
   type HandlerRegistry,
@@ -51,10 +52,18 @@ export function createClient<T extends object>(
 
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
-            const metadata = {
+            const span = yield* currentOtelSpan;
+
+            const metadata: MessageMetadata = {
               messageId: "temp",
-              correlationId: "temp"
+              correlationId: "temp",
+              traceContext: span.spanContext()
             };
+
+            yield* Effect.annotateCurrentSpan({
+              "signalgraph.message.id": metadata.messageId,
+              "signalgraph.correlation.id": metadata.correlationId,
+            });
 
             yield* broker.deliver({
               message: exportIdentifier,
@@ -63,7 +72,13 @@ export function createClient<T extends object>(
                 metadata
               }
             });
-          });
+          }).pipe(
+            Effect.withSpan("signalgraph.publish", {
+              attributes: {
+                "signalgraph.message.name": exportIdentifier,
+              },
+            })
+          );
         }
       };
 

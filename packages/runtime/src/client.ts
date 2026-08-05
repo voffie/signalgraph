@@ -12,9 +12,18 @@ export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
 }
 
+interface MessageTraceContext { }
+
+export interface MessageMetadata {
+  readonly messageId: string;
+  readonly correlationId: string;
+  readonly traceContext?: MessageTraceContext;
+};
+
 export type UserHandler<P> = (
   ctx: {
     readonly payload: P;
+    readonly metadata: MessageMetadata;
   }
 ) => Effect.Effect<void>;
 
@@ -49,10 +58,18 @@ export function createClient<T extends object>(
 
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
-            yield* broker.deliver(
-              exportIdentifier,
-              encoded
-            );
+            const metadata = {
+              messageId: "temp",
+              correlationId: "temp"
+            };
+
+            yield* broker.deliver({
+              message: exportIdentifier,
+              data: {
+                payload: encoded,
+                metadata
+              }
+            });
           });
         }
       };
@@ -63,9 +80,9 @@ export function createClient<T extends object>(
             return Effect.sync(() => {
               const list = handlers.get(consumer.name) ?? [];
 
-              list.push((payload) =>
+              list.push((message) =>
                 Effect.gen(function* () {
-                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(payload).pipe(
+                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(message.payload).pipe(
                     Effect.mapError((cause) =>
                       new InvalidPayloadError({
                         message: "Incoming payload does not match defined message schema",
@@ -75,7 +92,8 @@ export function createClient<T extends object>(
                   );
 
                   return yield* handler({
-                    payload: decoded
+                    payload: decoded,
+                    metadata: message.metadata
                   });
                 })
               );

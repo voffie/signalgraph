@@ -1,6 +1,6 @@
 import { Effect, Layer, Queue, Schema, Scope } from "effect";
-import { Broker, type HandlerRegistry } from "@signalgraph/runtime/broker";
-import { ConnectionError, InitializationError, type MessageGraph } from "@signalgraph/runtime";
+import { Broker, type HandlerRegistry, type BrokerMessage } from "@signalgraph/runtime/broker";
+import { ConnectionError, InitializationError, type MessageGraph, type MessageMetadata } from "@signalgraph/runtime";
 import * as amqp from "amqplib";
 
 type RabbitMQOptions = {
@@ -47,14 +47,24 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           })
         ));
 
-      const deliver = (
-        message: string,
-        payload: unknown
-      ) => Effect.gen(function* () {
-        const json = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(payload);
+      const deliver = ({
+        message,
+        data
+      }: { message: string; data: BrokerMessage; }) => Effect.gen(function* () {
+        const json = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(data.payload);
 
         yield* Effect.sync(() =>
-          publishChannel.publish(message, "", Buffer.from(json, "utf-8"))
+          publishChannel.publish(
+            message,
+            "",
+            Buffer.from(json, "utf-8"),
+            {
+              messageId: data.metadata.messageId,
+              correlationId: data.metadata.correlationId,
+              headers: {
+                traceContext: data.metadata.traceContext
+              }
+            })
         );
       });
 
@@ -147,10 +157,19 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   Schema.UnknownFromJsonString
                 )(msg.content.toString("utf-8"));
 
+                const metadata: MessageMetadata = {
+                  messageId: msg.properties.messageId ?? "",
+                  correlationId: msg.properties.correlationId ?? "",
+                  traceContext: msg.properties.headers?.traceContext
+                };
+
                 const list = handlers.get(consumer.name) ?? [];
 
                 for (const handler of list) {
-                  yield* handler(payload);
+                  yield* handler({
+                    payload,
+                    metadata
+                  });
                 }
               }).pipe(
                 Effect.matchEffect({

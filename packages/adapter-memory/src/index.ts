@@ -1,14 +1,17 @@
 import { Effect, Layer } from "effect";
-import { Broker, type HandlerRegistry } from "@signalgraph/runtime/broker";
+import { Broker, type BrokerMessage, type HandlerRegistry } from "@signalgraph/runtime/broker";
 import type { MessageGraph } from "@signalgraph/runtime";
 
 export const MemoryBroker = Layer.sync(Broker, () => {
   let handlers: HandlerRegistry | undefined;
   let graph: MessageGraph | undefined;
 
-  const deliver = (
-    message: string,
-    payload: unknown
+  const deliver = ({
+    message,
+    data
+  }: {
+    message: string; data: BrokerMessage;
+  }
   ) => Effect.gen(function* () {
     const consumers = graph?.[message].consumers ?? [];
 
@@ -16,7 +19,10 @@ export const MemoryBroker = Layer.sync(Broker, () => {
       const list = handlers?.get(consumer.name) ?? [];
 
       for (const handler of list) {
-        yield* handler(payload);
+        yield* handler({
+          payload: data.payload,
+          metadata: data.metadata
+        });
       };
     }
   });

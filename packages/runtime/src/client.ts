@@ -9,6 +9,7 @@ import type { AnyMessage, Consumer } from "signalgraph";
 import { toPropertyName } from "signalgraph/internal";
 import { validateRuntime, validateConsumers } from "./validation.ts";
 import type { MessageMetadata } from "./metadata.ts";
+import { CurrentMessageMetadata } from "./references.ts";
 
 export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
@@ -99,10 +100,14 @@ export function createClient<T extends object>(
                     )
                   );
 
-                  return yield* handler({
-                    payload: decoded,
-                    metadata: message.metadata
-                  });
+                  return yield* Effect.provideService(
+                    handler({
+                      payload: decoded,
+                      metadata: message.metadata
+                    }),
+                    CurrentMessageMetadata,
+                    message.metadata
+                  );
                 })
               );
 

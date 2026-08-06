@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Random } from "effect";
 import type { SpanContext } from "@opentelemetry/api";
 import { CurrentMessageMetadata } from "./references.ts";
 import { currentOtelSpan } from "@effect/opentelemetry/OtelTracer";
@@ -9,12 +9,23 @@ export interface MessageMetadata {
   readonly traceContext?: SpanContext;
 };
 
+function generateMessageId() {
+  return Effect.gen(function* () {
+    const ts = Date.now().toString(36);
+
+    const a = Math.abs(yield* Random.nextInt).toString(36);
+    const b = Math.abs(yield* Random.nextInt).toString(36);
+
+    return `${ts}-${a}-${b}`;
+  });
+}
+
 export function createPublishMetadata() {
   return Effect.gen(function* () {
     const parent = yield* CurrentMessageMetadata;
     const span = yield* currentOtelSpan;
 
-    const messageId = "temp";
+    const messageId = yield* generateMessageId();
     const correlationId = parent?.correlationId ?? messageId;
 
     return {

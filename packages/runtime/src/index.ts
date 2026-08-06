@@ -7,7 +7,8 @@ export {
 } from "./client.ts";
 
 export {
-  type MessageMetadata
+  type MessageMetadata,
+  createConsumeMetadata
 } from "./metadata.ts";
 
 export * from "./errors.ts"

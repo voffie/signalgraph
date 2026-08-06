@@ -1,7 +1,13 @@
 import { Effect, Layer, Queue, Schema, Scope } from "effect";
 import { Broker, type HandlerRegistry, type BrokerMessage } from "@signalgraph/runtime/broker";
-import { ConnectionError, InitializationError, type MessageGraph, type MessageMetadata } from "@signalgraph/runtime";
+import {
+  ConnectionError,
+  InitializationError,
+  createConsumeMetadata,
+  type MessageGraph,
+} from "@signalgraph/runtime";
 import * as amqp from "amqplib";
+import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 
 type RabbitMQOptions = {
   url: string;
@@ -159,19 +165,43 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   Schema.fromJsonString(Schema.Unknown)
                 )(msg.content.toString("utf-8"));
 
-                const metadata: MessageMetadata = {
+                const metadata = createConsumeMetadata({
                   messageId: msg.properties.messageId ?? "",
                   correlationId: msg.properties.correlationId ?? "",
                   traceContext: msg.properties.headers?.traceContext
-                };
+                });
 
                 const list = handlers.get(consumer.name) ?? [];
 
-                for (const handler of list) {
-                  yield* handler({
-                    payload,
-                    metadata
-                  });
+                const dispatch = Effect.gen(function* () {
+                  for (const handler of list) {
+                    yield* handler({
+                      payload,
+                      metadata
+                    });
+                  }
+                }).pipe(
+                  Effect.withSpan("signalgraph.consume", {
+                    attributes: {
+                      "signalgraph.message.name": messageName,
+                      "signalgraph.consumer.name": consumer.name
+                    }
+                  }),
+                  Effect.tap(() =>
+                    Effect.annotateCurrentSpan({
+                      "signalgraph.message.id": metadata.messageId,
+                      "signalgraph.correlation.id": metadata.correlationId
+                    })
+                  )
+                );
+
+                if (metadata.traceContext) {
+                  yield* withSpanContext(
+                    dispatch,
+                    metadata.traceContext
+                  );
+                } else {
+                  yield* dispatch;
                 }
               }).pipe(
                 Effect.matchEffect({

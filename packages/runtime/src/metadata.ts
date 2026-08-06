@@ -35,3 +35,17 @@ export function createPublishMetadata() {
     };
   });
 }
+
+export function createConsumeMetadata(args: {
+  messageId: string;
+  correlationId: string;
+  traceContext?: SpanContext;
+}): MessageMetadata {
+  return {
+    messageId: args.messageId,
+    correlationId: args.correlationId,
+    ...(args.traceContext && {
+      traceContext: args.traceContext
+    })
+  };
+}

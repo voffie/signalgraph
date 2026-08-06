@@ -1,5 +1,4 @@
 import { Effect, Schema } from "effect";
-import { currentOtelSpan } from "@effect/opentelemetry/OtelTracer";
 import {
   Broker,
   type HandlerRegistry,
@@ -8,7 +7,7 @@ import { InvalidPayloadError } from "./errors.ts";
 import type { AnyMessage, Consumer } from "signalgraph";
 import { toPropertyName } from "signalgraph/internal";
 import { validateRuntime, validateConsumers } from "./validation.ts";
-import type { MessageMetadata } from "./metadata.ts";
+import { createPublishMetadata, type MessageMetadata } from "./metadata.ts";
 import { CurrentMessageMetadata } from "./references.ts";
 
 export interface RuntimeMessage<P> {
@@ -53,13 +52,7 @@ export function createClient<T extends object>(
 
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
-            const span = yield* currentOtelSpan;
-
-            const metadata: MessageMetadata = {
-              messageId: "temp",
-              correlationId: "temp",
-              traceContext: span.spanContext()
-            };
+            const metadata: MessageMetadata = yield* createPublishMetadata();
 
             yield* Effect.annotateCurrentSpan({
               "signalgraph.message.id": metadata.messageId,

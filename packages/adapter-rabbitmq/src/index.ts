@@ -51,7 +51,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         message,
         data
       }: { message: string; data: BrokerMessage; }) => Effect.gen(function* () {
-        const json = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(data.payload);
+        const json = yield* Schema.encodeEffect(
+          Schema.fromJsonString(Schema.Unknown)
+        )(data.payload);
 
         yield* Effect.sync(() =>
           publishChannel.publish(
@@ -154,7 +156,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
               yield* Effect.gen(function* () {
                 const payload = yield* Schema.decodeUnknownEffect(
-                  Schema.UnknownFromJsonString
+                  Schema.fromJsonString(Schema.Unknown)
                 )(msg.content.toString("utf-8"));
 
                 const metadata: MessageMetadata = {

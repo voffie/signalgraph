@@ -100,6 +100,15 @@ export function createClient<T extends object>(
                     }),
                     CurrentMessageMetadata,
                     message.metadata
+                  ).pipe(
+                    Effect.withSpan("signalgraph.handler", {
+                      attributes: {
+                        "signalgraph.consumer.name": consumer.name,
+                        "signalgraph.message.name": consumer.message.name,
+                        "signalgraph.message.id": message.metadata.messageId,
+                        "signalgraph.correlation.id": message.metadata.correlationId
+                      }
+                    })
                   );
                 })
               );

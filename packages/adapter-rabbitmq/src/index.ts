@@ -184,15 +184,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   Effect.withSpan("signalgraph.consume", {
                     attributes: {
                       "signalgraph.message.name": messageName,
-                      "signalgraph.consumer.name": consumer.name
-                    }
-                  }),
-                  Effect.tap(() =>
-                    Effect.annotateCurrentSpan({
+                      "signalgraph.consumer.name": consumer.name,
                       "signalgraph.message.id": metadata.messageId,
                       "signalgraph.correlation.id": metadata.correlationId
-                    })
-                  )
+                    }
+                  }),
                 );
 
                 if (metadata.traceContext) {

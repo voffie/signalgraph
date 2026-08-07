@@ -25,7 +25,9 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@signalgraph/runtime": "workspace:*"
+    "@signalgraph/runtime": "workspace:*",
+    "@effect/opentelemetry": "4.0.0-beta.103",
+    "@opentelemetry/api": "1.9.1"
   },
   "devDependencies": {
     "effect": "4.0.0-beta.103"

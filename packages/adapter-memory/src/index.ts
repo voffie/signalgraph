@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { Broker, type BrokerMessage, type HandlerRegistry } from "@signalgraph/runtime/broker";
-import type { MessageGraph } from "@signalgraph/runtime";
+import { createConsumeMetadata, type MessageGraph } from "@signalgraph/runtime";
+import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 
 export const MemoryBroker = Layer.sync(Broker, () => {
   let handlers: HandlerRegistry | undefined;
@@ -16,14 +17,45 @@ export const MemoryBroker = Layer.sync(Broker, () => {
     const consumers = graph?.[message].consumers ?? [];
 
     for (const consumer of consumers) {
+      const metadata = data.metadata.traceContext ?
+        createConsumeMetadata({
+          messageId: data.metadata.messageId,
+          correlationId: data.metadata.correlationId,
+          traceContext: data.metadata.traceContext
+        }) : createConsumeMetadata({
+          messageId: data.metadata.messageId,
+          correlationId: data.metadata.correlationId,
+        });
+
       const list = handlers?.get(consumer.name) ?? [];
 
-      for (const handler of list) {
-        yield* handler({
-          payload: data.payload,
-          metadata: data.metadata
-        });
-      };
+      const dispatch = Effect.forEach(
+        list,
+        (handler) =>
+          handler({
+            payload: data.payload,
+            metadata
+          }),
+        { discard: true }
+      ).pipe(
+        Effect.withSpan("signalgraph.consume", {
+          attributes: {
+            "signalgraph.message.name": message,
+            "signalgraph.consumer.name": consumer.name,
+            "signalgraph.message.id": metadata.messageId,
+            "signalgraph.correlation.id": metadata.correlationId
+          }
+        })
+      );
+
+      if (metadata.traceContext) {
+        yield* withSpanContext(
+          dispatch,
+          metadata.traceContext
+        );
+      } else {
+        yield* dispatch;
+      }
     }
   });
 

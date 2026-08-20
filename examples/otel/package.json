@@ -1,0 +1,24 @@
+{
+  "name": "@signalgraph/otel-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "signalgraph generate",
+    "consume": "tsx src/handlers.ts",
+    "send": "tsx src/publish.ts"
+  },
+  "dependencies": {
+    "effect": "4.0.0-beta.103",
+    "signalgraph": "workspace:*",
+    "@signalgraph/runtime": "workspace:*",
+    "@signalgraph/adapter-rabbitmq": "workspace:*",
+    "@effect/opentelemetry": "4.0.0-beta.103",
+    "@opentelemetry/sdk-trace-base": "2.10.0",
+    "@opentelemetry/sdk-trace-node": "2.10.0",
+    "@opentelemetry/api-logs": "0.221.0",
+    "@opentelemetry/sdk-logs": "0.221.0",
+    "@opentelemetry/sdk-metrics": "2.10.0",
+    "@opentelemetry/sdk-trace-web": "2.10.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.221.0"
+  }
+}

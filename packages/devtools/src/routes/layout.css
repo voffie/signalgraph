@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #050508;
+  --color-surface: #08080f;
+  --color-panel: #0c0c18;
+  --color-card: #111126;
+  --color-border_hi: rgba(255, 255, 255, 0.10);
+  --color-border: rgba(255, 255, 255, 0.055);
+  --color-accent: #7c6fe0;
+  --color-msg_c: #4f8ef7;
+  --color-text: #e2e2ee;
+  --color-text2: #8080a0;
+  --color-muted: #3d3d58;
+
+  --nw: 172;
+  --nh: 76;
+}
+
+@keyframes edge-flow {
+  from {
+    stroke-dashoffset: 20;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse-live {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes node-select-ring {
+  0% {
+    opacity: 0.7;
+    r: 6;
+  }
+
+  100% {
+    opacity: 0;
+    r: 18;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.edge-anim {
+  animation: edge-flow 2s linear infinite;
+}
+
+.live-dot {
+  animation: pulse-live 1.4s ease-in-out infinite;
+}
+
+.insp-panel {
+  animation: slide-in 0.14s ease;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 3px;
+}

@@ -4,7 +4,6 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     broker: "src/broker.ts",
-    telemetry: "src/telemetry/index.ts"
   },
   format: ["esm"],
   platform: "node",

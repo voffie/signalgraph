@@ -6,7 +6,7 @@ import type {
 export interface SignalGraphSpan {
   readonly traceId: string;
   readonly spanId: string;
-  readonly parentSpanId?: string;
+  readonly parentSpanId: string;
 
   readonly name: string;
   readonly kind: SpanKind;
@@ -19,6 +19,6 @@ export interface SignalGraphSpan {
 
   readonly status: {
     readonly code: SpanStatusCode;
-    readonly message?: string;
+    readonly message: string;
   };
 }

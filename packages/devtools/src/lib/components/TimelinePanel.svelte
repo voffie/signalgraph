@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { TraceSpan } from "$lib/domain/types";
-  import { TEXT, TEXT2, MUTED } from "$lib/tokens";
   import { fmtMs } from "$lib/utils";
 
   let {
@@ -104,31 +103,25 @@
   }
 </script>
 
-<div style="background:#07070d;padding:10px 20px 14px">
-  <div
-    style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"
-  >
+<div class="bg-[#07070d] pt-2.5 px-5 pb-3.5">
+  <div class="flex items-center justify-between mb-2.5">
     <span
-      style={`font-size:10px;font-family:'JetBrains Mono', monospace;color:${TEXT2};letter-spacing:0.06em`}
+      class="text-[10px] font-['JetBrains_Mono'] text-text2 tracking-[0.06em]"
     >
       TRACE · {traceId}
     </span>
 
-    <span
-      style={`font-size:10px;font-family:'JetBrains Mono', monospace;color:${MUTED}`}
-    >
+    <span class="text-[10px] font-['JetBrains_Mono'] text-muted">
       {spans.length} spans
     </span>
   </div>
 
   {#if spans.length === 0}
-    <div
-      style={`font-size:11px;font-family:'JetBrains Mono', monospace;color:${MUTED};padding:8px 0`}
-    >
+    <div class="text-[11px] font-['JetBrains_Mono'] text-muted py-2 px-0">
       No spans recorded.
     </div>
   {:else}
-    <div style="display:flex;flex-direction:column;gap:4px">
+    <div class="flex flex-col gap-1">
       {#each spans as span (span.spanId)}
         {@const position = getSpanPosition(span)}
         {@const sel = selectedSpanId === span.spanId}
@@ -145,24 +138,26 @@
           role="button"
           tabindex="0"
           title={`${label} — ${fmtMs(span.endTime - span.startTime)}`}
-          style="display:flex;align-items:center;gap:10px;cursor:pointer"
+          class="flex items-center gap-2.5 cursor-pointer"
         >
           <span
-            style={`font-size:10px;font-family:'JetBrains Mono', monospace;width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${sel ? TEXT : TEXT2};font-weight:${sel ? 600 : 400};transition:color 0.14s, font-weight 0.14s`}
+            class={`text-[10px] font-['JetBrains_Mono'] w-32.5 shrink-0 overflow-hidden text-ellipsis whitespace-nowrap ${sel ? "text-text font-semibold" : "text-text2 font-normal"}`}
+            style={`transition:color 0.14s, font-weight 0.14s`}
           >
             {label}
           </span>
 
-          <div style="flex:1;position:relative;height:20px;min-width:0">
+          <div class="flex-1 relative h-5 min-w-0">
             <div
-              style="position:absolute;inset:2px 0;background:rgba(255, 255, 255,0.018);border-radius:3px"
+              class="absolute inset-y-0.5 inset-x-0 bg-white/2 rounded-[3px]"
             ></div>
 
             <div
-              style={`position:absolute;top:2px;bottom:2px;left:${position.left}%;width:${position.width}%;background:${sel ? "rgba(124,111,224,0.25)" : "rgba(124,111,224,0.10)"};border:1px solid ${sel ? "rgba(124,111,224,0.8)" : "rgba(124,111,224,0.35)"};border-radius:3px;overflow:hidden;display:flex;align-items:center;padding-left:5px;box-sizing:border-box;transition:background 0.14s, border-color 0.14s`}
+              class={`absolute top-0.5 bottom-0.5 border ${sel ? "bg-accent/25 border-accent/80" : "bg-accent/10 border-accent/35"} rounded-[3px] overflow-hidden flex items-center pl-1.25 box-border transition-colors`}
+              style={`left:${position.left}%;width:${position.width}%`}
             >
               <span
-                style={`font-size:9px;font-family:'JetBrains Mono', monospace;color:${sel ? "#7c6fe0" : "rgba(124,111,224,0.6)"};white-space:nowrap`}
+                class={`text-[9px] font-['JetBrains_Mono'], ${sel ? "text-accent" : "text-accent/60"} whitespace-nowrap`}
               >
                 {fmtMs(span.endTime - span.startTime)}
               </span>
@@ -173,12 +168,11 @@
     </div>
 
     <!-- Time axis -->
-    <div
-      style="display:flex;margin-top:6px;margin-left:140px;position:relative;height:14px"
-    >
+    <div class="flex mt-1.5 ml-35 relative h-3.5">
       {#each [0, 0.25, 0.5, 0.75, 1] as pct (pct)}
         <div
-          style={`position:absolute;left:${pct * 100}%;font-size:9px;font-family:'JetBrains Mono', monospace;color:${MUTED};transform:translateX(-50%)`}
+          class={`absolute text-[9px] font-['JetBrains_Mono'] text-muted -translate-x-1/2`}
+          style={`left:${pct * 100}%;transform:translateX(-50%)`}
         >
           {formatTimelineOffset(pct * traceDuration)}
         </div>

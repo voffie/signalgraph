@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { InspTab } from "$lib/types";
   import type { GraphNode } from "$lib/domain/types";
-  import { SC, ACCENT, BORDER, TEXT, TEXT2, MUTED } from "$lib/tokens";
 
   let {
     node,
@@ -106,8 +105,7 @@
           {t.label}
           {#if t.badge !== undefined}
             <span
-              class=""
-              style={`font-size:9px;background:${SC.error};color:#fff;border-radius:8px;padding:0 4px;line-height:14px`}
+              class="text-[9px] bg-red-500 text-white rounded-lg py-0 px-1 leading-3.5"
             >
               {t.badge}
             </span>
@@ -117,19 +115,17 @@
     </div>
 
     <!-- Tab body -->
-    <div style="flex:1;overflow:auto;padding:12px 14px">
+    <div class="flex-1 overflow-auto py-3 px-3.5">
       <!-- ── Overview ── -->
       {#if tab === "overview"}
-        <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="flex flex-col gap-2.5">
           {#each overviewRows as row (row.label)}
             <div
-              style={`display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid ${BORDER}`}
+              class="flex justify-between items-center gap-2 py-1.25 px-0 border-b border-b-border"
             >
-              <span style={`font-size:11px;color:${TEXT2};flex-shrink:0`}
-                >{row.label}</span
-              >
+              <span class="text-[11px] text-text2 shrink-0">{row.label}</span>
               <span
-                style={`font-size:11px;font-family:'JetBrains Mono', monospace;color:${TEXT};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:58%`}
+                class="text-[11px] font-['JetBrains_Mono'] text-text overflow-hidden text-ellipsis whitespace-nowrap max-w-[58%]"
                 title={row.value}
               >
                 {row.value}
@@ -143,7 +139,7 @@
       {#if tab === "attributes"}
         <div>
           {#if node.attributes.length > 0}
-            <div style="display:flex;flex-direction:column">
+            <div class="flex flex-col">
               {#each node.attributes as attribute, i (attribute.key)}
                 {@const isTrace =
                   attribute.key.includes("trace_id") ||
@@ -151,15 +147,15 @@
                 {@const isErr =
                   attribute.key === "error" && attribute.value === "true"}
                 <div
-                  style={`display:grid;grid-template-columns:46% 54%;padding:5px 0;gap:6px;border-bottom:${i < node.attributes.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"};font-size:11px;font-family:'JetBrains Mono', monospace`}
+                  class={`grid grid-cols-[46%_54%] py-1.25 px-0 gap-1.5 ${i < node.attributes.length - 1 ? "border-b border-b-white/4" : ""} text-[11px] font-['JetBrains_Mono']`}
                 >
                   <span
-                    style="color:{MUTED};overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                    class="text-muted overflow-hidden text-ellipsis whitespace-nowrap"
                   >
                     {formatAttributeKey(attribute.key)}
                   </span>
                   <span
-                    style={`color:${isErr ? SC.error : isTrace ? ACCENT : TEXT};overflow:hidden;text-overflow:ellipsis;white-space:nowrap`}
+                    class={`${isErr ? "text-red-500" : isTrace ? "text-accent" : "text-text"} overflow-hidden text-ellipsis whitespace-nowrap`}
                     title={attribute.value}
                   >
                     {attribute.value}
@@ -168,9 +164,7 @@
               {/each}
             </div>
           {:else}
-            <p style={`font-size:12px;color:${TEXT2}`}>
-              No span attributes recorded.
-            </p>
+            <p class="text-xs text-text2">No span attributes recorded.</p>
           {/if}
         </div>
       {/if}

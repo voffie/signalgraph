@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ACCENT, MSG_C, NW, NH, TEXT, TEXT2 } from "$lib/tokens";
+  import { ACCENT, MSG_C, NW, NH } from "$lib/tokens";
   import type { PositionedGraphNode } from "$lib/types";
 
   let {
@@ -23,7 +23,6 @@
   const isMsg = $derived(node.kind === "message");
   const kindC = $derived(isMsg ? MSG_C : ACCENT);
 
-  const fillBase = "#0a0718";
   const fillSel = $derived(
     isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)",
   );
@@ -45,7 +44,7 @@
 </script>
 
 <g
-  class="graph-node"
+  class={`graph-node cursor-pointer ${dimmed ? "opacity-10" : "opacity-100"}`}
   transform={`translate(${node.x},${node.y})`}
   filter={glowFilter}
   onclick={onClick}
@@ -54,7 +53,7 @@
   role="button"
   tabindex="0"
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-  style={`cursor:pointer;opacity:${dimmed ? 0.1 : 1};transition:opacity 0.15s`}
+  style={`transition:opacity 0.15s`}
 >
   <!-- Hover ring -->
   {#if hovered && !selected}
@@ -78,7 +77,7 @@
     width={NW}
     height={NH}
     rx={9}
-    fill={selected ? fillSel : fillBase}
+    fill={selected ? fillSel : "#0a0718"}
     {stroke}
     stroke-width={sw}
     style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s"
@@ -134,7 +133,7 @@
     y={21}
     font-size={7.5}
     font-family="'JetBrains Mono', monospace"
-    fill={TEXT2}
+    fill="var(--color-text2)"
     letter-spacing="0.09em"
   >
     {isMsg ? "MESSAGE" : "HANDLER"}
@@ -147,7 +146,7 @@
     font-size={13}
     font-family="'Inter', sans-serif"
     font-weight={600}
-    fill={TEXT}
+    fill="var(--color-text)"
   >
     {node.label}
   </text>

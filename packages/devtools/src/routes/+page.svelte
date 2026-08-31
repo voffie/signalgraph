@@ -1,18 +1,7 @@
 <script lang="ts">
   import type { InspTab, SearchField } from "$lib/types";
   import type { Trace, TraceSpan } from "$lib/domain/types";
-  import {
-    BG,
-    SURFACE,
-    PANEL,
-    BORDER_HI,
-    BORDER,
-    ACCENT,
-    MSG_C,
-    TEXT,
-    TEXT2,
-    MUTED,
-  } from "$lib/tokens";
+  import { ACCENT, MSG_C, MUTED } from "$lib/tokens";
   import { buildNmap, matchSearch } from "$lib/utils";
   import EdgeEl from "$lib/components/EdgeEl.svelte";
   import NodeEl from "$lib/components/NodeEl.svelte";
@@ -487,16 +476,14 @@
   </main>
 {:else if graph}
   <div
-    style={`display:flex;flex-direction:column;height:100vh;width:100vw;background:${BG};color:${TEXT};overflow:hidden;font-family:'Inter', sans-serif`}
+    class="flex flex-col h-screen w-screen bg-bg text-text overflow-hidden font-sans"
   >
     <!-- ══ Header ══════════════════════════════════════════════════════════ -->
     <header
-      style={`height:52px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;background:${PANEL};border-bottom:1px solid ${BORDER_HI};z-index:20`}
+      class="h-13 shrink-0 flex items-center gap-3 py-0 px-3.5 bg-panel border-b border-border_hi z-20"
     >
       <!-- Wordmark -->
-      <div
-        style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-right:4px"
-      >
+      <div class="flex items-center gap-2 shrink-0 mr-1">
         <svg width={18} height={18} viewBox="0 0 20 20" fill="none">
           <circle cx={10} cy={10} r={2.8} fill={ACCENT} />
           <circle cx={3} cy={5} r={1.6} fill={ACCENT} opacity={0.5} />
@@ -510,13 +497,11 @@
             opacity={0.45}
           />
         </svg>
-        <span
-          style={`font-size:13.5px;font-weight:600;letter-spacing:-0.02em;color:${TEXT}`}
-        >
+        <span class="text-[13.5px] font-semibold tracking-tight text-text">
           SignalGraph
         </span>
         <span
-          style={`font-size:9px;font-family:'JetBrains Mono', monospace;background:${ACCENT}20;color:${ACCENT};padding:1px 6px;border-radius:3px;letter-spacing:0.06em;border:1px solid ${ACCENT}35`}
+          class="text-[9px] font-['JetBrains_Mono'] bg-accent/20 text-accent py-px px-1.5 rounded-[3px] tracking-[0.06em] border border-accent/35"
         >
           OTEL
         </span>
@@ -524,19 +509,18 @@
 
       <!-- Search with field selector -->
       <div
-        style={`flex:1;max-width:480px;display:flex;align-items:stretch;background:rgba(255,255,255,0.04);border:1px solid ${BORDER_HI};border-radius:8px;overflow:hidden;height:34px`}
+        class="flex-1 max-w-120 flex items-stretch bg-white/0.04 border border-border_hi rounded-lg overflow-hidden h-8.5"
       >
         <select
+          id="search-type"
           bind:value={searchField}
-          style={`background:rgba(255,255,255,0.06);border:none;border-right:1px solid ${BORDER_HI};color:${TEXT2};padding:0 10px;font-size:10.5px;font-family:'JetBrains Mono', monospace;outline:none;cursor:pointer;flex-shrink:0;min-width:80px;max-width:90px`}
+          class="bg-white/0.06 border-none border-r border-r-border_hi text-text2 py-0 px-2.5 text-[10.5px] font-['JetBrains_Mono'] outline-none cursor-pointer shrink-0 min-w-20 max-w-22.5"
         >
           {#each searchFields as f (f.value)}
             <option value={f.value}>{f.label}</option>
           {/each}
         </select>
-        <div
-          style="display:flex;align-items:center;flex:1;padding:0 10px;gap:7px"
-        >
+        <div class="flex items-center flex-1 py-0 px-2.5 gap-1.75">
           <svg
             width={13}
             height={13}
@@ -549,20 +533,21 @@
             <circle cx={11} cy={11} r={8} /><path d="m21 21-4.35-4.35" />
           </svg>
           <input
+            id="search"
             type="text"
             placeholder="Search nodes, message IDs, trace IDs..."
             bind:value={search}
-            style={`background:none;border:none;outline:none;font-size:12.5px;color:${TEXT};flex:1;font-family:'Inter', sans-serif`}
+            class="bg-none border-none outline-none text-[12.5px] text-text flex-1 font-sans"
           />
           {#if search}
             <span
-              style={`font-size:10px;font-family:'JetBrains Mono', monospace;color:${matchCount > 0 ? ACCENT : "#f59e0b"};flex-shrink:0`}
+              class={`text-[10px] font-['JetBrains_Mono'] ${matchCount > 0 ? "text-accent" : "text-[#f59e0b]"}`}
             >
               {matchCount} match{matchCount !== 1 ? "es" : ""}
             </span>
             <button
               onclick={() => (search = "")}
-              style={`background:none;border:none;cursor:pointer;color:${MUTED};padding:0;font-size:18px;line-height:1;flex-shrink:0`}
+              class="bg-none border-none cursor-pointer text-muted p-0 text-[18px] leading-none shrink-0"
             >
               ×
             </button>
@@ -603,15 +588,15 @@
     </header>
 
     <!-- ══ Body ════════════════════════════════════════════════════════════ -->
-    <div style="display:flex;flex:1;min-height:0">
+    <div class="flex flex-1 min-h-0">
       <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
       <nav
-        style={`width:48px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:3px;background:${PANEL};border-right:1px solid ${BORDER_HI}`}
+        class="w-12 shrink-0 flex flex-col items-center py-2.5 px-0 gap-0.75 bg-panel border-r border-r-border_hi"
       >
         {#each navItems as item (item.title)}
           <button
             title={item.title}
-            style={`width:36px;height:36px;border-radius:8px;background:${item.active ? `${ACCENT}18` : "transparent"};border:1px solid ${item.active ? `${ACCENT}38` : "transparent"};cursor:pointer;display:flex;align-items:center;justify-content:center;color:${item.active ? ACCENT : MUTED};transition:all 0.15s`}
+            class={`size-9 rounded-lg border ${item.active ? "bg-accent/18 border-accent/38 text-accent" : "bg-transparent border-transparent text-muted"} cursor-pointer flex items-center justify-center transition-all`}
           >
             {@html item.icon}
           </button>
@@ -621,46 +606,40 @@
       <!-- ── Graph canvas ─────────────────────────────────────────────────── -->
       <main
         bind:this={canvasEl}
-        style={`flex:1;min-width:0;position:relative;overflow:hidden;background:${SURFACE}`}
+        class="flex-1 min-w-0 relative overflow-hidden bg-surface"
       >
         {#if hasGraphNodes}
           <!-- Toolbar -->
-          <div
-            style="position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:4px;align-items:center"
-          >
+          <div class="absolute top-3 left-3 z-10 flex gap-1 items-center">
             {#each zoomButtons as b (b.l)}
               <button
                 onclick={b.fn}
                 title={b.tip}
-                style={`width:28px;height:28px;border-radius:6px;background:${PANEL};border:1px solid ${BORDER_HI};cursor:pointer;color:${TEXT2};font-size:14px;display:flex;align-items:center;justify-content:center;transition:background 0.14s`}
+                class="size-7 rounded-md bg-panel border border-border_hi cursor-pointer text-text2 text-[14px] flex items-center justify-center"
+                style={`transition:background 0.14s`}
               >
                 {b.l}
               </button>
             {/each}
-            <span
-              style={`font-size:10px;font-family:'JetBrains Mono', monospace;color:${MUTED};margin-left:4px`}
-            >
+            <span class="text-[10px] font-['JetBrains_Mono'] text-muted ml-1">
               {Math.round(transform.scale * 100)}%
             </span>
           </div>
 
           <!-- Legend -->
           <div
-            style={`position:absolute;bottom:12px;left:12px;z-index:10;display:flex;gap:14px;align-items:center;background:${PANEL}f0;backdrop-filter:blur(12px);border:1px solid ${BORDER_HI};border-radius:8px;padding:7px 14px`}
+            class="absolute bottom-3 left-3 z-10 flex gap-3.5 items-center bg-panel/94 backdrop-blur-md border border-border_hi rounded-lg py-1.75 px-3.5"
           >
             <span
-              style={`display:flex;align-items:center;gap:6px;font-size:10px;font-family:'JetBrains Mono', monospace;color:${TEXT2}`}
+              class="flex items-center gap-1.5 text-[10px] font-['JetBrains_Mono'] text-text2"
             >
-              <span
-                style={`width:8px;height:8px;background:${MSG_C};display:inline-block;transform:rotate(45deg)`}
-              ></span>
+              <span class="size-2 bg-msg_c inline-block rotate-45"></span>
               Message
             </span>
             <span
-              style={`display:flex;align-items:center;gap:6px;font-size:10px;font-family:'JetBrains Mono', monospace;color:${TEXT2}`}
+              class="flex items-center gap-1.5 text-[10px] font-['JetBrains_Mono'] text-text2"
             >
-              <span
-                style={`font-size:10px;color:${ACCENT};font-family:'JetBrains Mono', monospace`}
+              <span class="text-[10px] text-accent font-['JetBrains_Mono']"
                 >{"{ }"}</span
               >
               Handler
@@ -672,7 +651,7 @@
             <button
               onclick={() => (inspCollapsed = false)}
               title="Open Inspector"
-              style={`position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:10;width:20px;height:52px;background:${PANEL};border:1px solid ${BORDER_HI};border-right:none;border-radius:7px 0 0 7px;cursor:pointer;color:${TEXT2};display:flex;align-items:center;justify-content:center;padding:0`}
+              class="absolute right-0 top-[50%] translate-y-[-50%] z-10 w-5 h-13 bg-panel border border-border_hi border-r-0 rounded-tl-[7px] rounded-bl-[7px] cursor-pointer text-text2 flex items-center justify-center p-0"
             >
               <svg width={9} height={9} viewBox="0 0 10 10">
                 <path
@@ -689,7 +668,7 @@
           <!-- SVG graph -->
           <svg
             bind:this={svgEl}
-            style={`width:100%;height:100%;display:block;cursor:${panning ? "grabbing" : "grab"};user-select:none;-webkit-user-select:none`}
+            class={`size-full block ${panning ? "cursor-grabbing" : "cursor-grab"} select-none`}
             onpointerdown={onPointerDown}
             onpointermove={onPointerMove}
             onpointerup={onPointerUp}
@@ -830,24 +809,23 @@
       <!-- ── Inspector ────────────────────────────────────────────────────── -->
       {#if hasGraphNodes}
         <aside
-          style={`width:${inspCollapsed ? 0 : 298}px;flex-shrink:0;overflow:hidden;background:${PANEL};border-left:1px solid ${BORDER_HI};display:flex;flex-direction:column;transition:width 0.25s cubic-bezier(0.4,0,0.2,1)`}
+          class={`${inspCollapsed ? "w-0" : "w-74.5"} shrink-0 overflow-hidden bg-panel border-l border-l-border_hi flex flex-col`}
+          style={`transition:width 0.25s cubic-bezier(0.4,0,0.2,1)`}
         >
-          <div
-            style="width:298px;display:flex;flex-direction:column;height:100%"
-          >
+          <div class="w-74.5 flex flex-col h-full">
             <!-- Inspector header -->
             <div
-              style={`padding:0 14px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${BORDER}`}
+              class="py-0 px-3.5 h-10 shrink-0 flex items-center justify-between border-b border-b-border"
             >
               <span
-                style={`font-size:9.5px;font-family:'JetBrains Mono', monospace;color:${MUTED};letter-spacing:0.09em`}
+                class="text-[9.5px] font-['JetBrains_Mono'] text-muted tracking-[0.09em]"
               >
                 INSPECTOR
               </span>
               <button
                 onclick={() => (inspCollapsed = true)}
                 title="Collapse inspector"
-                style={`background:none;border:none;cursor:pointer;color:${MUTED};display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:4px;font-size:10px;font-family:'JetBrains Mono', monospace;transition:color 0.14s`}
+                class="bg-none border-none cursor-pointer text-muted flex items-center gap-1 py-0.5 px-1 rounded-sm text-[10px] font-['JetBrains_Mono'] transition-colors"
               >
                 <svg width={12} height={12} viewBox="0 0 12 12">
                   <path
@@ -861,9 +839,7 @@
               </button>
             </div>
 
-            <div
-              style="flex:1;overflow:hidden;display:flex;flex-direction:column"
-            >
+            <div class="flex-1 overflow-hidden flex flex-col">
               <InspectorPanel
                 node={selected}
                 tab={inspTab}
@@ -877,16 +853,17 @@
 
     <!-- ══ Timeline ════════════════════════════════════════════════════════ -->
     {#if hasGraphNodes}
-      <div style="flex-shrink:0">
+      <div class="shrink-0">
         <button
           onclick={() => (timelineOpen = !timelineOpen)}
-          style={`display:flex;align-items:center;gap:8px;width:100%;padding:5px 18px;background:${PANEL};border-top:1px solid ${BORDER_HI};border:none;cursor:pointer;text-align:left;font-size:9.5px;font-family:'JetBrains Mono', monospace;color:${TEXT2};letter-spacing:0.07em`}
+          class="flex items-center gap-2 w-full py-1.25 px-4.5 bg-panel border-t border-t-border_hi border-none cursor-pointer text-left text-[9.5px] font-['JetBrains_Mono'] text-text2 tracking-[0.07em]"
         >
           <svg
             width={12}
             height={12}
             viewBox="0 0 12 12"
-            style={`transform:rotate(${timelineOpen ? 0 : 180}deg);transition:transform 0.2s cubic-bezier(0.4,0,0.2,1);flex-shrink:0`}
+            class={`${timelineOpen ? "rotate-0" : "rotate-180"} shrink-0`}
+            style="transition:transform 0.2s cubic-bezier(0.4,0,0.2,1)"
           >
             <path
               d="M 2 8 L 6 4 L 10 8"
@@ -900,7 +877,8 @@
         </button>
 
         <div
-          style={`overflow:scroll;max-height:${timelineOpen ? 210 : 0}px;transition:max-height 0.24s cubic-bezier(0.4,0,0.2,1)`}
+          class={`overflow-scroll ${timelineOpen ? "max-h-52.5" : "max-h-0"}`}
+          style="transition:max-height 0.24s cubic-bezier(0.4,0,0.2,1)"
         >
           <TimelinePanel
             spans={graph.traceSpans}

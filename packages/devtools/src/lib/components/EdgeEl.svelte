@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { GraphEdge } from "$lib/domain/types";
-  import { ACCENT } from "$lib/tokens";
   import type { PositionedGraphNode } from "$lib/types";
   import { epath } from "$lib/utils";
 
@@ -25,7 +24,6 @@
 
   const baseStroke = "rgba(124,111,224,0.2)";
   const hlStroke = "rgba(124,111,224,0.55)";
-  const flowColor = ACCENT;
   const markId = $derived(`arr-${edge.id}`);
 
   const sw = $derived(hovered ? 2.5 : 1.5);
@@ -50,7 +48,7 @@
     <path
       {d}
       fill="none"
-      stroke={flowColor}
+      stroke="var(--color-accent)"
       stroke-width={hovered ? 1.5 : 1}
       stroke-dasharray="5 16"
       class="edge-anim"
@@ -61,7 +59,7 @@
     <!-- Live particle -->
     <circle
       r={2.5}
-      fill={flowColor}
+      fill="var(--color-accent)"
       opacity={hovered ? 0.9 : 0.5}
       style="transition: opacity 0.18s"
     >

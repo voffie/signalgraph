@@ -7,7 +7,9 @@ import {
   OrderCompleted,
   Analytics,
   Billing,
-  Shipping
+  Shipping,
+  RetryingAnalytics,
+  DlqAnalytics
 } from "./schema.ts";
 
 export type OrderCreatedPayload = { readonly "orderId": number; };
@@ -22,16 +24,18 @@ export type Client =
     analytics: RuntimeConsumer<OrderCreatedPayload>;
     billing: RuntimeConsumer<OrderCreatedPayload>;
     shipping: RuntimeConsumer<OrderCompletedPayload>;
+    retryingAnalytics: RuntimeConsumer<OrderCreatedPayload>;
+    dlqAnalytics: RuntimeConsumer<OrderCompletedPayload>;
   };
 
 const messageGraph = {
   "order.created": {
     definition: OrderCreated,
-    consumers: [Analytics, Billing]
+    consumers: [Analytics, Billing, RetryingAnalytics]
   },
   "order.completed": {
     definition: OrderCompleted,
-    consumers: [Shipping]
+    consumers: [Shipping, DlqAnalytics]
   }
 } satisfies MessageGraph;
 

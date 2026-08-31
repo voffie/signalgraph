@@ -1,10 +1,30 @@
-import { Effect, Layer, Queue, Schema, Scope } from "effect";
+import { Duration, Effect, Layer, Queue, Schema, Scope } from "effect";
 import { Broker, type HandlerRegistry } from "@signalgraph/runtime/broker";
 import { ConnectionError, InitializationError, type MessageGraph } from "@signalgraph/runtime";
+import type { RetryPolicy } from "signalgraph";
 import * as amqp from "amqplib";
 
 type RabbitMQOptions = {
   url: string;
+};
+
+const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
+
+function retryDelay(policy: RetryPolicy, attempt: number) {
+  switch (policy.type) {
+    case "fixed":
+      return Math.round(Duration.toMillis(policy.delay));
+
+    case "exponential":
+      const delay = Math.round(Duration.toMillis(policy.initialDelay)) *
+        Math.pow(policy.factor ?? 2, attempt - 1);
+
+      if (policy.maxDelay === undefined) {
+        return delay;
+      } else {
+        return Math.min(delay, Math.round(Duration.toMillis(policy.maxDelay)));
+      }
+  }
 };
 
 export function RabbitMQBroker(options: RabbitMQOptions) {
@@ -33,17 +53,17 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       const publishChannel = yield* Effect.acquireRelease(
         Effect.tryPromise({
-          try: () => conn.createChannel(),
+          try: () => conn.createConfirmChannel(),
           catch: (cause) => new ConnectionError({
             cause,
             message: "Failed to create connection to channel"
           })
         }),
-        (connection) => Effect.promise(() => connection.close())
+        (channel) => Effect.promise(() => channel.close())
       ).pipe(
-        Effect.tap((connection) =>
+        Effect.tap((channel) =>
           Effect.sync(() => {
-            connection.on("close", () => console.log("RabbitMQ publish channel connection closed"));
+            channel.on("close", () => console.log("RabbitMQ publish channel connection closed"));
           })
         ));
 
@@ -51,11 +71,27 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         message: string,
         payload: unknown
       ) => Effect.gen(function* () {
-        const json = yield* Schema.encodeEffect(Schema.UnknownFromJsonString)(payload);
+        const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(payload);
 
         yield* Effect.sync(() =>
-          publishChannel.publish(message, "", Buffer.from(json, "utf-8"))
+          publishChannel.publish(
+            message,
+            "",
+            Buffer.from(json, "utf-8"),
+            {
+              contentType: "application/json",
+              persistent: true
+            }
+          )
         );
+
+        yield* Effect.tryPromise({
+          try: () => publishChannel.waitForConfirms(),
+          catch: (cause) => new ConnectionError({
+            cause,
+            message: "Failed to confirm published message"
+          })
+        });
       });
 
       const start = ({
@@ -124,6 +160,41 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               })
             });
 
+            if (consumer.retry !== undefined) {
+              for (let attempt = 1; attempt < consumer.retry.maxAttempts; attempt++) {
+                const delay = retryDelay(consumer.retry, attempt);
+
+                const queue = `${consumer.name}.retry.${attempt + 1}`;
+
+                yield* Effect.tryPromise({
+                  try: () =>
+                    consumerChannel.assertQueue(queue, {
+                      durable: true,
+                      deadLetterExchange: "",
+                      deadLetterRoutingKey: consumer.name,
+                      messageTtl: delay
+                    }),
+                  catch: (cause) => new InitializationError({
+                    cause,
+                    message: `Failed to create retry queue "${queue}"`
+                  })
+                });
+              }
+            }
+
+            if (consumer.dlq === true) {
+              yield* Effect.tryPromise({
+                try: () =>
+                  consumerChannel.assertQueue(`${consumer.name}.dlq`, {
+                    durable: true,
+                  }),
+                catch: (cause) => new InitializationError({
+                  cause,
+                  message: `Failed to create DLQ "${consumer.name}.dlq"`
+                })
+              });
+            }
+
             const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
 
             yield* Effect.tryPromise({
@@ -144,7 +215,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
               yield* Effect.gen(function* () {
                 const payload = yield* Schema.decodeUnknownEffect(
-                  Schema.UnknownFromJsonString
+                  Schema.fromJsonString(Schema.Unknown)
                 )(msg.content.toString("utf-8"));
 
                 const list = handlers.get(consumer.name) ?? [];
@@ -154,8 +225,104 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 }
               }).pipe(
                 Effect.matchEffect({
-                  onSuccess: () => Effect.sync(() => consumerChannel.ack(msg)),
-                  onFailure: () => Effect.sync(() => consumerChannel.nack(msg))
+                  onSuccess: () => {
+                    consumerChannel.ack(msg);
+
+                    if (consumer.hooks?.onSuccess) {
+                      return consumer.hooks.onSuccess({
+                        messageId: msg.properties.messageId
+                      });
+                    }
+
+                    return Effect.void;
+                  },
+                  onFailure: (cause) => Effect.gen(function* () {
+                    const nextAttempt = (
+                      msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1
+                    ) + 1;
+
+                    if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
+                      yield* Effect.sync(() => publishChannel.publish(
+                        "",
+                        `${consumer.name}.retry.${nextAttempt}`,
+                        msg.content,
+                        {
+                          ...msg.properties,
+                          persistent: true,
+                          headers: {
+                            ...msg.properties.headers,
+                            [RETRY_ATTEMPT_HEADER]: nextAttempt
+                          }
+                        }
+                      ));
+
+                      yield* Effect.tryPromise({
+                        try: () => publishChannel.waitForConfirms(),
+                        catch: (confirmCause) => new ConnectionError({
+                          cause: confirmCause,
+                          message: "Failed to confirm published message"
+                        })
+                      });
+
+                      consumerChannel.ack(msg);
+
+                      if (consumer.hooks?.onRetry) {
+                        yield* consumer.hooks.onRetry({
+                          attempt: nextAttempt,
+                          cause,
+                          messageId: msg.properties.messageId
+                        });
+                      }
+
+                      return;
+                    }
+
+                    if (consumer.dlq === true) {
+                      yield* Effect.sync(() => publishChannel.publish(
+                        "",
+                        `${consumer.name}.dlq`,
+                        msg.content,
+                        {
+                          ...msg.properties,
+                          persistent: true
+                        }
+                      ));
+
+                      yield* Effect.tryPromise({
+                        try: () => publishChannel.waitForConfirms(),
+                        catch: (confirmCause) => new ConnectionError({
+                          cause: confirmCause,
+                          message: "Failed to confirm published message"
+                        })
+                      });
+
+                      consumerChannel.ack(msg);
+
+                      if (consumer.hooks?.onFailure) {
+                        yield* consumer.hooks.onFailure({
+                          attempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1,
+                          cause,
+                          messageId: msg.properties.messageId
+                        });
+                      }
+
+                      return;
+                    }
+
+                    consumerChannel.nack(
+                      msg,
+                      false,
+                      false
+                    );
+
+                    if (consumer.hooks?.onFailure) {
+                      yield* consumer.hooks.onFailure({
+                        attempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1,
+                        cause,
+                        messageId: msg.properties.messageId
+                      });
+                    }
+                  })
                 })
               );
             });

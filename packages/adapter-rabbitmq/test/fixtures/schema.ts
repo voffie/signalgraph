@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Duration, Schema } from "effect";
 import { consumer, message } from "signalgraph";
 
 export const OrderCreated = message({
@@ -29,3 +29,24 @@ export const Shipping = consumer({
   name: "shipping",
   message: OrderCompleted
 });
+
+export const RetryingAnalytics = consumer({
+  name: "retryingAnalytics",
+  message: OrderCreated,
+  retry: {
+    type: "fixed",
+    delay: Duration.millis(100),
+    maxAttempts: 2
+  }
+});
+
+export const DlqAnalytics = consumer({
+  name: "dlqAnalytics",
+  message: OrderCompleted,
+  retry: {
+    type: "fixed",
+    delay: Duration.millis(100),
+    maxAttempts: 2
+  },
+  dlq: true
+})

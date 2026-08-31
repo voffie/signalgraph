@@ -16,7 +16,7 @@ export type UserHandler<P> = (
   ctx: {
     readonly payload: P;
   }
-) => Effect.Effect<void>;
+) => Effect.Effect<void, unknown>;
 
 export interface RuntimeConsumer<P> {
   handle(handler: UserHandler<P>): Effect.Effect<void>;

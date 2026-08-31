@@ -9,5 +9,6 @@ export {
 
 export {
   consumer,
-  type Consumer
+  type Consumer,
+  type RetryPolicy
 } from "./consumer.ts"

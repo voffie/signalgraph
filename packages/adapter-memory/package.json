@@ -1,0 +1,54 @@
+{
+  "name": "@signalgraph/adapter-memory",
+  "version": "0.0.0",
+  "description": "In-memory broker adapter for SignalGraph",
+  "type": "module",
+  "sideEffects": false,
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/**",
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "watch": "tsdown --watch",
+    "check": "tsc --noEmit",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "signalgraph": "workspace:*",
+    "@signalgraph/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "effect": "rc"
+  },
+  "peerDependencies": {
+    "effect": "4.0.0-rc.112"
+  },
+  "keywords": [
+    "effect",
+    "typescript",
+    "memory",
+    "adapter",
+    "testing",
+    "message-broker"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/adapter-memory"
+  },
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  }
+}

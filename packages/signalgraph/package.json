@@ -49,6 +49,7 @@
     "./*/index": null
   },
   "publishConfig": {
+    "access": "public",
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
@@ -60,7 +61,6 @@
       "./index": null,
       "./*/index": null
     },
-    "access": "public",
     "provenance": true
   },
   "scripts": {

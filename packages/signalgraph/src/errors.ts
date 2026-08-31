@@ -1,25 +1,25 @@
 import { Schema } from "effect";
 
-export class ConfigNotFoundError extends Schema.TaggedErrorClass<ConfigNotFoundError>()("ConfigNotFoundError", {
+export class ConfigNotFoundError extends Schema.TaggedError<ConfigNotFoundError>()("ConfigNotFoundError", {
   cwd: Schema.String,
   searched: Schema.String,
 }) { }
 
-export class InvalidConfigError extends Schema.TaggedErrorClass<InvalidConfigError>()("InvalidConfigError", {
+export class InvalidConfigError extends Schema.TaggedError<InvalidConfigError>()("InvalidConfigError", {
   cause: Schema.Unknown
 }) { }
 
-export class InvalidConfigExportError extends Schema.TaggedErrorClass<InvalidConfigExportError>()("InvalidConfigExportError", {
+export class InvalidConfigExportError extends Schema.TaggedError<InvalidConfigExportError>()("InvalidConfigExportError", {
   path: Schema.String,
   reason: Schema.String,
 }) { }
 
-export class InvalidSchemaError extends Schema.TaggedErrorClass<InvalidSchemaError>()("InvalidSchemaError", {
+export class InvalidSchemaError extends Schema.TaggedError<InvalidSchemaError>()("InvalidSchemaError", {
   path: Schema.String,
   reason: Schema.String,
 }) { }
 
-export class ModuleImportError extends Schema.TaggedErrorClass<ModuleImportError>()("ModuleImportError", {
+export class ModuleImportError extends Schema.TaggedError<ModuleImportError>()("ModuleImportError", {
   path: Schema.String,
   cause: Schema.Unknown,
 }) { }

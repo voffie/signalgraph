@@ -12,7 +12,7 @@ const indent = (text: string, spaces = 2) =>
     .join("\n");
 
 function generateSchemaType(schema: MessageSchema) {
-  const document = SchemaRepresentation.fromAST(schema.ast);
+  const document = SchemaRepresentation.toRepresentation(schema.ast);
   const multi = SchemaRepresentation.toMultiDocument(document);
   const code = SchemaRepresentation.toCodeDocument(multi);
 

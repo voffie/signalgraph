@@ -25,15 +25,16 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
+    "signalgraph": "workspace:*",
     "@signalgraph/runtime": "workspace:*",
     "amqplib": "2.0.1"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98",
+    "effect": "rc",
     "@testcontainers/rabbitmq": "12.0.4"
   },
   "peerDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-rc.112"
   },
   "keywords": [
     "effect",

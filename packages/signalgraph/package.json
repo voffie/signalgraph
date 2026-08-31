@@ -32,13 +32,13 @@
   },
   "dependencies": {
     "tsx": "4.23.0",
-    "@effect/platform-node": "4.0.0-beta.98"
+    "@effect/platform-node": "rc"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "rc"
   },
   "peerDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-rc.112"
   },
   "keywords": [
     "effect",

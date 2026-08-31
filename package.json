@@ -17,7 +17,7 @@
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
     "@effect/language-service": "0.85.1",
-    "@effect/vitest": "4.0.0-beta.98",
+    "@effect/vitest": "rc",
     "@types/node": "latest",
     "@vitest/coverage-v8": "4.1.10",
     "oxfmt": "0.47.0",

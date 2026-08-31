@@ -8,7 +8,7 @@
     "send": "tsx src/publish.ts"
   },
   "dependencies": {
-    "effect": "4.0.0-beta.98",
+    "effect": "rc",
     "signalgraph": "workspace:*",
     "@signalgraph/runtime": "workspace:*",
     "@signalgraph/adapter-rabbitmq": "workspace:*"

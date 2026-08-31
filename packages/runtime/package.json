@@ -29,11 +29,11 @@
     "signalgraph": "workspace:*"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.98",
+    "effect": "rc",
     "@signalgraph/adapter-memory": "workspace:*"
   },
   "peerDependencies": {
-    "effect": "4.0.0-beta.98"
+    "effect": "4.0.0-rc.112"
   },
   "keywords": [
     "effect",

@@ -1,8 +1,9 @@
 import { Console, Effect } from "effect";
-import { makeClient } from "../generated/index.ts";
+import { Client } from "../generated/index.ts";
+import { MemoryBroker } from "@signalgraph/adapter-memory";
 
 const program = Effect.gen(function* () {
-  const client = yield* makeClient;
+  const client = yield* Client;
   yield* client.billing.handle(({ payload }) => Effect.gen(function* () {
     yield* Console.log("Billing received: ", payload);
     yield* client.billingCompleted.publish(payload);
@@ -21,4 +22,8 @@ const program = Effect.gen(function* () {
   });
 });
 
-Effect.runSync(program)
+Effect.runSync(program.pipe(
+  Effect.provide(
+    MemoryBroker
+  )
+))

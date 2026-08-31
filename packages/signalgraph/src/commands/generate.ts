@@ -1,4 +1,4 @@
-import { Console, Effect, FileSystem, Path, Stream } from "effect";
+import { Console, Effect, FileSystem, Option, Path, Stream } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 import { register } from "tsx/esm/api";
 import { loadConfig } from "../loadConfig.ts";
@@ -33,7 +33,7 @@ const generateProject = Effect.fn(function* () {
 });
 
 export const generate = Command.make("generate", {
-  watch: Flag.boolean("watch").pipe(Flag.withAlias("w"))
+  watch: Flag.boolean("watch").pipe(Flag.withAlias("w"), Flag.optional)
 },
   Effect.fn(function* ({ watch }) {
     yield* Effect.acquireRelease(
@@ -45,7 +45,7 @@ export const generate = Command.make("generate", {
 
     yield* generateProject();
 
-    if (watch) {
+    if (Option.isSome(watch)) {
       const fs = yield* FileSystem.FileSystem;
       // TODO: Restart watchers if the config changes the schema location.
       yield* Stream.merge(

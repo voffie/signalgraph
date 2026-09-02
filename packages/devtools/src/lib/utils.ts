@@ -1,5 +1,6 @@
 import type { PositionedGraphNode, SearchField } from './types';
 import { NW, NH } from './tokens';
+import type { ServiceSummary, TraceSummary } from './domain/types';
 
 export function buildNmap(
   nodes: Array<PositionedGraphNode>
@@ -100,4 +101,24 @@ export function matchSearch(
         .toLowerCase()
         .includes(ql);
   }
+}
+
+export function matchSearchTrace(
+  trace: TraceSummary,
+  q: string,
+  field: SearchField
+): boolean {
+  const ql = q.toLowerCase();
+
+  return true;
+}
+
+export function matchSearchService(
+  service: ServiceSummary,
+  q: string,
+  field: SearchField
+): boolean {
+  const ql = q.toLowerCase();
+
+  return true;
 }

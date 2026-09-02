@@ -13,9 +13,6 @@
   --color-text: #e2e2ee;
   --color-text2: #8080a0;
   --color-muted: #3d3d58;
-
-  --nw: 172;
-  --nh: 76;
 }
 
 @keyframes edge-flow {

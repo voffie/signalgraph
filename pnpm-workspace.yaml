@@ -3,8 +3,9 @@ packages:
   - examples/*
 strictDepBuilds: false
 allowBuilds:
+  better-sqlite3: false
   cpu-features: false
-  esbuild: false,
+  esbuild: false
   msgpackr-extract: false
   protobufjs: false
   ssh2: false

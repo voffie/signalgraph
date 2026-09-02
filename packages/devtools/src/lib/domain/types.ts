@@ -1,5 +1,8 @@
 type NodeKind = "message" | "handler";
 
+export type TraceStatus = "ok" | "error";
+type HealthStatus = "healthy" | "degraded" | "failed";
+
 export interface Attribute {
   key: string;
   value: string;
@@ -62,3 +65,27 @@ export interface Graph {
   traceSpans: Array<TraceSpan>;
 }
 
+export interface TraceSummary {
+  traceId: string;
+  rootService: string;
+  rootOperation: string;
+  durationMs: number;
+  startTime: number;
+  status: TraceStatus;
+}
+
+export interface TraceListFilters {
+  service?: string;
+  status?: TraceStatus;
+}
+
+// Placeholder shape - not backed by a real Tempo endpoint yet.
+// Revisit once we know the actual metics source (Tempo metrics-generator, Prometheus, etc).
+export interface ServiceSummary {
+  name: string;
+  status: HealthStatus;
+  requestRate: string;
+  errorRate: number;
+  latencyP50Ms: number;
+  lastSeen: number;
+}

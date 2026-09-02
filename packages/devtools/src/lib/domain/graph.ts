@@ -68,7 +68,7 @@ export function buildGraph(trace: Trace): Graph {
         break;
 
       default:
-        throw new Error(`Unknown SignalGraph span kind: ${spanKind}`);
+        continue; // unrecognized span kind - ignore rather than fail the whole trace
     }
   }
 

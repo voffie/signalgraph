@@ -52,3 +52,15 @@ interface TempoTrace {
 export interface TempoResponse {
   trace: TempoTrace;
 }
+
+interface TempoSearchResult {
+  traceID: string; // hex, unlike the base64 traceId inside a full trace response
+  rootServiceName: string,
+  rootTraceName: string;
+  startTimeUnixNano: string;
+  durationMs: number;
+}
+
+export interface TempoSearchResponse {
+  traces: Array<TempoSearchResult>;
+}

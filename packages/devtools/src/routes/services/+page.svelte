@@ -172,7 +172,7 @@
                   </td>
                   <td
                     class="border-border/40 text-text border-b px-4 py-3 font-['JetBrains_Mono'] tabular-nums">
-                    {formatDuration(service.latencyP50Ms)}ms
+                    {formatDuration(service.latencyP50Ms)}
                   </td>
                 </tr>
               {/each}

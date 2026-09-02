@@ -65,7 +65,8 @@
     "**/dist",
     "**/build",
     "**/docs",
-    "**/.tsbuildinfo"
+    "**/.tsbuildinfo",
+    "node_modules"
   ],
   "overrides": [
     {

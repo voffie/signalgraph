@@ -1,8 +1,9 @@
 import { Effect } from "effect";
-import { importModule } from "./importModule.ts";
-import type { AnyMessage } from "./message.ts";
+
 import type { Consumer } from "./consumer.ts";
 import { InvalidSchemaError } from "./errors.ts";
+import { importModule } from "./importModule.ts";
+import type { AnyMessage } from "./message.ts";
 
 type SchemaExports = AnyMessage | Consumer<string, AnyMessage>;
 
@@ -48,7 +49,7 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
             path: schemaPath,
             reason: `Consumer "${candidate.name}" references a message ("${candidate.message.name}") 
             that is not exported as a top-level binding. Define the message with "export const" and referene it, 
-            rather than declaring it inline.`
+            rather than declaring it inline.`,
           });
         }
         if (!messages.has(candidate.message.name)) {
@@ -62,10 +63,10 @@ export const loadSchema = Effect.fn(function* (schemaPath: string) {
       default:
         return yield* new InvalidSchemaError({
           path: schemaPath,
-          reason: `Unsupported export: "${key}". Expected a Message or Consumer.`
+          reason: `Unsupported export: "${key}". Expected a Message or Consumer.`,
         });
     }
   }
 
   return { messages, consumers, messageExportNames, consumerExportNames } as SchemaData;
-})
+});

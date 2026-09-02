@@ -5,23 +5,22 @@
 </script>
 
 <main class="mx-auto max-w-md p-8">
-  <h1 class="mb-1 text-lg font-semibold text-text">Data source</h1>
-  <p class="mb-5 text-xs text-text2">
+  <h1 class="text-text mb-1 text-lg font-semibold">Data source</h1>
+  <p class="text-text2 mb-5 text-xs">
     SignalGraph reads traces from a single collector. Configure it below.
   </p>
 
   <form method="POST" action="?/save" use:enhance class="flex flex-col gap-3">
-    <label for="type" class="text-[11px] text-text2">Collector</label>
+    <label for="type" class="text-text2 text-[11px]">Collector</label>
     <select
       id="type"
       name="type"
       value={data.type ?? "tempo"}
-      class="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text"
-    >
+      class="border-border bg-surface text-text rounded-md border px-2.5 py-2 text-sm">
       <option value="tempo">Tempo</option>
     </select>
 
-    <label for="url" class="text-[11px] text-text2">Collector URL</label>
+    <label for="url" class="text-text2 text-[11px]">Collector URL</label>
     <input
       id="url"
       name="url"
@@ -29,17 +28,13 @@
       value={data.url ?? ""}
       placeholder="http://localhost:3200"
       required
-      class="rounded-md border border-border bg-surface px-2.5 py-2 font-mono text-sm text-text"
-    />
+      class="border-border bg-surface text-text rounded-md border px-2.5 py-2 font-mono text-sm" />
 
     {#if form?.error}
       <p class="text-xs text-red-500">{form.error}</p>
     {/if}
 
-    <button
-      type="submit"
-      class="mt-1 rounded-md bg-accent px-3 py-2 font-semibold text-white"
-    >
+    <button type="submit" class="bg-accent mt-1 rounded-md px-3 py-2 font-semibold text-white">
       Save
     </button>
   </form>

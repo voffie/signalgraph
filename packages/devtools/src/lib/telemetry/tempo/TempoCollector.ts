@@ -1,4 +1,5 @@
 import type { ServiceSummary, Trace, TraceListFilters, TraceSummary } from "$lib/domain/types";
+
 import type { TraceCollector } from "../collector";
 import { MOCK_SERVICE_SUMMARIES, MOCK_TEMPO_RESPONSE, MOCK_TEMPO_SEARCH_RESPONSE } from "./mock";
 import { normalizeSearchResponse, normalizeTrace } from "./normalize";

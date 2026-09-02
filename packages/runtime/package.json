@@ -2,23 +2,39 @@
   "name": "@signalgraph/runtime",
   "version": "0.0.0",
   "description": "Runtime primitives for generated SignalGraph clients",
-  "type": "module",
-  "sideEffects": false,
+  "keywords": [
+    "effect",
+    "event-driven",
+    "message-broker",
+    "runtime",
+    "typescript"
+  ],
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
   "author": {
     "name": "Viktor Söderborg",
     "url": "https://github.com/voffie"
   },
-  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/runtime"
+  },
+  "files": [
+    "src/**",
+    "dist/**"
+  ],
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",
     "./broker": "./dist/broker.mjs",
     "./telemetry": "./dist/telemetry.mjs",
     "./package.json": "./package.json"
   },
-  "files": [
-    "src/**",
-    "dist/**"
-  ],
   "scripts": {
     "build": "tsdown",
     "watch": "tsdown --watch",
@@ -27,33 +43,17 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "signalgraph": "workspace:*",
     "@effect/opentelemetry": "4.0.0-beta.103",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/resources": "2.10.0",
-    "@opentelemetry/sdk-trace-base": "2.10.0"
+    "@opentelemetry/sdk-trace-base": "2.10.0",
+    "signalgraph": "workspace:*"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.103",
-    "@signalgraph/adapter-memory": "workspace:*"
+    "@signalgraph/adapter-memory": "workspace:*",
+    "effect": "4.0.0-beta.103"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.103"
-  },
-  "keywords": [
-    "effect",
-    "typescript",
-    "runtime",
-    "event-driven",
-    "message-broker"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/voffie/signalgraph.git",
-    "directory": "packages/runtime"
-  },
-  "bugs": {
-    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

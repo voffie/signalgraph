@@ -1,8 +1,8 @@
-import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
-import { NodeServices } from "@effect/platform-node";
 import { fileURLToPath } from "node:url";
 
+import { NodeServices } from "@effect/platform-node";
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
 import { loadSchema } from "signalgraph/loadSchema";
 
 const schemaPath = new URL("./fixtures/basic/schema.ts", import.meta.url);
@@ -20,8 +20,8 @@ describe("loadSchema", () => {
           expect(schema.messageExportNames.has("orders.created")).toBe(true);
           expect(schema.messages.has("orders.created")).toBe(true);
           expect(schema.consumers.has("billing")).toBe(true);
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
-})
+});

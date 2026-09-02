@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
+
   import "./layout.css";
 
   let { data, children } = $props();
@@ -46,10 +47,9 @@
   ];
 </script>
 
-<div class="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
+<div class="bg-bg text-text flex h-screen w-screen overflow-hidden font-sans">
   <nav
-    class="flex w-12 shrink-0 flex-col items-center gap-0.75 border-r border-r-border_hi bg-panel py-2.5"
-  >
+    class="border-r-border_hi bg-panel flex w-12 shrink-0 flex-col items-center gap-0.75 border-r py-2.5">
     {#each navItems as item (item.title)}
       <a
         href={item.href}
@@ -57,9 +57,8 @@
         class={`flex size-9 items-center justify-center rounded-lg border transition-all ${
           page.url.pathname.startsWith(item.href)
             ? "border-accent/38 bg-accent/18 text-accent"
-            : "border-transparent bg-transparent text-muted"
-        }`}
-      >
+            : "text-muted border-transparent bg-transparent"
+        }`}>
         {@html item.icon}
       </a>
     {/each}
@@ -68,15 +67,9 @@
   <div class="flex min-w-0 flex-1 flex-col">
     {#if !data.hasDataSource && page.url.pathname !== "/settings"}
       <div
-        class="flex items-center justify-between gap-3 border-b border-border_hi bg-panel px-4 py-2 text-xs text-text2"
-      >
-        <span
-          >No data source configured - connect one to start exploring traces.</span
-        >
-        <a
-          href="/settings"
-          class="rounded-md bg-accent px-2.5 py-1 font-medium text-white"
-        >
+        class="border-border_hi bg-panel text-text2 flex items-center justify-between gap-3 border-b px-4 py-2 text-xs">
+        <span>No data source configured - connect one to start exploring traces.</span>
+        <a href="/settings" class="bg-accent rounded-md px-2.5 py-1 font-medium text-white">
           Go to settings
         </a>
       </div>

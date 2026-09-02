@@ -2,26 +2,43 @@
   "name": "signalgraph",
   "version": "0.0.0",
   "description": "Type-safe event-driven architecture for TypeScript built on Effect",
-  "type": "module",
-  "sideEffects": false,
+  "keywords": [
+    "cli",
+    "codegen",
+    "effect",
+    "event-driven",
+    "message-broker",
+    "typescript"
+  ],
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
   "author": {
     "name": "Viktor Söderborg",
     "url": "https://github.com/voffie"
   },
-  "homepage": "https://github.com/voffie/signalgraph#readme",
-  "exports": {
-    ".": "./dist/index.mjs",
-    "./config": "./dist/config.mjs",
-    "./internal": "./dist/internal.mjs",
-    "./package.json": "./package.json"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/signalgraph"
+  },
+  "bin": {
+    "signalgraph": "./bin/signalgraph"
   },
   "files": [
     "src/**",
     "dist/**",
     "bin/**"
   ],
-  "bin": {
-    "signalgraph": "./bin/signalgraph"
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./config": "./dist/config.mjs",
+    "./internal": "./dist/internal.mjs",
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsdown",
@@ -31,30 +48,13 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "tsx": "4.23.0",
-    "@effect/platform-node": "4.0.0-beta.103"
+    "@effect/platform-node": "4.0.0-beta.103",
+    "tsx": "4.23.0"
   },
   "devDependencies": {
     "effect": "4.0.0-beta.103"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.103"
-  },
-  "keywords": [
-    "effect",
-    "typescript",
-    "event-driven",
-    "message-broker",
-    "codegen",
-    "cli"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/voffie/signalgraph.git",
-    "directory": "packages/signalgraph"
-  },
-  "bugs": {
-    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

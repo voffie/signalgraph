@@ -3,12 +3,9 @@ export {
   type RuntimeMessage,
   type MessageGraph,
   type RuntimeClient,
-  createClient
+  createClient,
 } from "./client.ts";
 
-export {
-  type MessageMetadata,
-  createConsumeMetadata
-} from "./metadata.ts";
+export { type MessageMetadata, createConsumeMetadata } from "./metadata.ts";
 
-export * from "./errors.ts"
+export * from "./errors.ts";

@@ -6,37 +6,20 @@
       "path": "tsconfig.packages.json"
     }
   ],
-  "include": [
-    "**/vitest.*.ts",
-    "./packages/*/test/**/*.ts"
-  ],
+  "include": ["**/vitest.*.ts", "./packages/*/test/**/*.ts"],
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
     "erasableSyntaxOnly": false,
     "resolveJsonModule": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "paths": {
-      "signalgraph": [
-        "./packages/signalgraph/src/index.ts"
-      ],
-      "signalgraph/*": [
-        "./packages/signalgraph/src/*.ts"
-      ],
-      "@signalgraph/runtime": [
-        "./packages/runtime/src/index.ts"
-      ],
-      "@signalgraph/runtime/*": [
-        "./packages/runtime/src/*.ts"
-      ],
-      "@signalgraph/adapter-memory": [
-        "./packages/adapter-memory/src/index.ts"
-      ],
-      "@signalgraph/adapter-memory/*": [
-        "./packages/adapter-memory/src/*.ts"
-      ]
+      "signalgraph": ["./packages/signalgraph/src/index.ts"],
+      "signalgraph/*": ["./packages/signalgraph/src/*.ts"],
+      "@signalgraph/runtime": ["./packages/runtime/src/index.ts"],
+      "@signalgraph/runtime/*": ["./packages/runtime/src/*.ts"],
+      "@signalgraph/adapter-memory": ["./packages/adapter-memory/src/index.ts"],
+      "@signalgraph/adapter-memory/*": ["./packages/adapter-memory/src/*.ts"]
     },
     "plugins": [
       {

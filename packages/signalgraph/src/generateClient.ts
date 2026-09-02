@@ -1,9 +1,10 @@
 import { Effect, FileSystem, Path, SchemaRepresentation } from "effect";
-import type { SchemaData } from "./loadSchema.ts";
+
 import type { Config } from "./config.ts";
-import type { AnyMessage, MessageSchema } from "./message.ts";
 import type { Consumer } from "./consumer.ts";
 import { toPropertyName, toTypeName } from "./internal/naming.ts";
+import type { SchemaData } from "./loadSchema.ts";
+import type { AnyMessage, MessageSchema } from "./message.ts";
 
 const indent = (text: string, spaces = 2) =>
   text
@@ -17,24 +18,26 @@ function generateSchemaType(schema: MessageSchema) {
   const code = SchemaRepresentation.toCodeDocument(multi);
 
   return code.codes[0].Type;
-};
+}
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) => `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`
+    (message) =>
+      `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`,
   );
 }
 
 function generateConsumerEntries(consumers: Iterable<Consumer<string, AnyMessage>>) {
   return [...consumers].map(
-    (consumer) => `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`
+    (consumer) =>
+      `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`,
   );
 }
 
 function generateTypeAliases(messages: Iterable<AnyMessage>) {
   return [...messages].map(
     (message) =>
-      `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`
+      `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`,
   );
 }
 
@@ -65,14 +68,17 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
 
   const entries = [
     ...generateMessageEntries(data.messages.values()),
-    ...generateConsumerEntries(data.consumers.values())
+    ...generateConsumerEntries(data.consumers.values()),
   ];
 
   let schemaRelativePath = path.relative(outputDir, config.schema);
   if (!schemaRelativePath.startsWith(".")) {
     schemaRelativePath = "./" + schemaRelativePath;
   }
-  const schemaExportNames = [...data.messageExportNames.values(), ...data.consumerExportNames.values()];
+  const schemaExportNames = [
+    ...data.messageExportNames.values(),
+    ...data.consumerExportNames.values(),
+  ];
   const schemaImport =
     schemaExportNames.length > 0
       ? `import {\n${indent(schemaExportNames.join(",\n"))}\n} from "${schemaRelativePath}";`
@@ -80,39 +86,30 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
 
   const imports = [
     'import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient } from "@signalgraph/runtime";',
-    schemaImport
+    schemaImport,
   ]
     .filter(Boolean)
     .join("\n");
 
   const aliases = generateTypeAliases(data.messages.values()).join("\n\n");
 
-  const client =
-    [
-      "export type Client =",
-      indent("RuntimeClient &"),
-      indent("{"),
-      indent(entries.join("\n"), 4),
-      indent("};"),
-    ].join("\n");
+  const client = [
+    "export type Client =",
+    indent("RuntimeClient &"),
+    indent("{"),
+    indent(entries.join("\n"), 4),
+    indent("};"),
+  ].join("\n");
 
-  const messageGraph =
-    [
-      "const messageGraph = {",
-      indent(generateMessageGraph(data).join(",\n")),
-      "} satisfies MessageGraph;"
-    ].join("\n");
+  const messageGraph = [
+    "const messageGraph = {",
+    indent(generateMessageGraph(data).join(",\n")),
+    "} satisfies MessageGraph;",
+  ].join("\n");
 
   const exportClient = `export const Client = createClient<Client>(messageGraph);`;
 
-  const source = [
-    header,
-    imports,
-    aliases,
-    client,
-    messageGraph,
-    exportClient
-  ].join("\n\n");
+  const source = [header, imports, aliases, client, messageGraph, exportClient].join("\n\n");
 
   yield* fs.writeFileString(outputPath, source, { flag: "w" });
-})
+});

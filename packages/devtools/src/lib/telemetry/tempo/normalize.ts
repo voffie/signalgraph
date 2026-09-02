@@ -1,5 +1,12 @@
 import type { Attribute, Trace, TraceSpan, TraceSummary } from "$lib/domain/types";
-import type { TempoAttribute, TempoAttributeValue, TempoSpan, TempoResponse, TempoSearchResponse } from "./types.ts";
+
+import type {
+  TempoAttribute,
+  TempoAttributeValue,
+  TempoSpan,
+  TempoResponse,
+  TempoSearchResponse,
+} from "./types.ts";
 
 function base64ToHex(base64: string): string {
   return Buffer.from(base64, "base64").toString("hex");
@@ -40,7 +47,7 @@ function normalizeAttributeValue(value: TempoAttributeValue): string {
 function normalizeAttribute(attribute: TempoAttribute): Attribute {
   return {
     key: attribute.key,
-    value: normalizeAttributeValue(attribute.value)
+    value: normalizeAttributeValue(attribute.value),
   };
 }
 
@@ -71,9 +78,7 @@ export function normalizeTrace(response: TempoResponse): Trace {
   const resourceAttributes: Array<Attribute> = [];
 
   for (const resourceSpan of response.trace.resourceSpans) {
-    resourceAttributes.push(
-      ...resourceSpan.resource.attributes.map(normalizeAttribute)
-    );
+    resourceAttributes.push(...resourceSpan.resource.attributes.map(normalizeAttribute));
 
     for (const scopeSpan of resourceSpan.scopeSpans) {
       for (const span of scopeSpan.spans) {
@@ -95,7 +100,7 @@ export function normalizeTrace(response: TempoResponse): Trace {
   return {
     traceId,
     spans,
-    resourceAttributes
+    resourceAttributes,
   };
 }
 
@@ -109,6 +114,6 @@ export function normalizeSearchResponse(response: TempoSearchResponse): Array<Tr
     // Tempo's search API doesn't return status directly - you'd typically
     // query with a status tag filter, or check span status after fetching
     // the full trace. Hardcoding "ok" until that's wired up.
-    status: "ok"
+    status: "ok",
   }));
 }

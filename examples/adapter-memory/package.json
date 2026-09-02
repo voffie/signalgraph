@@ -7,9 +7,9 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "effect": "4.0.0-beta.103",
-    "signalgraph": "workspace:*",
+    "@signalgraph/adapter-memory": "workspace:*",
     "@signalgraph/runtime": "workspace:*",
-    "@signalgraph/adapter-memory": "workspace:*"
+    "effect": "4.0.0-beta.103",
+    "signalgraph": "workspace:*"
   }
 }

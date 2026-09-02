@@ -5,6 +5,6 @@ export default defineConfig({
   schema: "./schema.ts",
   broker: {
     package: "@signalgraph/adapter-memory",
-    layer: "MemoryBroker"
-  }
-})
+    layer: "MemoryBroker",
+  },
+});

@@ -1,11 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "import",
-    "oxc",
-    "node"
-  ],
+  "plugins": ["typescript", "import", "oxc", "node"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -55,24 +50,14 @@
     "no-underscore-dangle": [
       "error",
       {
-        "allow": [
-          "_tag"
-        ]
+        "allow": ["_tag"]
       }
     ]
   },
-  "ignorePatterns": [
-    "**/dist",
-    "**/build",
-    "**/docs",
-    "**/.tsbuildinfo",
-    "node_modules"
-  ],
+  "ignorePatterns": ["**/dist", "**/build", "**/docs", "**/.tsbuildinfo", "node_modules"],
   "overrides": [
     {
-      "files": [
-        "**/{test,examples}/**"
-      ],
+      "files": ["**/{test,examples}/**"],
       "rules": {
         "eslint/no-console": "off"
       }

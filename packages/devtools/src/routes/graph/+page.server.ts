@@ -1,4 +1,5 @@
 import { getActiveCollector } from "$lib/server/datasources/registry";
+
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url, depends }) => {
@@ -15,7 +16,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
   } catch (err) {
     return {
       trace: null,
-      error: err instanceof Error ? err.message : "Unable to load trace"
+      error: err instanceof Error ? err.message : "Unable to load trace",
     };
   }
-}
+};

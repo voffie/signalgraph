@@ -1,10 +1,7 @@
 const identifierRegex = /[^a-zA-Z0-9]+/;
 
 function splitIdentifier(text: string) {
-  return text
-    .trim()
-    .split(identifierRegex)
-    .filter(Boolean);
+  return text.trim().split(identifierRegex).filter(Boolean);
 }
 
 function capitalize(text: string) {
@@ -28,9 +25,7 @@ export function toPropertyName(text: string) {
 
   const identifier = parts
     .map((part, index) =>
-      index === 0
-        ? part.charAt(0).toLowerCase() + part.slice(1)
-        : capitalize(part)
+      index === 0 ? part.charAt(0).toLowerCase() + part.slice(1) : capitalize(part),
     )
     .join("");
 
@@ -38,9 +33,7 @@ export function toPropertyName(text: string) {
 }
 
 export function toTypeName(text: string) {
-  const identifier = splitIdentifier(text)
-    .map(capitalize)
-    .join("");
+  const identifier = splitIdentifier(text).map(capitalize).join("");
 
   return ensureValidIdentifier(identifier);
 }

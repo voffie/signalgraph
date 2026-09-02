@@ -23,24 +23,18 @@
   const isMsg = $derived(node.kind === "message");
   const kindC = $derived(isMsg ? MSG_C : ACCENT);
 
-  const fillSel = $derived(
-    isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)",
-  );
+  const fillSel = $derived(isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)");
 
   const strokeNorm = "rgba(255,255,255,0.075)";
 
   const strokeSel = $derived(kindC);
   const strokeHov = $derived(`${kindC}66`);
 
-  const stroke = $derived(
-    selected ? strokeSel : hovered ? strokeHov : strokeNorm,
-  );
+  const stroke = $derived(selected ? strokeSel : hovered ? strokeHov : strokeNorm);
 
   const sw = $derived(selected ? 1.5 : 1);
 
-  const glowFilter = $derived(
-    selected ? (isMsg ? "url(#glow-evt)" : "url(#glow-hnd)") : undefined,
-  );
+  const glowFilter = $derived(selected ? (isMsg ? "url(#glow-evt)" : "url(#glow-hnd)") : undefined);
 </script>
 
 <g
@@ -53,8 +47,7 @@
   role="button"
   tabindex="0"
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-  style={`transition:opacity 0.15s`}
->
+  style={`transition:opacity 0.15s`}>
   {#if hovered && !selected}
     <rect
       x={-4}
@@ -65,8 +58,7 @@
       fill="none"
       stroke={kindC}
       stroke-width={0.75}
-      opacity={0.35}
-    />
+      opacity={0.35} />
   {/if}
 
   <rect
@@ -78,8 +70,7 @@
     fill={selected ? fillSel : "#0a0718"}
     {stroke}
     stroke-width={sw}
-    style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s"
-  />
+    style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s" />
 
   <rect
     x={1}
@@ -89,25 +80,13 @@
     rx={1.5}
     fill={kindC}
     opacity={selected ? 0.85 : hovered ? 0.5 : 0.28}
-    style="transition: opacity 0.15s"
-  />
+    style="transition: opacity 0.15s" />
 
-  <line
-    x1={0}
-    y1={29}
-    x2={NW}
-    y2={29}
-    stroke="rgba(255,255,255,0.042)"
-    stroke-width={0.5}
-  />
+  <line x1={0} y1={29} x2={NW} y2={29} stroke="rgba(255,255,255,0.042)" stroke-width={0.5} />
 
   {#if isMsg}
     <g transform="translate(11,10)">
-      <polygon
-        points="6,0 12,6 6,12 0,6"
-        fill={kindC}
-        opacity={selected ? 0.85 : 0.55}
-      />
+      <polygon points="6,0 12,6 6,12 0,6" fill={kindC} opacity={selected ? 0.85 : 0.55} />
     </g>
   {:else}
     <text
@@ -118,8 +97,7 @@
       font-weight={500}
       fill={kindC}
       opacity={selected ? 0.9 : 0.6}
-      style="transition: opacity 0.15s"
-    >
+      style="transition: opacity 0.15s">
       {"{}"}
     </text>
   {/if}
@@ -129,8 +107,7 @@
     font-size={7.5}
     font-family="'JetBrains Mono', monospace"
     fill="var(--color-text2)"
-    letter-spacing="0.09em"
-  >
+    letter-spacing="0.09em">
     {isMsg ? "MESSAGE" : "HANDLER"}
   </text>
 
@@ -140,8 +117,7 @@
     font-size={13}
     font-family="'Inter', sans-serif"
     font-weight={600}
-    fill="var(--color-text)"
-  >
+    fill="var(--color-text)">
     {node.label}
   </text>
 </g>

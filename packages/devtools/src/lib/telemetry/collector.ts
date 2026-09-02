@@ -7,8 +7,7 @@ export interface TraceCollector {
   listServices(): Promise<Array<ServiceSummary>>;
 }
 
-export type CollectorConfig =
-  | {
-    type: "tempo";
-    url: string;
-  };
+export type CollectorConfig = {
+  type: "tempo";
+  url: string;
+};

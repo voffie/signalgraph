@@ -1,7 +1,8 @@
 import { Effect, Path } from "effect";
-import { importModule } from "./importModule.ts";
-import { InvalidConfigExportError } from "./errors.ts";
+
 import type { Config } from "./config.ts";
+import { InvalidConfigExportError } from "./errors.ts";
+import { importModule } from "./importModule.ts";
 
 export const loadConfig = Effect.fn(function* (configPath: string) {
   const path = yield* Path.Path;
@@ -10,7 +11,7 @@ export const loadConfig = Effect.fn(function* (configPath: string) {
   if (!module.default) {
     return yield* new InvalidConfigExportError({
       path: configPath,
-      reason: "Expected a default export."
+      reason: "Expected a default export.",
     });
   }
 
@@ -21,6 +22,6 @@ export const loadConfig = Effect.fn(function* (configPath: string) {
   return {
     ...data,
     schema: path.resolve(configDir, data.schema),
-    out: path.resolve(configDir, data.out)
+    out: path.resolve(configDir, data.out),
   };
-})
+});

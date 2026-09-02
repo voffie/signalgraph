@@ -1,7 +1,4 @@
-import type {
-  SpanKind,
-  SpanStatusCode
-} from "@opentelemetry/api";
+import type { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 
 export interface SignalGraphSpan {
   readonly traceId: string;

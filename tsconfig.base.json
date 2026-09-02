@@ -33,10 +33,7 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "namespaceImportPackages": [
-          "effect",
-          "@effect/*"
-        ],
+        "namespaceImportPackages": ["effect", "@effect/*"],
         "includeSuggestionsInTsc": false,
         "ignoreEffectWarningsInTscExitCode": true,
         "ignoreEffectErrorsInTscExitCode": true

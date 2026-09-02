@@ -2,21 +2,38 @@
   "name": "@signalgraph/adapter-rabbitmq",
   "version": "0.0.0",
   "description": "RabbitMQ broker adapter for SignalGraph",
-  "type": "module",
-  "sideEffects": false,
+  "keywords": [
+    "adapter",
+    "effect",
+    "message-broker",
+    "rabbitmq",
+    "testing",
+    "typescript"
+  ],
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
   "author": {
     "name": "Viktor Söderborg",
     "url": "https://github.com/voffie"
   },
-  "homepage": "https://github.com/voffie/signalgraph#readme",
-  "exports": {
-    ".": "./dist/index.mjs",
-    "./package.json": "./package.json"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/adapter-rabbitmq"
   },
   "files": [
     "src/**",
     "dist/**"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsdown",
     "watch": "tsdown --watch",
@@ -25,33 +42,16 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@signalgraph/runtime": "workspace:*",
-    "amqplib": "2.0.1",
     "@effect/opentelemetry": "4.0.0-beta.103",
-    "@opentelemetry/api": "1.9.1"
+    "@opentelemetry/api": "1.9.1",
+    "@signalgraph/runtime": "workspace:*",
+    "amqplib": "2.0.1"
   },
   "devDependencies": {
-    "effect": "4.0.0-beta.103",
-    "@testcontainers/rabbitmq": "12.0.4"
+    "@testcontainers/rabbitmq": "12.0.4",
+    "effect": "4.0.0-beta.103"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.103"
-  },
-  "keywords": [
-    "effect",
-    "typescript",
-    "rabbitmq",
-    "adapter",
-    "testing",
-    "message-broker"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/voffie/signalgraph.git",
-    "directory": "packages/adapter-rabbitmq"
-  },
-  "bugs": {
-    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

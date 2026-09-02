@@ -1,11 +1,16 @@
-import { clearDataSourceConfig, getDataSourceConfig, saveDataSourceConfig } from "$lib/server/db/dataSource";
+import {
+  clearDataSourceConfig,
+  getDataSourceConfig,
+  saveDataSourceConfig,
+} from "$lib/server/db/dataSource";
+
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = () => {
   const config = getDataSourceConfig();
   return {
     type: config?.type ?? null,
-    url: config && 'url' in config ? config.url : null
+    url: config && "url" in config ? config.url : null,
   };
 };
 
@@ -16,8 +21,8 @@ export const actions: Actions = {
     // TODO: Add a validation part here for the data source (if needed)
 
     saveDataSourceConfig({
-      type: form.get("type") as 'tempo',
-      url: form.get('url') as string
+      type: form.get("type") as "tempo",
+      url: form.get("url") as string,
     });
 
     return { success: true };
@@ -25,5 +30,5 @@ export const actions: Actions = {
   disconnect: async () => {
     clearDataSourceConfig();
     return { success: true };
-  }
-}
+  },
+};

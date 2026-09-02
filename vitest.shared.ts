@@ -1,16 +1,15 @@
 import path from "node:path";
+
 import aliases from "vite-tsconfig-paths";
 import type { ViteUserConfig } from "vitest/config";
 
 const config: ViteUserConfig = {
   plugins: [aliases()],
   test: {
-    exclude: [
-      "**/node_modules/**"
-    ],
+    exclude: ["**/node_modules/**"],
     setupFiles: [path.join(__dirname, "vitest.setup.ts")],
     sequence: {
-      concurrent: true
+      concurrent: true,
     },
     include: ["test/**/*.test.ts"],
     coverage: {
@@ -25,10 +24,10 @@ const config: ViteUserConfig = {
         "**/*.d.ts",
         "**/*.config.ts",
         "**/vitest.setup.*",
-        "**/vitest.shared.*"
-      ]
-    }
-  }
+        "**/vitest.shared.*",
+      ],
+    },
+  },
 };
 
-export default config
+export default config;

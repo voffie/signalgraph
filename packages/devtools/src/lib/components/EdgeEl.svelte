@@ -40,8 +40,7 @@
       stroke={visStroke}
       stroke-width={sw}
       marker-end={`url(#${markId})`}
-      style="transition: stroke 0.18s, stroke-width 0.18s"
-    />
+      style="transition: stroke 0.18s, stroke-width 0.18s" />
 
     <path
       {d}
@@ -51,20 +50,14 @@
       stroke-dasharray="5 16"
       class="edge-anim"
       opacity={flowOpacity}
-      style="transition: opacity 0.18s, stroke-width 0.18s"
-    />
+      style="transition: opacity 0.18s, stroke-width 0.18s" />
 
     <circle
       r={2.5}
       fill="var(--color-accent)"
       opacity={hovered ? 0.9 : 0.5}
-      style="transition: opacity 0.18s"
-    >
-      <animateMotion
-        dur={`${particleDur}s`}
-        repeatCount="indefinite"
-        path={d}
-      />
+      style="transition: opacity 0.18s">
+      <animateMotion dur={`${particleDur}s`} repeatCount="indefinite" path={d} />
     </circle>
 
     <path
@@ -75,7 +68,6 @@
       onmouseenter={onEnter}
       onmouseleave={onLeave}
       role="presentation"
-      class="cursor-crosshair"
-    />
+      class="cursor-crosshair" />
   </g>
 {/if}

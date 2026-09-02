@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
 
 @theme {
   --color-bg: #050508;
   --color-surface: #08080f;
   --color-panel: #0c0c18;
   --color-card: #111126;
-  --color-border_hi: rgba(255, 255, 255, 0.10);
+  --color-border_hi: rgba(255, 255, 255, 0.1);
   --color-border: rgba(255, 255, 255, 0.055);
   --color-accent: #7c6fe0;
   --color-msg_c: #4f8ef7;
@@ -26,7 +26,6 @@
 }
 
 @keyframes pulse-live {
-
   0%,
   100% {
     opacity: 1;

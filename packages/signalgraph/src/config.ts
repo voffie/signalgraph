@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+
 import { InvalidConfigError } from "./errors.ts";
 
 const ConfigSchema = Schema.Struct({
@@ -6,8 +7,8 @@ const ConfigSchema = Schema.Struct({
   out: Schema.String,
   broker: Schema.Struct({
     package: Schema.String,
-    layer: Schema.String
-  })
+    layer: Schema.String,
+  }),
 });
 
 export type Config = typeof ConfigSchema.Type;

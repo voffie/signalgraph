@@ -1,7 +1,7 @@
 {
   "name": "devtools",
-  "private": true,
   "version": "0.0.1",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite dev --open",
@@ -10,6 +10,9 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.1",
@@ -22,8 +25,5 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
-  },
-  "dependencies": {
-    "better-sqlite3": "^13.0.3"
   }
 }

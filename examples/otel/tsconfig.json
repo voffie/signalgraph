@@ -4,9 +4,5 @@
   "compilerOptions": {
     "rootDir": "."
   },
-  "include": [
-    "generated",
-    "src",
-    "signalgraph.config.ts"
-  ]
+  "include": ["generated", "src", "signalgraph.config.ts"]
 }

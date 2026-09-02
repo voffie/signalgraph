@@ -1,17 +1,12 @@
-import type { PositionedGraphNode, SearchField } from './types';
-import { NW, NH } from './tokens';
-import type { ServiceSummary, TraceSummary } from './domain/types';
+import type { ServiceSummary, TraceSummary } from "./domain/types";
+import { NW, NH } from "./tokens";
+import type { PositionedGraphNode, SearchField } from "./types";
 
-export function buildNmap(
-  nodes: Array<PositionedGraphNode>
-): Record<string, PositionedGraphNode> {
-  return Object.fromEntries(nodes.map(node => [node.id, node]));
+export function buildNmap(nodes: Array<PositionedGraphNode>): Record<string, PositionedGraphNode> {
+  return Object.fromEntries(nodes.map((node) => [node.id, node]));
 }
 
-export function epath(
-  src: PositionedGraphNode,
-  tgt: PositionedGraphNode
-): string {
+export function epath(src: PositionedGraphNode, tgt: PositionedGraphNode): string {
   const sx = src.x + NW;
   const sy = src.y + NH / 2;
 
@@ -23,10 +18,7 @@ export function epath(
   return `M${sx} ${sy} C${sx + dx} ${sy} ${tx - dx} ${ty} ${tx} ${ty}`;
 }
 
-export function emid(
-  src: PositionedGraphNode,
-  tgt: PositionedGraphNode
-): { x: number; y: number; } {
+export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode): { x: number; y: number } {
   const sx = src.x + NW;
   const sy = src.y + NH / 2;
 
@@ -49,65 +41,53 @@ export function emid(
 
 export function fmtMs(ms: number): string {
   if (ms === 0) {
-    return '—';
+    return "—";
   }
 
   return ms < 1000 ? `${ms.toFixed(3)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-export function matchSearch(
-  node: PositionedGraphNode,
-  q: string,
-  field: SearchField
-): boolean {
+export function matchSearch(node: PositionedGraphNode, q: string, field: SearchField): boolean {
   const ql = q.toLowerCase();
   const attrs = node.attributes;
 
   switch (field) {
-    case 'name':
+    case "name":
       return node.label.toLowerCase().includes(ql);
 
-    case 'service':
+    case "service":
       return attrs.some(
         (attribute) =>
-          attribute.key === 'service.name' &&
-          attribute.value.toLowerCase().includes(ql)
+          attribute.key === "service.name" && attribute.value.toLowerCase().includes(ql),
       );
 
-    case 'msg-id':
+    case "msg-id":
       return attrs.some(
         (attribute) =>
-          attribute.key.includes('message_id') &&
-          attribute.value.toLowerCase().includes(ql)
+          attribute.key.includes("message_id") && attribute.value.toLowerCase().includes(ql),
       );
 
-    case 'corr-id':
+    case "corr-id":
       return attrs.some(
         (attribute) =>
-          attribute.key.includes('correlation') &&
-          attribute.value.toLowerCase().includes(ql)
+          attribute.key.includes("correlation") && attribute.value.toLowerCase().includes(ql),
       );
 
-    case 'trace-id':
+    case "trace-id":
       return attrs.some(
         (attribute) =>
-          attribute.key.includes('trace') &&
-          attribute.value.toLowerCase().includes(ql)
+          attribute.key.includes("trace") && attribute.value.toLowerCase().includes(ql),
       );
 
     default:
-      return [node.label, node.id, ...attrs.map(a => a.value)]
-        .join(' ')
+      return [node.label, node.id, ...attrs.map((a) => a.value)]
+        .join(" ")
         .toLowerCase()
         .includes(ql);
   }
 }
 
-export function matchSearchTrace(
-  trace: TraceSummary,
-  q: string,
-  field: SearchField
-): boolean {
+export function matchSearchTrace(trace: TraceSummary, q: string, field: SearchField): boolean {
   const ql = q.toLowerCase();
 
   return true;
@@ -116,7 +96,7 @@ export function matchSearchTrace(
 export function matchSearchService(
   service: ServiceSummary,
   q: string,
-  field: SearchField
+  field: SearchField,
 ): boolean {
   const ql = q.toLowerCase();
 

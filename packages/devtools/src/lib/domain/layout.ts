@@ -1,4 +1,5 @@
 import type { PositionedGraphNode } from "$lib/types";
+
 import type { Graph, GraphNode } from "./types";
 
 export const NODE_WIDTH = 172;
@@ -8,16 +9,10 @@ const HORIZONTAL_GAP = 96;
 const VERTICAL_GAP = 44;
 const PADDING = 48;
 
-export function positionGraphNodes(
-  graph: Graph
-): Array<PositionedGraphNode> {
+export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
-  const remainingIncoming = new Map(
-    graph.nodes.map((node) => [node.id, 0])
-  );
-  const outgoing = new Map(
-    graph.nodes.map((node) => [node.id, new Array<string>()])
-  );
+  const remainingIncoming = new Map(graph.nodes.map((node) => [node.id, 0]));
+  const outgoing = new Map(graph.nodes.map((node) => [node.id, new Array<string>()]));
 
   for (const edge of graph.edges) {
     if (!nodesById.has(edge.source) || !nodesById.has(edge.target)) {
@@ -25,10 +20,7 @@ export function positionGraphNodes(
     }
 
     outgoing.get(edge.source)?.push(edge.target);
-    remainingIncoming.set(
-      edge.target,
-      (remainingIncoming.get(edge.target) ?? 0) + 1
-    );
+    remainingIncoming.set(edge.target, (remainingIncoming.get(edge.target) ?? 0) + 1);
   }
 
   const levels = new Map<string, number>();
@@ -81,7 +73,7 @@ export function positionGraphNodes(
       positions.set(node.id, {
         ...node,
         x: PADDING + level * (NODE_WIDTH + HORIZONTAL_GAP),
-        y: PADDING + row * (NODE_HEIGHT + VERTICAL_GAP)
+        y: PADDING + row * (NODE_HEIGHT + VERTICAL_GAP),
       });
     }
   }

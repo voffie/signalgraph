@@ -2,21 +2,38 @@
   "name": "@signalgraph/adapter-memory",
   "version": "0.0.0",
   "description": "In-memory broker adapter for SignalGraph",
-  "type": "module",
-  "sideEffects": false,
+  "keywords": [
+    "adapter",
+    "effect",
+    "memory",
+    "message-broker",
+    "testing",
+    "typescript"
+  ],
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
   "author": {
     "name": "Viktor Söderborg",
     "url": "https://github.com/voffie"
   },
-  "homepage": "https://github.com/voffie/signalgraph#readme",
-  "exports": {
-    ".": "./dist/index.mjs",
-    "./package.json": "./package.json"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/adapter-memory"
   },
   "files": [
     "src/**",
     "dist/**"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsdown",
     "watch": "tsdown --watch",
@@ -25,31 +42,14 @@
     "coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@signalgraph/runtime": "workspace:*",
     "@effect/opentelemetry": "4.0.0-beta.103",
-    "@opentelemetry/api": "1.9.1"
+    "@opentelemetry/api": "1.9.1",
+    "@signalgraph/runtime": "workspace:*"
   },
   "devDependencies": {
     "effect": "4.0.0-beta.103"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.103"
-  },
-  "keywords": [
-    "effect",
-    "typescript",
-    "memory",
-    "adapter",
-    "testing",
-    "message-broker"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/voffie/signalgraph.git",
-    "directory": "packages/adapter-memory"
-  },
-  "bugs": {
-    "url": "https://github.com/voffie/signalgraph/issues"
   }
 }

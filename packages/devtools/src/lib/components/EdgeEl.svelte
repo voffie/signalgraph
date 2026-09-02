@@ -34,7 +34,6 @@
 
 {#if src && tgt}
   <g>
-    <!-- Static base -->
     <path
       {d}
       fill="none"
@@ -44,7 +43,6 @@
       style="transition: stroke 0.18s, stroke-width 0.18s"
     />
 
-    <!-- Animated flow dash -->
     <path
       {d}
       fill="none"
@@ -56,7 +54,6 @@
       style="transition: opacity 0.18s, stroke-width 0.18s"
     />
 
-    <!-- Live particle -->
     <circle
       r={2.5}
       fill="var(--color-accent)"
@@ -70,7 +67,6 @@
       />
     </circle>
 
-    <!-- Wide invisible hit target -->
     <path
       {d}
       fill="none"

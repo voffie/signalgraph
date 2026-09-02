@@ -55,7 +55,6 @@
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
   style={`transition:opacity 0.15s`}
 >
-  <!-- Hover ring -->
   {#if hovered && !selected}
     <rect
       x={-4}
@@ -70,7 +69,6 @@
     />
   {/if}
 
-  <!-- Body -->
   <rect
     x={0}
     y={0}
@@ -83,7 +81,6 @@
     style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s"
   />
 
-  <!-- Top accent stripe — visually differentiates kind -->
   <rect
     x={1}
     y={0}
@@ -95,7 +92,6 @@
     style="transition: opacity 0.15s"
   />
 
-  <!-- Header row divider -->
   <line
     x1={0}
     y1={29}
@@ -105,7 +101,6 @@
     stroke-width={0.5}
   />
 
-  <!-- Kind icon + label -->
   {#if isMsg}
     <g transform="translate(11,10)">
       <polygon
@@ -139,7 +134,6 @@
     {isMsg ? "MESSAGE" : "HANDLER"}
   </text>
 
-  <!-- Main label -->
   <text
     x={11}
     y={49}

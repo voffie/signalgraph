@@ -79,7 +79,6 @@
   </div>
 {:else}
   <div class="insp-panel flex flex-col h-full">
-    <!-- Node identity -->
     <div class="pt-3 px-3.5 pb-2.5 border-b border-b-border shrink-0">
       <div class="flex items-center gap-1.75 mb-1.75">
         <span
@@ -93,7 +92,6 @@
       </h2>
     </div>
 
-    <!-- Tabs -->
     <div
       class="flex border-b border-b-border shrink-0 overflow-x-auto py-0 px-1 scrollbar-none"
     >
@@ -114,9 +112,7 @@
       {/each}
     </div>
 
-    <!-- Tab body -->
     <div class="flex-1 overflow-auto py-3 px-3.5">
-      <!-- ── Overview ── -->
       {#if tab === "overview"}
         <div class="flex flex-col gap-2.5">
           {#each overviewRows as row (row.label)}
@@ -135,7 +131,6 @@
         </div>
       {/if}
 
-      <!-- ── Attributes ── -->
       {#if tab === "attributes"}
         <div>
           {#if node.attributes.length > 0}

@@ -167,7 +167,6 @@
       {/each}
     </div>
 
-    <!-- Time axis -->
     <div class="flex mt-1.5 ml-35 relative h-3.5">
       {#each [0, 0.25, 0.5, 0.75, 1] as pct (pct)}
         <div

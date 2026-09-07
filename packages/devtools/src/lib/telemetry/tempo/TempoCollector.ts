@@ -1,7 +1,7 @@
 import type { ServiceSummary, Trace, TraceListFilters, TraceSummary } from "$lib/domain/types";
 
 import type { TraceCollector } from "../collector";
-import { MOCK_SERVICE_SUMMARIES, MOCK_TEMPO_RESPONSE, MOCK_TEMPO_SEARCH_RESPONSE } from "./mock";
+import { MOCK_SERVICE_SUMMARIES, MOCK_TEMPO_SEARCH_RESPONSE } from "./mock";
 import { normalizeSearchResponse, normalizeTrace } from "./normalize";
 
 export class TempoCollector implements TraceCollector {
@@ -10,32 +10,35 @@ export class TempoCollector implements TraceCollector {
   constructor(url: string) {
     this.#url = url;
   }
+
   async collect(traceId?: string): Promise<Trace> {
-    // TODO: real Tempo querying, once we're ready to wire it up.
-    /*if (traceId) {
-      const res = await fetch(`${this.#url}/api/traces/${traceId}`);
+    if (traceId) {
+      const res = await fetch(`${this.#url}/api/v2/traces/${traceId}`);
       if (!res.ok) {
         throw new Error(`Tempo returned ${res.status} for trace ${traceId}`);
       }
+
       const json = await res.json();
+
       return normalizeTrace(json);
     }
 
     // No traceId - fetch the most recent trace matching our service.
     // Tempo's search API is something like:
     const searchRes = await fetch(`${this.#url}/api/search?limit=1`);
+
     if (!searchRes.ok) {
       throw new Error(`Tempo search returned ${searchRes.status}`);
     }
 
     const searchJson = await searchRes.json();
-    const latestTraceId = searchJson.traces?.[0]?.traceID;
+    const latestTraceId = searchJson.traces[0].traceID;
+
     if (!latestTraceId) {
       throw new Error("No traces found");
     }
-    return this.collect(latestTraceId);*/
 
-    return normalizeTrace(MOCK_TEMPO_RESPONSE);
+    return this.collect(latestTraceId);
   }
 
   async listTraces(filters?: TraceListFilters): Promise<Array<TraceSummary>> {

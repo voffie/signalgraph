@@ -7,7 +7,14 @@ export const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 
 db.exec(`CREATE TABLE IF NOT EXISTS data_source (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  type TEXT NOT NULL,
-  config TEXT NOT NULL
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  vendor TEXT NOT NULL,
+  config TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 0
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 )`);

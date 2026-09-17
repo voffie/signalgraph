@@ -1,9 +1,8 @@
-import type { TraceCollector } from "$lib/telemetry/collector";
-import { createCollector } from "$lib/telemetry/collectorFactory";
+import { type TraceCollector, createCollector } from "$lib/telemetry/traces";
 
-import { getDataSourceConfig } from "../db/dataSource";
+import { getActiveDataSource } from "../db/dataSource";
 
-export function getActiveCollector(): TraceCollector | null {
-  const config = getDataSourceConfig();
-  return config ? createCollector(config) : null;
+export function getActiveTraceCollector(): TraceCollector | null {
+  const source = getActiveDataSource();
+  return source ? createCollector(source.vendor, source.config) : null;
 }

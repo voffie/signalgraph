@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ACCENT, MSG_C, NW, NH } from "$lib/tokens";
+  import { NODE_HEIGHT, NODE_WIDTH } from "$lib/domain/layout";
   import type { PositionedGraphNode } from "$lib/types";
 
   let {
@@ -21,17 +21,13 @@
   } = $props();
 
   const isMsg = $derived(node.kind === "message");
-  const kindC = $derived(isMsg ? MSG_C : ACCENT);
+  const kindC = $derived(isMsg ? "var(--color-chart-1)" : "var(--color-primary)");
 
   const fillSel = $derived(isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)");
-
+  const strokeHov = $derived(isMsg ? "rgba(79,142,247,0.4)" : "rgba(124,11,224,0.4)");
   const strokeNorm = "rgba(255,255,255,0.075)";
 
-  const strokeSel = $derived(kindC);
-  const strokeHov = $derived(`${kindC}66`);
-
-  const stroke = $derived(selected ? strokeSel : hovered ? strokeHov : strokeNorm);
-
+  const stroke = $derived(selected ? kindC : hovered ? strokeHov : strokeNorm);
   const sw = $derived(selected ? 1.5 : 1);
 
   const glowFilter = $derived(selected ? (isMsg ? "url(#glow-evt)" : "url(#glow-hnd)") : undefined);
@@ -52,8 +48,8 @@
     <rect
       x={-4}
       y={-4}
-      width={NW + 8}
-      height={NH + 8}
+      width={NODE_WIDTH + 8}
+      height={NODE_HEIGHT + 8}
       rx={13}
       fill="none"
       stroke={kindC}
@@ -64,10 +60,10 @@
   <rect
     x={0}
     y={0}
-    width={NW}
-    height={NH}
+    width={NODE_WIDTH}
+    height={NODE_HEIGHT}
     rx={9}
-    fill={selected ? fillSel : "#0a0718"}
+    fill={selected ? fillSel : "var(--color-card)"}
     {stroke}
     stroke-width={sw}
     style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s" />
@@ -75,14 +71,20 @@
   <rect
     x={1}
     y={0}
-    width={NW - 2}
+    width={NODE_WIDTH - 2}
     height={3}
     rx={1.5}
     fill={kindC}
     opacity={selected ? 0.85 : hovered ? 0.5 : 0.28}
     style="transition: opacity 0.15s" />
 
-  <line x1={0} y1={29} x2={NW} y2={29} stroke="rgba(255,255,255,0.042)" stroke-width={0.5} />
+  <line
+    x1={0}
+    y1={29}
+    x2={NODE_WIDTH}
+    y2={29}
+    stroke="rgba(255,255,255,0.055)"
+    stroke-width={0.5} />
 
   {#if isMsg}
     <g transform="translate(11,10)">
@@ -106,7 +108,7 @@
     y={21}
     font-size={7.5}
     font-family="'JetBrains Mono', monospace"
-    fill="var(--color-text2)"
+    fill="var(--color-muted-foreground)"
     letter-spacing="0.09em">
     {isMsg ? "MESSAGE" : "HANDLER"}
   </text>
@@ -117,7 +119,7 @@
     font-size={13}
     font-family="'Inter', sans-serif"
     font-weight={600}
-    fill="var(--color-text)">
+    fill="var(--color-foreground)">
     {node.label}
   </text>
 </g>

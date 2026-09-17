@@ -3,15 +3,16 @@
 </script>
 
 <div class="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-  <div class="text-accent flex size-12 items-center justify-center rounded-full font-mono text-3xl">
+  <div
+    class="text-primary flex size-12 items-center justify-center rounded-full font-mono text-3xl">
     {page.status}
   </div>
 
   <div>
-    <h1 class="text-text m-0 text-sm font-semibold">
+    <h1 class="m-0 text-sm font-semibold">
       {page.status === 404 ? "Page not found" : "Something went wrong"}
     </h1>
-    <p class="text-text2 mt-2 mb-0 max-w-sm text-xs leading-relaxed">
+    <p class="mt-2 mb-0 max-w-sm text-xs leading-relaxed">
       {page.error?.message ?? "An unexpected error occurred."}
     </p>
   </div>

@@ -19,7 +19,6 @@
 
   const src = $derived(nmap[edge.source]);
   const tgt = $derived(nmap[edge.target]);
-
   const d = $derived(src && tgt ? epath(src, tgt) : "");
 
   const baseStroke = "rgba(124,111,224,0.2)";
@@ -45,7 +44,7 @@
     <path
       {d}
       fill="none"
-      stroke="var(--color-accent)"
+      stroke="var(--color-primary)"
       stroke-width={hovered ? 1.5 : 1}
       stroke-dasharray="5 16"
       class="edge-anim"
@@ -54,7 +53,7 @@
 
     <circle
       r={2.5}
-      fill="var(--color-accent)"
+      fill="var(--color-primary)"
       opacity={hovered ? 0.9 : 0.5}
       style="transition: opacity 0.18s">
       <animateMotion dur={`${particleDur}s`} repeatCount="indefinite" path={d} />

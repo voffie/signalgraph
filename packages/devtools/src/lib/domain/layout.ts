@@ -5,10 +5,6 @@ import type { Graph, GraphNode } from "./types";
 export const NODE_WIDTH = 172;
 export const NODE_HEIGHT = 76;
 
-const HORIZONTAL_GAP = 96;
-const VERTICAL_GAP = 44;
-const PADDING = 48;
-
 export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
   const remainingIncoming = new Map(graph.nodes.map((node) => [node.id, 0]));
@@ -72,8 +68,8 @@ export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
     for (const [row, node] of nodes.entries()) {
       positions.set(node.id, {
         ...node,
-        x: PADDING + level * (NODE_WIDTH + HORIZONTAL_GAP),
-        y: PADDING + row * (NODE_HEIGHT + VERTICAL_GAP),
+        x: 48 + level * (NODE_WIDTH + 96),
+        y: 48 + row * (NODE_HEIGHT + 44),
       });
     }
   }

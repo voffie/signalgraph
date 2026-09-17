@@ -1,24 +1,30 @@
 <script lang="ts">
-  import { invalidate } from "$app/navigation";
+  import CommandMenu from "$lib/components/CommandMenu.svelte";
+  import ConnectionsDialog from "$lib/components/ConnectionsDialog.svelte";
   import EdgeEl from "$lib/components/EdgeEl.svelte";
+  import GraphSearchBar from "$lib/components/GraphSearchBar.svelte";
   import InspectorPanel from "$lib/components/InspectorPanel.svelte";
   import NodeEl from "$lib/components/NodeEl.svelte";
+  import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import TimelinePanel from "$lib/components/TimelinePanel.svelte";
+  import TraceDialog from "$lib/components/TraceDialog.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
   import { buildGraph } from "$lib/domain/graph";
   import { NODE_HEIGHT, NODE_WIDTH, positionGraphNodes } from "$lib/domain/layout";
   import type { TraceSpan } from "$lib/domain/types";
-  import { ACCENT, MSG_C, MUTED } from "$lib/tokens";
   import type { InspTab, SearchField } from "$lib/types";
-  import { buildNmap, matchSearch } from "$lib/utils";
+  import { buildNmap, cn, matchSearch } from "$lib/utils.js";
+  import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import MaximizeIcon from "@lucide/svelte/icons/maximize";
+  import MinusIcon from "@lucide/svelte/icons/minus";
+  import PlusIcon from "@lucide/svelte/icons/plus";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
+  import ShareIcon from "@lucide/svelte/icons/share-2";
   import { tick } from "svelte";
 
   let { data } = $props();
-
-  const POLL_INTERVAL_MS = 15_100;
-  $effect(() => {
-    const timer = setInterval(() => invalidate("app:trace"), POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
-  });
 
   let selectedId = $state<string | null>(null);
   let selectedSpanId = $state<string | null>(null);
@@ -27,17 +33,13 @@
   let search = $state("");
   let searchField = $state<SearchField>("any");
   let timelineOpen = $state(true);
-  let inspCollapsed = $state(false);
+  let inspCollapsed = $state(true);
   let inspTab = $state<InspTab>("overview");
   let transform = $state({ x: 20, y: 55, scale: 0.76 });
   let panning = $state(false);
+  let overlay = $state<"command" | "connections" | "trace" | "settings" | null>(null);
 
-  let panRef: { x: number; y: number; tx: number; ty: number } = {
-    x: 0,
-    y: 0,
-    tx: 0,
-    ty: 0,
-  };
+  let panRef: { x: number; y: number; tx: number; ty: number } = { x: 0, y: 0, tx: 0, ty: 0 };
   let svgEl: SVGSVGElement | undefined = $state();
   let canvasEl: HTMLElement | undefined = $state();
 
@@ -55,19 +57,8 @@
   const matchCount = $derived(filteredIds?.size ?? 0);
   const hasGraphNodes = $derived(positionedNodes.length > 0);
 
-  const searchFields: Array<{ value: SearchField; label: string }> = [
-    { value: "any", label: "Any" },
-    { value: "name", label: "Name" },
-    { value: "msg-id", label: "Msg ID" },
-    { value: "corr-id", label: "Corr ID" },
-    { value: "trace-id", label: "Trace ID" },
-    { value: "service", label: "Service" },
-  ];
-
   $effect(() => {
-    if (hasGraphNodes) {
-      tick().then(handleFitView);
-    }
+    if (hasGraphNodes) tick().then(handleFitView);
   });
 
   $effect(() => {
@@ -76,10 +67,7 @@
     const handler = (e: WheelEvent) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.1 : 0.9;
-      transform = {
-        ...transform,
-        scale: Math.max(0.2, Math.min(3, transform.scale * factor)),
-      };
+      transform = { ...transform, scale: Math.max(0.2, Math.min(3, transform.scale * factor)) };
     };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
@@ -150,15 +138,11 @@
   }
 
   function getPrimarySpanForNode(nodeId: string): TraceSpan | null {
-    if (!graph) {
-      return null;
-    }
+    if (!graph) return null;
 
     const node = nmap[nodeId];
 
-    if (!node) {
-      return null;
-    }
+    if (!node) return null;
 
     const primarySpanName = node.kind === "message" ? "signalgraph.publish" : "signalgraph.handler";
 
@@ -178,7 +162,6 @@
 
   function handleNodeClick(nodeId: string) {
     const nextSelectedId = selectedId === nodeId ? null : nodeId;
-
     selectedId = nextSelectedId;
     selectedSpanId = nextSelectedId
       ? (getPrimarySpanForNode(nextSelectedId)?.spanId ?? null)
@@ -190,161 +173,179 @@
     }
   }
 
-  const zoomButtons = [
-    {
-      l: "+",
-      tip: "Zoom in",
-      fn: () => {
-        transform = {
-          ...transform,
-          scale: Math.min(3, transform.scale * 1.2),
-        };
-      },
-    },
-    {
-      l: "−",
-      tip: "Zoom out",
-      fn: () => {
-        transform = {
-          ...transform,
-          scale: Math.max(0.2, transform.scale * 0.8),
-        };
-      },
-    },
-    { l: "⊡", tip: "Fit view", fn: handleFitView },
-  ];
+  function handleKeydown(e: KeyboardEvent) {
+    const isModPressed = e.metaKey || e.ctrlKey;
+
+    if (isModPressed && e.key === "k") {
+      overlay = null;
+      e.preventDefault();
+      overlay = "command";
+      return;
+    }
+
+    if (isModPressed && e.key === ",") {
+      e.preventDefault();
+      overlay = "settings";
+      return;
+    }
+  }
 </script>
 
-{#if data.error}
-  <div class="flex flex-1 items-center justify-center p-8 text-center">
-    <div>
-      <h2 class="text-text m-0 text-sm font-semibold">Unable to load trace</h2>
-      <p class="text-text2 mt-2 max-w-sm text-xs leading-relaxed">
-        {data.error}
-      </p>
+<svelte:window onkeydown={handleKeydown} />
+
+{#snippet header()}
+  <header
+    class="bg-background sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4">
+    <div class="flex items-center gap-2">
+      <svg width={18} height={18} viewBox="0 0 20 20" fill="none">
+        <circle cx={10} cy={10} r={2.8} fill="var(--color-primary)" />
+        <circle cx={3} cy={5} r={1.6} fill="var(--color-primary)" opacity={0.5} />
+        <circle cx={17} cy={5} r={1.6} fill="var(--color-primary)" opacity={0.5} />
+        <circle cx={3} cy={15} r={1.6} fill="var(--color-primary)" opacity={0.5} />
+        <circle cx={17} cy={15} r={1.6} fill="var(--color-primary)" opacity={0.5} />
+        <path
+          d="M4.4 5.7 7.6 8.4M12.4 8.4 15.6 5.7M4.4 14.3 7.6 11.6M12.4 11.6 15.6 14.3"
+          stroke="var(--color-primary)"
+          stroke-width={1}
+          opacity={0.45} />
+      </svg>
+      <span class="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+        SignalGraph
+      </span>
     </div>
-  </div>
-{:else if !graph}
-  <div class="flex flex-1 items-center justify-center p-8 text-center">
-    <p class="text-text2 text-xs">No data source configured yet.</p>
-  </div>
-{:else}
-  <div class="flex min-h-0 flex-1 flex-col">
-    <div
-      class="border-b-border_hi bg-panel relative flex h-11 shrink-0 items-center gap-2 border-b px-3">
-      <div>
-        <div class="mr-1 flex shrink-0 items-center gap-2">
-          <svg width={18} height={18} viewBox="0 0 20 20" fill="none">
-            <circle cx={10} cy={10} r={2.8} fill={ACCENT} />
-            <circle cx={3} cy={5} r={1.6} fill={ACCENT} opacity={0.5} />
-            <circle cx={17} cy={5} r={1.6} fill={ACCENT} opacity={0.5} />
-            <circle cx={3} cy={15} r={1.6} fill={ACCENT} opacity={0.5} />
-            <circle cx={17} cy={15} r={1.6} fill={ACCENT} opacity={0.5} />
-            <path
-              d="M4.4 5.7 7.6 8.4M12.4 8.4 15.6 5.7M4.4 14.3 7.6 11.6M12.4 11.6 15.6 14.3"
-              stroke={ACCENT}
-              stroke-width={1}
-              opacity={0.45} />
-          </svg>
-          <span class="text-text text-[13.5px] font-semibold tracking-tight"> SignalGraph </span>
-          <span
-            class="bg-accent/20 text-accent border-accent/35 rounded-[3px] border px-1.5 py-px font-['JetBrains_Mono'] text-[9px] tracking-[0.06em]">
-            OTEL
-          </span>
-        </div>
-      </div>
-      <div
-        class="border-border_hi absolute top-1/2 left-1/2 flex h-8 w-120 -translate-x-1/2 -translate-y-1/2 items-stretch overflow-hidden rounded-lg border bg-white/4">
-        <select
-          name="searchType"
-          bind:value={searchField}
-          class="border-r-border_hi bg-white[0.06] text-text2 max-w-22.5 min-w-20 shrink-0 cursor-pointer border-r border-none px-2.5 font-['JetBrains_Mono'] text-[10.5px] outline-none">
-          {#each searchFields as f (f.value)}
-            <option value={f.value}>{f.label}</option>
-          {/each}
-        </select>
-        <div class="flex flex-1 items-center gap-1.75 px-2.5">
-          <svg
-            width={13}
-            height={13}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={MUTED}
-            stroke-width={2}
-            stroke-linecap="round">
-            <circle cx={11} cy={11} r={8} />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            name="searchValue"
-            type="text"
-            placeholder="Search nodes, message IDs, trace IDs..."
-            bind:value={search}
-            class="text-text flex-1 border-none bg-transparent text-[12.5px] outline-none" />
-          {#if search}
-            <span
-              class={`font-['JetBrains_Mono'] text-[10px] ${matchCount > 0 ? "text-accent" : "text-amber-400"}`}>
-              {matchCount} match{matchCount !== 1 ? "es" : ""}
-            </span>
-            <button
-              onclick={() => (search = "")}
-              class="text-muted shrink-0 border-none bg-none p-0 text-[18px] leading-none">
-              ×
-            </button>
-          {/if}
-        </div>
-      </div>
+
+    <div class="flex items-center gap-1">
+      <button
+        onclick={() => (overlay = "command")}
+        class="text-muted-foreground hover:text-foreground flex items-center gap-2 px-2 py-1.5 text-xs transition-colors">
+        Search
+        <kbd
+          class="bg-popover rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px]"
+          >⌘K</kbd>
+      </button>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Settings (⌘,)"
+        onclick={() => (overlay = "settings")}>
+        <SettingsIcon class="size-4" />
+      </Button>
     </div>
+  </header>
+{/snippet}
+
+<CommandMenu open={overlay === "command"} onNavigate={(name) => (overlay = name)} />
+
+<ConnectionsDialog open={overlay === "connections"} dataSources={data.dataSources} />
+
+<TraceDialog open={overlay === "trace"} traces={data.traces} />
+
+<SettingsDialog open={overlay === "settings"} graphLookbackSeconds={data.graphLookbackSeconds} />
+
+<div class="flex min-h-0 flex-1 flex-col">
+  {@render header()}
+
+  {#if data.error}
+    <Empty.Root class="flex-1">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <ShareIcon />
+        </Empty.Media>
+        <Empty.Title>Unable to Load Trace</Empty.Title>
+        <Empty.Description>
+          {data.error}
+        </Empty.Description>
+      </Empty.Header>
+    </Empty.Root>
+  {:else if !graph}
+    <Empty.Root class="flex-1">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <ShareIcon />
+        </Empty.Media>
+        <Empty.Title>No Message Flows Found</Empty.Title>
+        <Empty.Description>
+          Nothing here yet. Connect a collector to get started, or give it a moment if one's already
+          running.
+        </Empty.Description>
+      </Empty.Header>
+      <Empty.Content>
+        <div>
+          <Button variant="link" onclick={() => (overlay = "settings")}>Go to Settings</Button>
+        </div>
+      </Empty.Content>
+    </Empty.Root>
+  {:else}
     <div class="flex min-h-0 flex-1">
-      <main bind:this={canvasEl} class="bg-surface relative min-w-0 flex-1 overflow-hidden">
+      <main bind:this={canvasEl} class="bg-secondary relative min-w-0 flex-1 overflow-hidden">
         {#if hasGraphNodes}
-          <div class="absolute top-3 left-3 z-10 flex items-center gap-1">
-            {#each zoomButtons as b (b.l)}
-              <button
-                onclick={b.fn}
-                title={b.tip}
-                class="border-border_hi bg-panel text-text2 flex size-7 items-center justify-center rounded-md border text-[14px]">
-                {b.l}
-              </button>
-            {/each}
-            <span class="text-muted ml-1 font-['JetBrains_Mono'] text-[10px]">
-              {Math.round(transform.scale * 100)}%
-            </span>
+          <div class="absolute top-3 left-3 z-10 flex items-center gap-2">
+            <GraphSearchBar
+              {search}
+              {searchField}
+              {matchCount}
+              onSearchChange={(value) => (search = value)}
+              onSearchFieldChange={(value) => (searchField = value)} />
+
+            <div class="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                class="size-7"
+                title="Zoom in"
+                onclick={() =>
+                  (transform = { ...transform, scale: Math.min(3, transform.scale * 1.2) })}>
+                <PlusIcon class="size-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                class="size-7"
+                title="Zoom out"
+                onclick={() =>
+                  (transform = { ...transform, scale: Math.max(0.2, transform.scale * 0.8) })}>
+                <MinusIcon class="size-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                class="size-7"
+                title="Fit view"
+                onclick={handleFitView}>
+                <MaximizeIcon class="size-3.5" />
+              </Button>
+              <span class="text-muted-foreground ml-1 font-mono text-[10px]">
+                {Math.round(transform.scale * 100)}%
+              </span>
+            </div>
           </div>
 
           <div
-            class="border-border_hi bg-panel/94 absolute bottom-3 left-3 z-10 flex items-center gap-3.5 rounded-lg border px-3.5 py-1.75 backdrop-blur-md">
-            <span class="text-text2 flex items-center gap-1.5 font-['JetBrains_Mono'] text-[10px]">
-              <span class="bg-msg_c inline-block size-2 rotate-45"></span>
+            class="bg-popover/94 absolute bottom-3 left-3 z-10 flex items-center gap-3.5 rounded-lg border border-white/10 px-3.5 py-1.75 backdrop-blur-md">
+            <span class="flex items-center gap-1.5 font-mono text-[10px]">
+              <span class="bg-chart-1 inline-block size-2 rotate-45"></span>
               Message
             </span>
-            <span class="text-text2 flex items-center gap-1.5 font-['JetBrains_Mono'] text-[10px]">
-              <span class="font-['JetBrains_Mono']text-[10px] text-accent">
-                {"{ }"}
-              </span>
+            <span class="flex items-center gap-1.5 font-mono text-[10px]">
+              <span class="text primary font-mono text-[10px]">{"{ }"}</span>
               Handler
             </span>
           </div>
 
           {#if inspCollapsed}
-            <button
-              onclick={() => (inspCollapsed = false)}
+            <Button
+              variant="outline"
+              size="icon"
               title="Open Inspector"
-              class="border-border_hi bg-panel text-text2 absolute top-[50%] right-0 z-10 flex h-13 w-5 translate-y-[-50%] items-center justify-center rounded-tl-[7px] rounded-bl-[7px] border border-r-0 p-0">
-              <svg width={9} height={9} viewBox="0 0 10 10">
-                <path
-                  d="M7 2L3 5l4 3"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width={1.5}
-                  stroke-linecap="round" />
-              </svg>
-            </button>
+              class="absolute top-1/2 right-0 z-10 h-13 w-5 -translate-y-1/2 rounded-r-none border-r-0"
+              onclick={() => (inspCollapsed = false)}>
+              <ChevronLeftIcon class="size-3.5" />
+            </Button>
           {/if}
 
           <svg
             bind:this={svgEl}
-            class={`block size-full select-none ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+            class={cn("block size-full select-none", panning ? "cursor-grabbing" : "cursor-grab")}
             onpointerdown={onPointerDown}
             onpointermove={onPointerMove}
             onpointerup={onPointerUp}
@@ -362,7 +363,7 @@
               </pattern>
               <filter id="glow-evt" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur" />
-                <feFlood flood-color={MSG_C} flood-opacity="0.5" result="color" />
+                <feFlood flood-color="var(--color-chart-1)" flood-opacity="0.5" result="color" />
                 <feComposite in="color" in2="blur" operator="in" result="glow" />
                 <feMerge>
                   <feMergeNode in="glow" />
@@ -371,7 +372,7 @@
               </filter>
               <filter id="glow-hnd" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur" />
-                <feFlood flood-color={ACCENT} flood-opacity="0.5" result="color" />
+                <feFlood flood-color="var(--color-primary)" flood-opacity="0.5" result="color" />
                 <feComposite in="color" in2="blur" operator="in" result="glow" />
                 <feMerge>
                   <feMergeNode in="glow" />
@@ -408,12 +409,12 @@
           <div
             class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
             <div
-              class="border-border_hi bg-panel text-accent flex size-10 items-center justify-center rounded-full border font-mono">
+              class="bg-popover text-primary flex size-10 items-center justify-center rounded-full border border-white/10 font-mono">
               ∿
             </div>
             <div>
-              <h2 class="text-text m-0 text-sm font-semibold">No SignalGraph spans found</h2>
-              <p class="text-text2 mt-2 mb-0 max-w-sm text-xs leading-relaxed">
+              <h2 class="m-0 text-sm font-semibold">No SignalGraph spans found</h2>
+              <p class="mt-2 mb-0 max-w-sm text-xs leading-relaxed">
                 This trace was loaded successfully, but it does not contain spans instrumented with
                 SignalGraph.
               </p>
@@ -424,27 +425,25 @@
 
       {#if hasGraphNodes}
         <aside
-          class={`${inspCollapsed ? "w-0" : "w-74.5"} border-l-border_hi bg-panel flex shrink-0 flex-col overflow-hidden border-l`}
+          class={cn(
+            "bg-popover flex shrink-0 flex-col overflow-hidden border-l border-white/10",
+            inspCollapsed ? "w-0" : "w-74.5",
+          )}
           style={`transition:width 0.25s cubic-bezier(0.4,0,0.2,1)`}>
           <div class="flex h-full w-74.5 flex-col">
             <div
               class="border-b-border flex h-10 shrink-0 items-center justify-between border-b px-3.5">
-              <span class="text-muted font-['JetBrains_Mono'] text-[9.5px] tracking-[0.09em]">
+              <span class="text-muted-foreground font-mono text-[9.5px] tracking-[0.09em]">
                 INSPECTOR
               </span>
-              <button
-                onclick={() => (inspCollapsed = true)}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="text-muted-foreground size-5"
                 title="Collapse inspector"
-                class="text-muted flex items-center gap-1 rounded-sm px-1 py-0.5 font-['JetBrains_Mono'] text-[10px]">
-                <svg width={12} height={12} viewBox="0 0 12 12">
-                  <path
-                    d="M4 2L8 6l-4 4"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width={1.5}
-                    stroke-linecap="round" />
-                </svg>
-              </button>
+                onclick={() => (inspCollapsed = true)}>
+                <ChevronRightIcon class="size-3.5" />
+              </Button>
             </div>
 
             <div class="flex flex-1 flex-col overflow-hidden">
@@ -459,12 +458,12 @@
       <div class="shrink-0">
         <button
           onclick={() => (timelineOpen = !timelineOpen)}
-          class="border-t-border_hi bg-panel text-text2 flex w-full items-center gap-2 border-t border-none px-4.5 py-1.25 text-left font-['JetBrains_Mono'] text-[9.5px] tracking-[0.07em]">
+          class="bg-popover flex w-full items-center gap-2 border-t border-white/10 px-4.5 py-1.25 text-left font-mono text-[9.5px] tracking-[0.07em]">
           <svg
             width={12}
             height={12}
             viewBox="0 0 12 12"
-            class={`${timelineOpen ? "rotate-0" : "rotate-180"} shrink-0`}
+            class={cn("shrink-0", timelineOpen ? "rotate-0" : "rotate-180")}
             style="transition:transform 0.2s cubic-bezier(0.4,0,0.2,1)">
             <path
               d="M 2 8 L 6 4 L 10 8"
@@ -477,7 +476,7 @@
         </button>
 
         <div
-          class={`overflow-scroll ${timelineOpen ? "max-h-52.5" : "max-h-0"}`}
+          class={cn("overflow-scroll", timelineOpen ? "max-h-52.5" : "max-h-0")}
           style="transition:max-height 0.24s cubic-bezier(0.4,0,0.2,1)">
           <TimelinePanel
             spans={graph.traceSpans}
@@ -487,5 +486,5 @@
         </div>
       </div>
     {/if}
-  </div>
-{/if}
+  {/if}
+</div>

@@ -1,17 +1,34 @@
-import type { ServiceSummary, TraceSummary } from "./domain/types";
-import { NW, NH } from "./tokens";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+import { NODE_WIDTH, NODE_HEIGHT } from "./domain/layout";
 import type { PositionedGraphNode, SearchField } from "./types";
+
+export function cn(...inputs: Array<ClassValue>) {
+  return twMerge(clsx(inputs));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "children"> : T;
+export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
+export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
+
+export function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 export function buildNmap(nodes: Array<PositionedGraphNode>): Record<string, PositionedGraphNode> {
   return Object.fromEntries(nodes.map((node) => [node.id, node]));
 }
 
 export function epath(src: PositionedGraphNode, tgt: PositionedGraphNode): string {
-  const sx = src.x + NW;
-  const sy = src.y + NH / 2;
+  const sx = src.x + NODE_WIDTH;
+  const sy = src.y + NODE_HEIGHT / 2;
 
   const tx = tgt.x;
-  const ty = tgt.y + NH / 2;
+  const ty = tgt.y + NODE_HEIGHT / 2;
 
   const dx = Math.abs(tx - sx) * 0.48;
 
@@ -19,11 +36,11 @@ export function epath(src: PositionedGraphNode, tgt: PositionedGraphNode): strin
 }
 
 export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode): { x: number; y: number } {
-  const sx = src.x + NW;
-  const sy = src.y + NH / 2;
+  const sx = src.x + NODE_WIDTH;
+  const sy = src.y + NODE_HEIGHT / 2;
 
   const tx = tgt.x;
-  const ty = tgt.y + NH / 2;
+  const ty = tgt.y + NODE_HEIGHT / 2;
 
   const dx = Math.abs(tx - sx) * 0.48;
 
@@ -85,20 +102,4 @@ export function matchSearch(node: PositionedGraphNode, q: string, field: SearchF
         .toLowerCase()
         .includes(ql);
   }
-}
-
-export function matchSearchTrace(trace: TraceSummary, q: string, field: SearchField): boolean {
-  const ql = q.toLowerCase();
-
-  return true;
-}
-
-export function matchSearchService(
-  service: ServiceSummary,
-  q: string,
-  field: SearchField,
-): boolean {
-  const ql = q.toLowerCase();
-
-  return true;
 }

@@ -22,4 +22,7 @@ export default defineConfig({
       adapter: adapter(),
     }),
   ],
+  ssr: {
+    noExternal: ["bits-ui", "svelte-sonner"],
+  },
 });

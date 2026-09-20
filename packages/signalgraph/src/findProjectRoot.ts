@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Path } from "effect";
+
 import { ConfigNotFoundError } from "./errors.ts";
 
 export interface Project {
@@ -18,7 +19,7 @@ export const findProjectRoot = Effect.fn(function* () {
     if (yield* fs.exists(configPath)) {
       return {
         root: current,
-        configPath
+        configPath,
       };
     }
 
@@ -27,7 +28,7 @@ export const findProjectRoot = Effect.fn(function* () {
     if (parent === current) {
       return yield* new ConfigNotFoundError({
         cwd: current,
-        searched: "signalgraph.config.ts"
+        searched: "signalgraph.config.ts",
       });
     }
 

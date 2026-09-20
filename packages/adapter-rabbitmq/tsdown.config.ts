@@ -8,10 +8,10 @@ export default defineConfig({
   sourcemap: true,
   dts: true,
   deps: {
-    onlyBundle: []
+    onlyBundle: [],
   },
   treeshake: {
-    moduleSideEffects: false
+    moduleSideEffects: false,
   },
   publint: "ci-only",
   attw: "ci-only",
@@ -19,7 +19,7 @@ export default defineConfig({
   exports: {
     customExports: (exports) => ({
       ...exports,
-      "./package.json": "./package.json"
-    })
-  }
-})
+      "./package.json": "./package.json",
+    }),
+  },
+});

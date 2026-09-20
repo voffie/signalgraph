@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+
 import type { MessageGraph } from "./client.ts";
 import { ValidationError } from "./errors.ts";
 
@@ -8,7 +9,7 @@ export function validateRuntime(graph: MessageGraph) {
       if (message.consumers.length === 0) {
         return yield* new ValidationError({
           message: `Message "${name}" has no consumers`,
-          area: "graph"
+          area: "graph",
         });
       }
     }
@@ -25,7 +26,7 @@ export function validateConsumers(graph: MessageGraph) {
         ) {
           return yield* new ValidationError({
             message: `Invalid prefetch value for consumer "${consumer.name}"`,
-            area: "consumer"
+            area: "consumer",
           });
         }
       }

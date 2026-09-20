@@ -1,0 +1,124 @@
+<script lang="ts">
+  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "$lib/domain/layout";
+
+  let {
+    node,
+    selected,
+    dimmed,
+    hovered,
+    onClick,
+    onEnter,
+    onLeave,
+  }: {
+    node: PositionedGraphNode;
+    selected: boolean;
+    dimmed: boolean;
+    hovered: boolean;
+    onClick: () => void;
+    onEnter: () => void;
+    onLeave: () => void;
+  } = $props();
+
+  const isMsg = $derived(node.kind === "message");
+  const kindC = $derived(isMsg ? "var(--color-chart-1)" : "var(--color-primary)");
+
+  const fillSel = $derived(isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)");
+  const strokeHov = $derived(isMsg ? "rgba(79,142,247,0.4)" : "rgba(124,111,224,0.4)");
+  const strokeNorm = "rgba(255,255,255,0.075)";
+
+  const stroke = $derived(selected ? kindC : hovered ? strokeHov : strokeNorm);
+  const sw = $derived(selected ? 1.5 : 1);
+
+  const glowFilter = $derived(selected ? (isMsg ? "url(#glow-evt)" : "url(#glow-hnd)") : undefined);
+</script>
+
+<g
+  class={`graph-node cursor-pointer ${dimmed ? "opacity-10" : "opacity-100"}`}
+  transform={`translate(${node.x},${node.y})`}
+  filter={glowFilter}
+  onclick={onClick}
+  onmouseenter={onEnter}
+  onmouseleave={onLeave}
+  role="button"
+  tabindex="0"
+  onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+  style={`transition:opacity 0.15s`}>
+  {#if hovered && !selected}
+    <rect
+      x={-4}
+      y={-4}
+      width={NODE_WIDTH + 8}
+      height={NODE_HEIGHT + 8}
+      rx={13}
+      fill="none"
+      stroke={kindC}
+      stroke-width={0.75}
+      opacity={0.35} />
+  {/if}
+
+  <rect
+    x={0}
+    y={0}
+    width={NODE_WIDTH}
+    height={NODE_HEIGHT}
+    rx={9}
+    fill={selected ? fillSel : "var(--color-card)"}
+    {stroke}
+    stroke-width={sw}
+    style="transition: fill 0.15s, stroke 0.15s, stroke-width 0.12s" />
+
+  <rect
+    x={1}
+    y={0}
+    width={NODE_WIDTH - 2}
+    height={3}
+    rx={1.5}
+    fill={kindC}
+    opacity={selected ? 0.85 : hovered ? 0.5 : 0.28}
+    style="transition: opacity 0.15s" />
+
+  <line
+    x1={0}
+    y1={29}
+    x2={NODE_WIDTH}
+    y2={29}
+    stroke="rgba(255,255,255,0.055)"
+    stroke-width={0.5} />
+
+  {#if isMsg}
+    <g transform="translate(11,10)">
+      <polygon points="6,0 12,6 6,12 0,6" fill={kindC} opacity={selected ? 0.85 : 0.55} />
+    </g>
+  {:else}
+    <text
+      x={10}
+      y={21}
+      font-size={11}
+      font-family="'JetBrains Mono', monospace"
+      font-weight={500}
+      fill={kindC}
+      opacity={selected ? 0.9 : 0.6}
+      style="transition: opacity 0.15s">
+      {"{}"}
+    </text>
+  {/if}
+  <text
+    x={isMsg ? 28 : 32}
+    y={21}
+    font-size={7.5}
+    font-family="'JetBrains Mono', monospace"
+    fill="var(--color-muted-foreground)"
+    letter-spacing="0.09em">
+    {isMsg ? "MESSAGE" : "HANDLER"}
+  </text>
+
+  <text
+    x={11}
+    y={49}
+    font-size={13}
+    font-family="'Inter', sans-serif"
+    font-weight={600}
+    fill="var(--color-foreground)">
+    {node.label}
+  </text>
+</g>

@@ -4,21 +4,21 @@ import { consumer, message } from "signalgraph";
 export const OrderCreated = message({
   name: "orders.created",
   schema: Schema.Struct({
-    orderId: Schema.String
-  })
+    orderId: Schema.String,
+  }),
 });
 
 export const Billing = consumer({
   name: "billing",
-  message: OrderCreated
+  message: OrderCreated,
 });
 
 export const Analytics = consumer({
   name: "analytics",
-  message: OrderCreated
+  message: OrderCreated,
 });
 
 export const Inventory = consumer({
   name: "inventory",
-  message: OrderCreated
-})
+  message: OrderCreated,
+});

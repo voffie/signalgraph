@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   entry: {
     index: "src/index.ts",
-    broker: "src/broker.ts"
+    broker: "src/broker.ts",
   },
   format: ["esm"],
   platform: "node",
@@ -11,10 +11,10 @@ export default defineConfig({
   sourcemap: true,
   dts: true,
   deps: {
-    onlyBundle: []
+    onlyBundle: [],
   },
   treeshake: {
-    moduleSideEffects: false
+    moduleSideEffects: false,
   },
   publint: "ci-only",
   attw: "ci-only",
@@ -22,7 +22,7 @@ export default defineConfig({
   exports: {
     customExports: (exports) => ({
       ...exports,
-      "./package.json": "./package.json"
-    })
-  }
-})
+      "./package.json": "./package.json",
+    }),
+  },
+});

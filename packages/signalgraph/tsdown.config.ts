@@ -4,7 +4,7 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     config: "src/config.ts",
-    internal: "src/internal/index.ts"
+    internal: "src/internal/index.ts",
   },
   format: ["esm"],
   platform: "node",
@@ -12,10 +12,10 @@ export default defineConfig({
   sourcemap: true,
   dts: true,
   deps: {
-    onlyBundle: []
+    onlyBundle: [],
   },
   treeshake: {
-    moduleSideEffects: false
+    moduleSideEffects: false,
   },
   publint: "ci-only",
   attw: "ci-only",
@@ -23,7 +23,7 @@ export default defineConfig({
   exports: {
     customExports: (exports) => ({
       ...exports,
-      "./package.json": "./package.json"
-    })
-  }
-})
+      "./package.json": "./package.json",
+    }),
+  },
+});

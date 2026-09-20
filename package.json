@@ -1,7 +1,6 @@
 {
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.3.0",
   "scripts": {
     "build": "pnpm -r build",
     "watch": "pnpm -r --parallel watch",
@@ -17,16 +16,17 @@
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
     "@effect/language-service": "0.85.1",
-    "@effect/vitest": "4.0.0-beta.98",
+    "@effect/vitest": "4.0.0-beta.103",
     "@types/node": "latest",
     "@vitest/coverage-v8": "4.1.10",
-    "oxfmt": "0.47.0",
-    "oxlint": "1.62.0",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
     "publint": "^0.3.21",
     "tsdown": "0.21.10",
     "typescript": "^6.0.3",
     "vite": "^7.2.7",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.10"
-  }
+  },
+  "packageManager": "pnpm@11.3.0"
 }

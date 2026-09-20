@@ -1,22 +1,21 @@
 import { Effect, Schema } from "effect";
-import {
-  Broker,
-  type HandlerRegistry,
-} from "./broker.ts";
-import { InvalidPayloadError } from "./errors.ts";
 import type { AnyMessage, Consumer } from "signalgraph";
 import { toPropertyName } from "signalgraph/internal";
+
+import { Broker, type HandlerRegistry } from "./broker.ts";
+import { InvalidPayloadError } from "./errors.ts";
+import { createPublishMetadata, type MessageMetadata } from "./metadata.ts";
+import { CurrentMessageMetadata } from "./references.ts";
 import { validateRuntime, validateConsumers } from "./validation.ts";
 
 export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
 }
 
-export type UserHandler<P> = (
-  ctx: {
-    readonly payload: P;
-  }
-) => Effect.Effect<void>;
+export type UserHandler<P> = (ctx: {
+  readonly payload: P;
+  readonly metadata: MessageMetadata;
+}) => Effect.Effect<void>;
 
 export interface RuntimeConsumer<P> {
   handle(handler: UserHandler<P>): Effect.Effect<void>;
@@ -34,9 +33,7 @@ export type RuntimeClient = {
   listen(): Effect.Effect<void>;
 };
 
-export function createClient<T extends object>(
-  graph: MessageGraph
-) {
+export function createClient<T extends object>(graph: MessageGraph) {
   return Effect.sync(() => {
     const client: Record<string, unknown> = {};
     const handlers: HandlerRegistry = new Map();
@@ -47,14 +44,32 @@ export function createClient<T extends object>(
           return Effect.gen(function* () {
             const broker = yield* Broker;
 
-            const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
-
-            yield* broker.deliver(
-              exportIdentifier,
-              encoded
+            const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(
+              payload,
             );
-          });
-        }
+
+            const metadata: MessageMetadata = yield* createPublishMetadata();
+
+            yield* Effect.annotateCurrentSpan({
+              "signalgraph.message.id": metadata.messageId,
+              "signalgraph.correlation.id": metadata.correlationId,
+            });
+
+            yield* broker.deliver({
+              message: exportIdentifier,
+              data: {
+                payload: encoded,
+                metadata,
+              },
+            });
+          }).pipe(
+            Effect.withSpan("signalgraph.publish", {
+              attributes: {
+                "signalgraph.message.name": exportIdentifier,
+              },
+            }),
+          );
+        },
       };
 
       for (const consumer of exportData.consumers) {
@@ -63,29 +78,46 @@ export function createClient<T extends object>(
             return Effect.sync(() => {
               const list = handlers.get(consumer.name) ?? [];
 
-              list.push((payload) =>
+              list.push((message) =>
                 Effect.gen(function* () {
-                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(payload).pipe(
-                    Effect.mapError((cause) =>
-                      new InvalidPayloadError({
-                        message: "Incoming payload does not match defined message schema",
-                        cause
-                      })
-                    )
+                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(
+                    message.payload,
+                  ).pipe(
+                    Effect.mapError(
+                      (cause) =>
+                        new InvalidPayloadError({
+                          message: "Incoming payload does not match defined message schema",
+                          cause,
+                        }),
+                    ),
                   );
 
-                  return yield* handler({
-                    payload: decoded
-                  });
-                })
+                  return yield* Effect.provideService(
+                    handler({
+                      payload: decoded,
+                      metadata: message.metadata,
+                    }),
+                    CurrentMessageMetadata,
+                    message.metadata,
+                  ).pipe(
+                    Effect.withSpan("signalgraph.handler", {
+                      attributes: {
+                        "signalgraph.consumer.name": consumer.name,
+                        "signalgraph.message.name": consumer.message.name,
+                        "signalgraph.message.id": message.metadata.messageId,
+                        "signalgraph.correlation.id": message.metadata.correlationId,
+                      },
+                    }),
+                  );
+                }),
               );
 
               handlers.set(consumer.name, list);
             });
-          }
+          },
         };
-      };
-    };
+      }
+    }
 
     client.start = () =>
       Effect.gen(function* () {
@@ -96,7 +128,7 @@ export function createClient<T extends object>(
 
         yield* broker.start({
           graph,
-          handlers
+          handlers,
         });
       });
 

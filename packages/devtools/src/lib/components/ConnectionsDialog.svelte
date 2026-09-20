@@ -4,6 +4,7 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import type { DataSourceProfile } from "$lib/server/db/dataSource";
   import { TRACE_VENDORS, type TraceVendor } from "$lib/telemetry/traces";
   import { cn } from "$lib/utils";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
@@ -11,14 +12,17 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { tick } from "svelte";
 
-  type ConnectionRow = {
-    name: string;
-    vendor: TraceVendor;
-    config: { url: string };
-    isActive: boolean;
-  };
+  import { moveListIndex } from "../listNavigation";
 
-  let { open, dataSources }: { open: boolean; dataSources: Array<ConnectionRow> } = $props();
+  let {
+    open,
+    onOpenChange,
+    dataSources,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    dataSources: Array<DataSourceProfile>;
+  } = $props();
 
   type Step = "list" | "name" | "vendor" | "url";
 
@@ -48,7 +52,7 @@
     step = "name";
   }
 
-  function startEdit(row: ConnectionRow) {
+  function startEdit(row: DataSourceProfile) {
     editingCurrentName = row.name;
     formName = row.name;
     formVendor = row.vendor;
@@ -78,8 +82,8 @@
   }
 
   function handleListKeydown(e: KeyboardEvent) {
-    e.preventDefault();
     if (e.key === "n") {
+      e.preventDefault();
       startCreate();
       return;
     }
@@ -87,21 +91,26 @@
     switch (e.key) {
       case "ArrowDown":
       case "j":
-        selectedIndex = Math.min(selectedIndex + 1, dataSources.length - 1);
+        e.preventDefault();
+        selectedIndex = moveListIndex(selectedIndex, "down", dataSources.length);
         break;
       case "ArrowUp":
       case "k":
-        selectedIndex = Math.max(selectedIndex - 1, 0);
+        e.preventDefault();
+        selectedIndex = moveListIndex(selectedIndex, "up", dataSources.length);
         break;
       case "Enter":
       case " ":
+        e.preventDefault();
         setActive(dataSources[selectedIndex].name);
         break;
       case "e":
+        e.preventDefault();
         startEdit(dataSources[selectedIndex]);
         break;
       case "d":
       case "Backspace":
+        e.preventDefault();
         deleteConnection(dataSources[selectedIndex].name);
         break;
     }
@@ -117,22 +126,24 @@
   }
 
   function handleVendorKeydown(e: KeyboardEvent) {
-    e.preventDefault();
-
     switch (e.key) {
       case "ArrowDown":
       case "j":
+        e.preventDefault();
         vendorIndex = Math.min(vendorIndex + 1, TRACE_VENDORS.length - 1);
         break;
       case "ArrowUp":
       case "k":
+        e.preventDefault();
         vendorIndex = Math.max(vendorIndex - 1, 0);
         break;
       case "Enter":
+        e.preventDefault();
         formVendor = TRACE_VENDORS[vendorIndex].value;
         step = "url";
         break;
       case "Escape":
+        e.preventDefault();
         step = "name";
         break;
     }
@@ -171,22 +182,28 @@
     }
   }
 
-  $effect(() => {
-    const currentStep = step;
+  function focusStep(currentStep: Step) {
     tick().then(() => {
       if (currentStep === "list") listEl?.focus();
       if (currentStep === "name") nameInputEl?.focus();
       if (currentStep === "vendor") vendorListEl?.focus();
       if (currentStep === "url") vendorUrlEl?.focus();
     });
+  }
+
+  $effect(() => {
+    if (!open) return;
+
+    const currentStep = step;
+    focusStep(currentStep);
   });
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content
-    onOpenAutoFocus={(e) => {
-      e.preventDefault();
-      if (step === "list") listEl?.focus();
+    onOpenAutoFocus={(event) => {
+      event.preventDefault();
+      focusStep(step);
     }}
     class="flex max-w-md flex-col gap-4 p-5">
     {#if step === "list"}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAttribute } from "$lib/domain/attributes";
   import type { TraceSpan } from "$lib/domain/types";
   import { capitalize, cn, fmtMs } from "$lib/utils";
 
@@ -22,9 +23,7 @@
 
   function getSpanLabel(span: TraceSpan): string {
     if (span.name === "signalgraph.publish") {
-      let messageName =
-        span.attributes.find((attribute) => attribute.key === "signalgraph.message.name")?.value ??
-        span.name;
+      let messageName = getAttribute(span.attributes, "signalgraph.message.name") ?? span.name;
 
       messageName = messageName
         .trim()
@@ -37,9 +36,7 @@
     }
 
     if (span.name === "signalgraph.consume" || span.name === "signalgraph.handler") {
-      const consumerName =
-        span.attributes.find((attribute) => attribute.key === "signalgraph.consumer.name")?.value ??
-        span.name;
+      const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name") ?? span.name;
 
       const suffix = span.name === "signalgraph.consume" ? " (Consume)" : " (Handler)";
       return consumerName ? capitalize(consumerName) + suffix : span.name;

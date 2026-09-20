@@ -2,7 +2,7 @@ import type { TracesConfig, TraceVendor } from "$lib/telemetry/traces";
 
 import { db } from "./index";
 
-type DataSourceProfile = {
+export type DataSourceProfile = {
   id: number;
   name: string;
   vendor: TraceVendor;

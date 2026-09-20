@@ -1,23 +1,21 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import XIcon from "@lucide/svelte/icons/x";
 </script>
 
-<div class="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-  <div
-    class="text-primary flex size-12 items-center justify-center rounded-full font-mono text-3xl">
-    {page.status}
-  </div>
-
-  <div>
-    <h1 class="m-0 text-sm font-semibold">
-      {page.status === 404 ? "Page not found" : "Something went wrong"}
-    </h1>
-    <p class="mt-2 mb-0 max-w-sm text-xs leading-relaxed">
-      {page.error?.message ?? "An unexpected error occurred."}
-    </p>
-  </div>
-
-  <a href="/graph" class="bg-accent mt-1 rounded-md px-3 py-2 text-xs font-semibold text-white">
-    Back to Graph
-  </a>
-</div>
+<Empty.Root class="flex-1">
+  <Empty.Header>
+    <Empty.Media variant="icon">
+      <XIcon />
+    </Empty.Media>
+    <Empty.Title>{page.status === 404 ? "Page not found" : "Something went wrong"}</Empty.Title>
+    <Empty.Description>{page.error?.message ?? "An unexpected error occurred."}</Empty.Description>
+  </Empty.Header>
+  <Empty.Content>
+    <div class="flex gap-2">
+      <Button href="/" variant="link">Back to graph</Button>
+    </div>
+  </Empty.Content>
+</Empty.Root>

@@ -1,9 +1,12 @@
-import type { PositionedGraphNode } from "$lib/types";
-
 import type { Graph, GraphNode } from "./types";
 
 export const NODE_WIDTH = 172;
 export const NODE_HEIGHT = 76;
+
+export interface PositionedGraphNode extends GraphNode {
+  x: number;
+  y: number;
+}
 
 export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));

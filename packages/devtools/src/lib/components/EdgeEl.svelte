@@ -1,6 +1,6 @@
 <script lang="ts">
+  import type { PositionedGraphNode } from "$lib/domain/layout";
   import type { GraphEdge } from "$lib/domain/types";
-  import type { PositionedGraphNode } from "$lib/types";
   import { epath } from "$lib/utils";
 
   let {

@@ -1,12 +1,10 @@
+import { getAttribute } from "./attributes";
 import type { Graph, GraphEdge, GraphNode, Trace } from "./types";
-
-function getAttributeValue(attributes: GraphNode["attributes"], key: string): string | undefined {
-  return attributes.find((attribute) => attribute.key === key)?.value;
-}
 
 export function buildGraph(trace: Trace): Graph {
   const nodes = new Map<string, GraphNode>();
   const edges = new Map<string, GraphEdge>();
+  const spanNodeIds: Record<string, string> = {};
 
   const signalGraphSpans = trace.spans.filter((span) => span.name.startsWith("signalgraph."));
 
@@ -15,9 +13,9 @@ export function buildGraph(trace: Trace): Graph {
 
     switch (spanKind) {
       case "publish": {
-        const messageId = getAttributeValue(span.attributes, "signalgraph.message.id");
+        const messageId = getAttribute(span.attributes, "signalgraph.message.id");
 
-        const messageName = getAttributeValue(span.attributes, "signalgraph.message.name");
+        const messageName = getAttribute(span.attributes, "signalgraph.message.name");
 
         if (!messageId || !messageName) {
           continue;
@@ -29,12 +27,15 @@ export function buildGraph(trace: Trace): Graph {
           kind: "message",
           attributes: span.attributes,
           traceId: span.traceId,
+          primarySpanId: span.spanId,
         });
+
+        spanNodeIds[span.spanId] = messageId;
         break;
       }
 
       case "handler": {
-        const consumerName = getAttributeValue(span.attributes, "signalgraph.consumer.name");
+        const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name");
 
         if (!consumerName) {
           continue;
@@ -46,11 +47,19 @@ export function buildGraph(trace: Trace): Graph {
           kind: "handler",
           attributes: span.attributes,
           traceId: span.traceId,
+          primarySpanId: span.spanId,
         });
+
+        spanNodeIds[span.spanId] = consumerName;
         break;
       }
 
       case "consume":
+        const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name");
+
+        if (consumerName) {
+          spanNodeIds[span.spanId] = consumerName;
+        }
         break;
 
       default:
@@ -64,9 +73,9 @@ export function buildGraph(trace: Trace): Graph {
     const spanKind = span.name.split(".")[1];
 
     if (spanKind === "consume") {
-      const messageId = getAttributeValue(span.attributes, "signalgraph.message.id");
+      const messageId = getAttribute(span.attributes, "signalgraph.message.id");
 
-      const consumerName = getAttributeValue(span.attributes, "signalgraph.consumer.name");
+      const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name");
 
       if (!messageId || !consumerName) {
         continue;
@@ -80,7 +89,7 @@ export function buildGraph(trace: Trace): Graph {
     }
 
     if (spanKind === "publish") {
-      const messageId = getAttributeValue(span.attributes, "signalgraph.message.id");
+      const messageId = getAttribute(span.attributes, "signalgraph.message.id");
 
       if (!messageId || !span.parentSpanId) {
         continue;
@@ -92,7 +101,7 @@ export function buildGraph(trace: Trace): Graph {
         continue;
       }
 
-      const consumerName = getAttributeValue(parentSpan.attributes, "signalgraph.consumer.name");
+      const consumerName = getAttribute(parentSpan.attributes, "signalgraph.consumer.name");
 
       if (!consumerName) {
         continue;
@@ -110,5 +119,6 @@ export function buildGraph(trace: Trace): Graph {
     nodes: [...nodes.values()],
     edges: [...edges.values()],
     traceSpans: signalGraphSpans,
+    spanNodeIds,
   };
 }

@@ -8,7 +8,8 @@ export type TraceVendor = (typeof TRACE_VENDORS)[number]["value"];
 export type TracesConfig = { url: string };
 
 export interface TraceCollector {
-  collect(args: { traceId?: string; lookbackSeconds: number }): Promise<Trace>;
+  getTrace(traceId: string): Promise<Trace | null>;
+  getLatestTrace(lookbackSeconds: number): Promise<Trace | null>;
   listTraces(filters: TraceListFilters): Promise<Array<TraceSummary>>;
 }
 

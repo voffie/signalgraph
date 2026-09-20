@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { NODE_HEIGHT, NODE_WIDTH } from "$lib/domain/layout";
-  import type { PositionedGraphNode } from "$lib/types";
+  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "$lib/domain/layout";
 
   let {
     node,
@@ -24,7 +23,7 @@
   const kindC = $derived(isMsg ? "var(--color-chart-1)" : "var(--color-primary)");
 
   const fillSel = $derived(isMsg ? "rgba(79,142,247,0.10)" : "rgba(124,111,224,0.10)");
-  const strokeHov = $derived(isMsg ? "rgba(79,142,247,0.4)" : "rgba(124,11,224,0.4)");
+  const strokeHov = $derived(isMsg ? "rgba(79,142,247,0.4)" : "rgba(124,111,224,0.4)");
   const strokeNorm = "rgba(255,255,255,0.075)";
 
   const stroke = $derived(selected ? kindC : hovered ? strokeHov : strokeNorm);

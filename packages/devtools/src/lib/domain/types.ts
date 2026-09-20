@@ -1,7 +1,5 @@
 type NodeKind = "message" | "handler";
 
-type TraceStatus = "ok" | "error";
-
 export interface Attribute {
   key: string;
   value: string;
@@ -44,6 +42,7 @@ export interface GraphNode {
   kind: NodeKind;
   attributes: Array<Attribute>;
   traceId: string;
+  primarySpanId: string;
 }
 
 /**
@@ -62,6 +61,7 @@ export interface Graph {
   nodes: Array<GraphNode>;
   edges: Array<GraphEdge>;
   traceSpans: Array<TraceSpan>;
+  spanNodeIds: Record<string, string>;
 }
 
 export interface TraceSummary {
@@ -70,12 +70,10 @@ export interface TraceSummary {
   rootOperation: string;
   durationMs: number;
   startTime: number;
-  status: TraceStatus;
 }
 
 export interface TraceListFilters {
   start: number;
   end: number;
   service?: Array<string>;
-  status?: Array<TraceStatus>;
 }

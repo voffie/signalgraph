@@ -111,9 +111,5 @@ export function normalizeSearchResponse(response: TempoSearchResponse): Array<Tr
     rootOperation: result.rootTraceName,
     durationMs: result.durationMs,
     startTime: normalizeTimestamp(result.startTimeUnixNano),
-    // Tempo's search API doesn't return status directly - you'd typically
-    // query with a status tag filter, or check span status after fetching
-    // the full trace. Hardcoding "ok" until that's wired up.
-    status: "ok",
   }));
 }

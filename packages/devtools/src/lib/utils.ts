@@ -1,8 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-import { NODE_WIDTH, NODE_HEIGHT } from "./domain/layout";
-import type { PositionedGraphNode, SearchField } from "./types";
+import { NODE_WIDTH, NODE_HEIGHT, type PositionedGraphNode } from "./domain/layout";
+import type { SearchField } from "./types";
 
 export function cn(...inputs: Array<ClassValue>) {
   return twMerge(clsx(inputs));

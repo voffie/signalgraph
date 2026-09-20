@@ -6,9 +6,11 @@
 
   let {
     open,
+    onOpenChange,
     onNavigate,
   }: {
     open: boolean;
+    onOpenChange: (open: boolean) => void;
     onNavigate: (destination: "connections" | "settings" | "trace") => void;
   } = $props();
 
@@ -17,7 +19,7 @@
   }
 </script>
 
-<Command.Dialog bind:open>
+<Command.Dialog {open} {onOpenChange}>
   <Command.Input placeholder="Type a command or search..." />
   <Command.List>
     <Command.Empty>No results found.</Command.Empty>

@@ -5,8 +5,19 @@
   import { cn } from "$lib/utils.js";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import { tick } from "svelte";
 
-  let { open, graphLookbackSeconds }: { open: boolean; graphLookbackSeconds: number } = $props();
+  import { moveListIndex } from "../listNavigation";
+
+  let {
+    open,
+    onOpenChange,
+    graphLookbackSeconds,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    graphLookbackSeconds: number;
+  } = $props();
 
   const LOOKBACK_OPTIONS = [
     { label: "Last 15 minutes", seconds: 15 * 60 },
@@ -43,12 +54,14 @@
   }
 
   function handleSettingsKeydown(e: KeyboardEvent) {
-    e.preventDefault();
     if (e.key === "ArrowDown" || e.key === "j") {
-      settingIndex = Math.min(settingIndex + 1, SETTINGS.length - 1);
+      e.preventDefault();
+      settingIndex = moveListIndex(settingIndex, "down", SETTINGS.length);
     } else if (e.key === "ArrowUp" || e.key === "k") {
-      settingIndex = Math.max(settingIndex - 1, 0);
+      e.preventDefault();
+      settingIndex = moveListIndex(settingIndex, "up", SETTINGS.length);
     } else if (e.key === "Enter") {
+      e.preventDefault();
       step = SETTINGS[settingIndex].id;
     }
   }
@@ -62,24 +75,49 @@
   }
 
   function handleLookbackKeydown(e: KeyboardEvent) {
-    e.preventDefault();
     if (e.key === "ArrowDown" || e.key === "j") {
-      valueIndex = Math.min(valueIndex + 1, LOOKBACK_OPTIONS.length - 1);
+      e.preventDefault();
+      valueIndex = moveListIndex(valueIndex, "down", LOOKBACK_OPTIONS.length);
     } else if (e.key === "ArrowUp" || e.key === "k") {
-      valueIndex = Math.max(valueIndex - 1, 0);
+      e.preventDefault();
+      valueIndex = moveListIndex(valueIndex, "up", LOOKBACK_OPTIONS.length);
     } else if (e.key === "Enter") {
+      e.preventDefault();
       selectLookback(LOOKBACK_OPTIONS[valueIndex].seconds);
     } else if (e.key === "Escape") {
+      e.preventDefault();
       step = "settings";
     }
   }
+
+  function focusStep(currentStep: Step) {
+    tick().then(() => {
+      if (currentStep === "settings") listEl?.focus();
+      if (currentStep === "lookback") valueListEl?.focus();
+    });
+  }
+
+  $effect(() => {
+    if (!open) return;
+
+    const currentStep = step;
+
+    if (currentStep === "lookback") {
+      valueIndex = Math.max(
+        0,
+        LOOKBACK_OPTIONS.findIndex((option) => option.seconds === graphLookbackSeconds),
+      );
+    }
+
+    focusStep(currentStep);
+  });
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content
     onOpenAutoFocus={(e) => {
       e.preventDefault();
-      if (step === "settings") listEl?.focus();
+      focusStep(step);
     }}
     class="flex max-w-md flex-col gap-4 p-5">
     {#if step === "settings"}

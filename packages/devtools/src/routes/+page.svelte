@@ -17,11 +17,15 @@
   import { buildNmap, cn, matchSearch } from "$lib/utils.js";
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import CircleOffIcon from "@lucide/svelte/icons/circle-off";
+  import DatabaseIcon from "@lucide/svelte/icons/database";
   import MaximizeIcon from "@lucide/svelte/icons/maximize";
   import MinusIcon from "@lucide/svelte/icons/minus";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import SearchXIcon from "@lucide/svelte/icons/search-x";
   import SettingsIcon from "@lucide/svelte/icons/settings";
-  import ShareIcon from "@lucide/svelte/icons/share-2";
+  import WaypointsIcon from "@lucide/svelte/icons/waypoints";
   import { tick } from "svelte";
 
   let { data } = $props();
@@ -121,51 +125,18 @@
     panning = false;
   }
 
-  function getSpanAttribute(span: TraceSpan, key: string): string | undefined {
-    return span.attributes.find((attribute) => attribute.key === key)?.value;
-  }
-
-  function getNodeIdForSpan(span: TraceSpan): string | null {
-    if (span.name === "signalgraph.publish") {
-      return getSpanAttribute(span, "signalgraph.message.id") ?? null;
-    }
-
-    if (span.name === "signalgraph.consume" || span.name === "signalgraph.handler") {
-      return getSpanAttribute(span, "signalgraph.consumer.name") ?? null;
-    }
-
-    return null;
-  }
-
-  function getPrimarySpanForNode(nodeId: string): TraceSpan | null {
-    if (!graph) return null;
-
-    const node = nmap[nodeId];
-
-    if (!node) return null;
-
-    const primarySpanName = node.kind === "message" ? "signalgraph.publish" : "signalgraph.handler";
-
-    return (
-      graph.traceSpans.find(
-        (span) => span.name === primarySpanName && getNodeIdForSpan(span) === nodeId,
-      ) ?? null
-    );
-  }
-
   function handleSpanClick(span: TraceSpan) {
     selectedSpanId = span.spanId;
-    selectedId = getNodeIdForSpan(span);
+    selectedId = graph?.spanNodeIds[span.spanId] ?? null;
     inspTab = "overview";
     inspCollapsed = false;
   }
 
   function handleNodeClick(nodeId: string) {
     const nextSelectedId = selectedId === nodeId ? null : nodeId;
+
     selectedId = nextSelectedId;
-    selectedSpanId = nextSelectedId
-      ? (getPrimarySpanForNode(nextSelectedId)?.spanId ?? null)
-      : null;
+    selectedSpanId = nextSelectedId ? (nmap[nextSelectedId]?.primarySpanId ?? null) : null;
 
     if (nextSelectedId) {
       inspTab = "overview";
@@ -234,13 +205,33 @@
   </header>
 {/snippet}
 
-<CommandMenu open={overlay === "command"} onNavigate={(name) => (overlay = name)} />
+<CommandMenu
+  open={overlay === "command"}
+  onOpenChange={(open) => {
+    if (!open) overlay = null;
+  }}
+  onNavigate={(name) => (overlay = name)} />
 
-<ConnectionsDialog open={overlay === "connections"} dataSources={data.dataSources} />
+<ConnectionsDialog
+  open={overlay === "connections"}
+  dataSources={data.dataSources}
+  onOpenChange={(open) => {
+    if (!open) overlay = null;
+  }} />
 
-<TraceDialog open={overlay === "trace"} traces={data.traces} />
+<TraceDialog
+  open={overlay === "trace"}
+  selectedTraceId={data.trace?.traceId ?? null}
+  onOpenChange={(open) => {
+    if (!open) overlay = null;
+  }} />
 
-<SettingsDialog open={overlay === "settings"} graphLookbackSeconds={data.graphLookbackSeconds} />
+<SettingsDialog
+  open={overlay === "settings"}
+  graphLookbackSeconds={data.graphLookbackSeconds}
+  onOpenChange={(open) => {
+    if (!open) overlay = null;
+  }} />
 
 <div class="flex min-h-0 flex-1 flex-col">
   {@render header()}
@@ -249,25 +240,48 @@
     <Empty.Root class="flex-1">
       <Empty.Header>
         <Empty.Media variant="icon">
-          <ShareIcon />
+          <CircleAlertIcon />
         </Empty.Media>
         <Empty.Title>Unable to Load Trace</Empty.Title>
+        <Empty.Description>{data.error}</Empty.Description>
+      </Empty.Header>
+    </Empty.Root>
+  {:else if !data.hasAnyDataSource}
+    <Empty.Root class="flex-1">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <DatabaseIcon />
+        </Empty.Media>
+        <Empty.Title>No Connections Configured</Empty.Title>
+        <Empty.Description>Add a connection to start viewing traces.</Empty.Description>
+      </Empty.Header>
+      <Empty.Content>
+        <Button variant="link" onclick={() => (overlay = "connections")}>Add connection</Button>
+      </Empty.Content>
+    </Empty.Root>
+  {:else if !data.hasActiveDataSource}
+    <Empty.Root class="flex-1">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <CircleOffIcon />
+        </Empty.Media>
+        <Empty.Title>No Active Connection</Empty.Title>
         <Empty.Description>
-          {data.error}
+          Set one of your saved connections as active to load a trace.
         </Empty.Description>
       </Empty.Header>
+      <Empty.Content>
+        <Button variant="link" onclick={() => (overlay = "connections")}>Switch connection</Button>
+      </Empty.Content>
     </Empty.Root>
   {:else if !graph}
     <Empty.Root class="flex-1">
       <Empty.Header>
         <Empty.Media variant="icon">
-          <ShareIcon />
+          <SearchXIcon />
         </Empty.Media>
-        <Empty.Title>No Message Flows Found</Empty.Title>
-        <Empty.Description>
-          Nothing here yet. Connect a collector to get started, or give it a moment if one's already
-          running.
-        </Empty.Description>
+        <Empty.Title>No Traces Found</Empty.Title>
+        <Empty.Description>Waiting for SignalGraph traces to be generated.</Empty.Description>
       </Empty.Header>
       <Empty.Content>
         <div>
@@ -327,7 +341,7 @@
               Message
             </span>
             <span class="flex items-center gap-1.5 font-mono text-[10px]">
-              <span class="text primary font-mono text-[10px]">{"{ }"}</span>
+              <span class="text-primary font-mono text-[10px]">{"{ }"}</span>
               Handler
             </span>
           </div>
@@ -406,20 +420,18 @@
             </g>
           </svg>
         {:else}
-          <div
-            class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
-            <div
-              class="bg-popover text-primary flex size-10 items-center justify-center rounded-full border border-white/10 font-mono">
-              ∿
-            </div>
-            <div>
-              <h2 class="m-0 text-sm font-semibold">No SignalGraph spans found</h2>
-              <p class="mt-2 mb-0 max-w-sm text-xs leading-relaxed">
+          <Empty.Root class="flex-1">
+            <Empty.Header>
+              <Empty.Media variant="icon">
+                <WaypointsIcon />
+              </Empty.Media>
+              <Empty.Title>No SignalGraph spans found</Empty.Title>
+              <Empty.Description>
                 This trace was loaded successfully, but it does not contain spans instrumented with
                 SignalGraph.
-              </p>
-            </div>
-          </div>
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
         {/if}
       </main>
 

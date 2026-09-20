@@ -14,14 +14,6 @@ function buildTraceQlQuery(filters: TraceListFilters): string | undefined {
     conditions.push(filters.service.length > 1 ? `(${clause})` : clause);
   }
 
-  if (filters.status?.length) {
-    const clause = filters.status
-      .map((s) => `status = "${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
-      .join(" || ");
-
-    conditions.push(filters.status.length > 1 ? `(${clause})` : clause);
-  }
-
   if (!conditions.length) return undefined;
   return `{ ${conditions.join(" && ")} }`;
 }
@@ -33,28 +25,22 @@ export class TempoCollector implements TraceCollector {
     this.#url = url;
   }
 
-  async collect({
-    traceId,
-    lookbackSeconds,
-  }: {
-    traceId?: string;
-    lookbackSeconds: number;
-  }): Promise<Trace> {
-    if (traceId) {
-      const res = await fetch(`${this.#url}/api/v2/traces/${traceId}`);
+  async getTrace(traceId: string): Promise<Trace | null> {
+    const res = await fetch(`${this.#url}/api/v2/traces/${traceId}`);
 
-      if (res.status === 404) {
-        throw new Error(`Trace ${traceId} not found`);
-      }
-
-      if (!res.ok) {
-        throw new Error(`Tempo returned ${res.status} for trace ${traceId}`);
-      }
-
-      const json = await res.json();
-      return normalizeTrace(json);
+    if (res.status === 404) {
+      return null;
     }
 
+    if (!res.ok) {
+      throw new Error(`Tempo returned ${res.status} for trace ${traceId}`);
+    }
+
+    const json = await res.json();
+    return normalizeTrace(json);
+  }
+
+  async getLatestTrace(lookbackSeconds: number): Promise<Trace | null> {
     const now = Math.floor(Date.now() / 1000);
 
     const params = new URLSearchParams();
@@ -70,13 +56,9 @@ export class TempoCollector implements TraceCollector {
     }
 
     const searchJson = await searchRes.json();
-    const latestTraceId = searchJson.traces?.[0]?.traceID;
+    const traceId = searchJson.traces?.[0]?.traceID;
 
-    if (!latestTraceId) {
-      throw new Error("No traces found");
-    }
-
-    return this.collect({ traceId: latestTraceId, lookbackSeconds });
+    return traceId ? this.getTrace(traceId) : null;
   }
 
   async listTraces(filters: TraceListFilters): Promise<Array<TraceSummary>> {

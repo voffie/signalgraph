@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getAttribute } from "$lib/domain/attributes";
   import type { GraphNode } from "$lib/domain/types";
   import type { InspTab } from "$lib/types";
   import { capitalize, cn } from "$lib/utils";
@@ -34,10 +35,7 @@
   const traceId = $derived(node ? (node?.traceId ?? "-") : "-");
 
   const corrId = $derived(
-    node
-      ? (node.attributes.find((attribute) => attribute.key === "signalgraph.correlation.id")
-          ?.value ?? "-")
-      : "-",
+    node ? (getAttribute(node.attributes, "signalgraph.correlation.id") ?? "-") : "-",
   );
 
   const overviewRows = $derived(

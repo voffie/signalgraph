@@ -1,31 +1,80 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/state";
+  import { Button } from "$lib/components/ui/button/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import type { TraceSummary } from "$lib/domain/types";
   import { cn } from "$lib/utils.js";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import { tick } from "svelte";
 
-  let { open, traces }: { open: boolean; traces: Array<TraceSummary> | null } = $props();
+  import { moveListIndex } from "../listNavigation";
+
+  let {
+    open,
+    selectedTraceId,
+    onOpenChange,
+  }: {
+    open: boolean;
+    selectedTraceId: string | null;
+    onOpenChange: (open: boolean) => void;
+  } = $props();
 
   let selectedIndex = $state(0);
-  let listEl: HTMLDivElement | undefined = $state();
+  let listEl = $state<HTMLDivElement | null>(null);
+  let traces = $state<Array<TraceSummary>>([]);
+  let loading = $state(false);
+  let error = $state<string | null>(null);
 
-  let currentTraceId = $derived(page.url.searchParams.get("trace"));
+  async function loadTraces() {
+    loading = true;
+    error = null;
+    traces = [];
+    selectedIndex = 0;
+
+    try {
+      const response = await fetch("/api/traces");
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(body?.message ?? "Unable to load traces.");
+      }
+
+      const body = (await response.json()) as { traces: Array<TraceSummary> };
+      traces = body.traces;
+
+      await tick();
+      listEl?.focus();
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : "Unable to load traces.";
+    } finally {
+      loading = false;
+    }
+  }
+
+  $effect(() => {
+    if (open) {
+      void loadTraces();
+    }
+  });
 
   function selectTrace(traceId: string) {
-    open = false;
+    onOpenChange(false);
     goto(`/?trace=${traceId}`);
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    e.preventDefault();
     if (traces === null || traces.length === 0) return;
     if (e.key === "ArrowDown" || e.key === "j") {
-      selectedIndex = Math.min(selectedIndex + 1, traces.length - 1);
+      e.preventDefault();
+      selectedIndex = moveListIndex(selectedIndex, "down", traces.length);
     } else if (e.key === "ArrowUp" || e.key === "k") {
-      selectedIndex = Math.max(selectedIndex - 1, 0);
+      e.preventDefault();
+      selectedIndex = moveListIndex(selectedIndex, "up", traces.length);
     } else if (e.key === "Enter") {
+      e.preventDefault();
       selectTrace(traces[selectedIndex].traceId);
     }
   }
@@ -35,16 +84,29 @@
   }
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root {open} {onOpenChange}>
   <Dialog.Content
-    onOpenAutoFocus={() => {
-      listEl?.focus();
-    }}
+    onOpenAutoFocus={(event) => event.preventDefault()}
     class="flex max-w-md flex-col gap-4 p-5">
     <Dialog.Title class="text-sm font-semibold">Switch trace</Dialog.Title>
 
-    {#if traces === null}
-      <p class="text-muted-foreground text-sm">No traces found</p>
+    {#if loading}
+      <div class="text-muted-foreground flex items-center gap-2 text-sm">
+        <LoaderCircleIcon class="size-4 animate-spin" />
+        Loading recent traces...
+      </div>
+    {:else if error}
+      <div class="flex flex-col gap-3">
+        <div class="text-destructive flex items-center gap-2 text-sm">
+          <CircleAlertIcon class="size-4" />
+          {error}
+        </div>
+
+        <Button variant="outline" size="sm" class="w-fit gap-2" onclick={loadTraces}>
+          <RefreshCwIcon class="size-3.5" />
+          Retry
+        </Button>
+      </div>
     {:else if traces.length === 0}
       <p class="text-muted-foreground text-sm">No recent traces found.</p>
     {:else}
@@ -67,7 +129,7 @@
             <span class="text-muted-foreground text-xs">
               {formatTraceTime(trace.startTime)} · {trace.durationMs}ms
             </span>
-            {#if trace.traceId === currentTraceId}
+            {#if trace.traceId === selectedTraceId}
               <CheckIcon class="text-primary size-3.5" />
             {/if}
           </button>

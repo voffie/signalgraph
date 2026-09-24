@@ -90,6 +90,12 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             });
 
             for (const consumer of messageDef.consumers) {
+              const consumerHandlers = handlers.get(consumer.name);
+
+              if (!consumerHandlers?.length) {
+                continue;
+              }
+
               // Pin this channel's release to the broker's scope,
               // not to whatever scope surrounds this call to start().
               const consumerChannel = yield* Scope.provide(layerScope)(
@@ -169,7 +175,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     traceContext: msg.properties.headers?.traceContext,
                   });
 
-                  const list = handlers.get(consumer.name) ?? [];
+                  const list = consumerHandlers;
 
                   const dispatch = Effect.gen(function* () {
                     for (const handler of list) {

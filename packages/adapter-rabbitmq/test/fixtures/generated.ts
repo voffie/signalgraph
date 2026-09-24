@@ -9,7 +9,7 @@ import {
   createClient,
 } from "@signalgraph/runtime";
 
-import { OrderCreated, OrderCompleted, Analytics, Billing, Shipping } from "./schema.ts";
+import { OrderCreated, Analytics, Billing } from "./schema.ts";
 
 export type OrderCreatedPayload = { readonly orderId: number };
 
@@ -20,17 +20,12 @@ export type Client = RuntimeClient & {
   orderCompleted: RuntimeMessage<OrderCompletedPayload>;
   analytics: RuntimeConsumer<OrderCreatedPayload>;
   billing: RuntimeConsumer<OrderCreatedPayload>;
-  shipping: RuntimeConsumer<OrderCompletedPayload>;
 };
 
 const messageGraph = {
   "order.created": {
     definition: OrderCreated,
     consumers: [Analytics, Billing],
-  },
-  "order.completed": {
-    definition: OrderCompleted,
-    consumers: [Shipping],
   },
 } satisfies MessageGraph;
 

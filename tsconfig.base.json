@@ -33,10 +33,30 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "namespaceImportPackages": ["effect", "@effect/*"],
+        "namespaceImportPackages": [
+          "effect",
+          "@effect/*"
+        ],
+        "diagnosticSeverity": {
+          "globalErrorInEffectFailure": "off",
+          "unstableApiUsage": "off",
+          "experimentalApiUsage": "off"
+        },
         "includeSuggestionsInTsc": false,
         "ignoreEffectWarningsInTscExitCode": true,
-        "ignoreEffectErrorsInTscExitCode": true
+        "ignoreEffectErrorsInTscExitCode": true,
+        "overrides": [
+          {
+            "exclude": [
+              "**/index.ts",
+            ],
+            "options": {
+              "diagnosticSeverity": {
+                "apiStabilityLeak": "error"
+              }
+            }
+          }
+        ]
       }
     ]
   }

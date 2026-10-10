@@ -1,7 +1,11 @@
 packages:
   - packages/*
+  - packages/adapter/*
   - examples/*
-strictDepBuilds: false
+
+verifyDepsBeforeRun: error
+enableGlobalVirtualStore: false
+
 allowBuilds:
   better-sqlite3: false
   cpu-features: false
@@ -9,3 +13,14 @@ allowBuilds:
   msgpackr-extract: false
   protobufjs: false
   ssh2: false
+
+minimumReleaseAgeExclude:
+  - "@effect/tsgo-darwin-arm64@0.51.0"
+  - "@effect/tsgo-darwin-x64@0.51.0"
+  - "@effect/tsgo-linux-arm64@0.51.0"
+  - "@effect/tsgo-linux-arm@0.51.0"
+  - "@effect/tsgo-linux-x64@0.51.0"
+  - "@effect/tsgo-win32-arm64@0.51.0"
+  - "@effect/tsgo-win32-x64@0.51.0"
+  - "@effect/tsgo@0.51.0"
+  - '@effect/vitest@4.0.3'

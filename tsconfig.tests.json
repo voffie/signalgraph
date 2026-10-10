@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+  "references": [
+    {
+      "path": "tsconfig.packages.json"
+    }
+  ],
+  "include": [
+    "**/vitest.*.ts",
+    "./packages/*/test/**/*.ts",
+    "./packages/*/test/**/*.json",
+    "./packages/**/test/**/*.ts",
+    "./packages/**/test/**/*.json"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "erasableSyntaxOnly": false,
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "signalgraph": [
+        "./packages/signalgraph/src/index.ts"
+      ],
+      "signalgraph/*": [
+        "./packages/signalgraph/src/*.ts"
+      ],
+      "@signalgraph/adapter-memory": [
+        "./packages/adapter/memory/src/index.ts"
+      ],
+      "@signalgraph/adapter-memory/*": [
+        "./packages/adapter/memory/src/*.ts"
+      ],
+      "@signalgraph/adapter-rabbitmq": [
+        "./packages/adapter/rabbitmq/src/index.ts"
+      ],
+      "@signalgraph/adapter-rabbitmq/*": [
+        "./packages/adapter/rabbitmq/src/*.ts"
+      ],
+      "@signalgraph/devtools": [
+        "./packages/devtools/src/index.ts"
+      ],
+      "@signalgraph/devtools/*": [
+        "./packages/devtools/src/*.ts"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "namespaceImportPackages": [],
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectWarningsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": true,
+        "diagnosticSeverity": {
+          "unknownInEffectCatch": "off",
+          "multipleEffectProvide": "off",
+          "unstableApiUsage": "off"
+        }
+      }
+    ]
+  },
+}

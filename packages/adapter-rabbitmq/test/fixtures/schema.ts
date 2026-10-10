@@ -8,13 +8,6 @@ export const OrderCreated = message({
   }),
 });
 
-export const OrderCompleted = message({
-  name: "order.completed",
-  schema: Schema.Struct({
-    orderId: Schema.Number,
-  }),
-});
-
 export const Analytics = consumer({
   name: "analytics",
   message: OrderCreated,
@@ -23,9 +16,4 @@ export const Analytics = consumer({
 export const Billing = consumer({
   name: "billing",
   message: OrderCreated,
-});
-
-export const Shipping = consumer({
-  name: "shipping",
-  message: OrderCompleted,
 });

@@ -1,29 +1,24 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import { Effect, Layer } from "effect";
-import {
-  Broker,
-  type BrokerMessage,
-  createConsumeMetadata,
-  type HandlerRegistry,
-  type MessageGraph
-} from "signalgraph/runtime";
+import * as Broker from "signalgraph/broker";
+import * as Runtime from "signalgraph/runtime";
 
-export const MemoryBroker = Layer.sync(Broker, () => {
-  let handlers: HandlerRegistry | undefined;
-  let graph: MessageGraph | undefined;
+export const MemoryBroker = Layer.sync(Broker.Broker, () => {
+  let handlers: Broker.HandlerRegistry | undefined;
+  let graph: Runtime.MessageGraph | undefined;
 
-  const deliver = ({ message, data }: { message: string; data: BrokerMessage }) =>
+  const deliver = ({ message, data }: { message: string; data: Broker.BrokerMessage }) =>
     Effect.gen(function* () {
       const consumers = graph?.[message].consumers ?? [];
 
       for (const consumer of consumers) {
         const metadata = data.metadata.traceContext
-          ? createConsumeMetadata({
+          ? Runtime.createConsumeMetadata({
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId,
               traceContext: data.metadata.traceContext
             })
-          : createConsumeMetadata({
+          : Runtime.createConsumeMetadata({
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId
             });
@@ -61,8 +56,8 @@ export const MemoryBroker = Layer.sync(Broker, () => {
     graph: runtimeGraph,
     handlers: runtimeHandlers
   }: {
-    handlers: HandlerRegistry;
-    graph: MessageGraph;
+    handlers: Broker.HandlerRegistry;
+    graph: Runtime.MessageGraph;
   }) =>
     Effect.sync(() => {
       graph = runtimeGraph;

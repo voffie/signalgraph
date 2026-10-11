@@ -1,15 +1,8 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import * as amqp from "amqplib";
 import { Effect, Layer, Queue, Schema, Scope } from "effect";
-import {
-  Broker,
-  type BrokerMessage,
-  ConnectionError,
-  type HandlerRegistry,
-  InitializationError,
-  createConsumeMetadata,
-  type MessageGraph
-} from "signalgraph/runtime";
+import * as Broker from "signalgraph/broker";
+import * as Runtime from "signalgraph/runtime";
 
 type RabbitMQOptions = {
   url: string;
@@ -17,7 +10,7 @@ type RabbitMQOptions = {
 
 export function RabbitMQBroker(options: RabbitMQOptions) {
   return Layer.effect(
-    Broker,
+    Broker.Broker,
     Effect.gen(function* () {
       const { url } = options;
 
@@ -27,7 +20,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         Effect.tryPromise({
           try: () => amqp.connect(url),
           catch: (cause) =>
-            new ConnectionError({
+            new Runtime.ConnectionError({
               cause,
               message: "Failed to create connection to RabbitMQ broker"
             })
@@ -45,7 +38,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         Effect.tryPromise({
           try: () => conn.createChannel(),
           catch: (cause) =>
-            new ConnectionError({
+            new Runtime.ConnectionError({
               cause,
               message: "Failed to create connection to channel"
             })
@@ -59,7 +52,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         )
       );
 
-      const deliver = ({ message, data }: { message: string; data: BrokerMessage }) =>
+      const deliver = ({ message, data }: { message: string; data: Broker.BrokerMessage }) =>
         Effect.gen(function* () {
           const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(data.payload);
 
@@ -74,7 +67,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           );
         });
 
-      const start = ({ graph, handlers }: { graph: MessageGraph; handlers: HandlerRegistry }) =>
+      const start = ({ graph, handlers }: { graph: Runtime.MessageGraph; handlers: Broker.HandlerRegistry }) =>
         Effect.gen(function* () {
           for (const [messageName, messageDef] of Object.entries(graph)) {
             yield* Effect.tryPromise({
@@ -83,7 +76,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   durable: true
                 }),
               catch: (cause) =>
-                new InitializationError({
+                new Runtime.InitializationError({
                   cause,
                   message: `Failed to create exchange for ${messageName}`
                 })
@@ -103,7 +96,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   Effect.tryPromise({
                     try: () => conn.createChannel(),
                     catch: (cause) =>
-                      new ConnectionError({
+                      new Runtime.ConnectionError({
                         cause,
                         message: `Failed to create connection to channel for consumer "${consumer.name}"`
                       })
@@ -117,7 +110,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 yield* Effect.tryPromise({
                   try: () => consumerChannel.prefetch(prefetch),
                   catch: (cause) =>
-                    new InitializationError({
+                    new Runtime.InitializationError({
                       cause,
                       message: `Failed to set prefetch of ${prefetch} on channel`
                     })
@@ -130,7 +123,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     durable: true
                   }),
                 catch: (cause) =>
-                  new InitializationError({
+                  new Runtime.InitializationError({
                     cause,
                     message: `Failed to create queue for ${consumer.name}`
                   })
@@ -139,7 +132,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               yield* Effect.tryPromise({
                 try: () => consumerChannel.bindQueue(consumer.name, messageName, ""),
                 catch: (cause) =>
-                  new InitializationError({
+                  new Runtime.InitializationError({
                     cause,
                     message: `Failed to bind queue ${consumer.name} to exchange ${messageName}`
                   })
@@ -155,7 +148,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     }
                   }),
                 catch: (cause) =>
-                  new InitializationError({
+                  new Runtime.InitializationError({
                     cause,
                     message: `Failed to start consuming ${consumer.name}`
                   })
@@ -169,7 +162,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     msg.content.toString("utf-8")
                   );
 
-                  const metadata = createConsumeMetadata({
+                  const metadata = Runtime.createConsumeMetadata({
                     messageId: msg.properties.messageId ?? "",
                     correlationId: msg.properties.correlationId ?? "",
                     traceContext: msg.properties.headers?.traceContext

@@ -1,7 +1,7 @@
 import { Context, type Effect } from "effect";
 
-import type { MessageGraph } from "./client.ts";
-import type { MessageMetadata } from "./metadata.ts";
+import type { MessageGraph } from "../runtime/client.ts";
+import type { MessageMetadata } from "../runtime/metadata.ts";
 
 export interface BrokerMessage {
   readonly payload: unknown;
@@ -15,10 +15,7 @@ export type HandlerRegistry = Map<string, Array<BrokerHandler>>;
 export class Broker extends Context.Service<
   Broker,
   {
-    deliver(args: {
-      readonly message: string;
-      readonly data: BrokerMessage;
-    }): Effect.Effect<void, unknown>;
+    deliver(args: { readonly message: string; readonly data: BrokerMessage }): Effect.Effect<void, unknown>;
 
     readonly start: (args: {
       readonly graph: MessageGraph;

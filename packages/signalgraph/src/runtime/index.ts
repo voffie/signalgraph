@@ -1,5 +1,3 @@
-export { Broker, type BrokerMessage, type HandlerRegistry } from "./Broker.ts";
-
 export {
   type RuntimeConsumer,
   type RuntimeMessage,

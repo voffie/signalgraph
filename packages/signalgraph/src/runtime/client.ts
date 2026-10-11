@@ -1,19 +1,22 @@
 import { Effect, Schema } from "effect";
 
+import * as Broker from "../broker/index.ts";
 import type { Consumer } from "../Consumer.ts";
 import { toPropertyName } from "../internal/naming.ts";
 import type { AnyMessage } from "../Message.ts";
-import { Broker, type HandlerRegistry } from "./Broker.ts";
 import { InvalidPayloadError } from "./errors.ts";
-import { createPublishMetadata, type MessageMetadata } from "./metadata.ts";
+import * as Metadata from "./metadata.ts";
 import { CurrentMessageMetadata } from "./references.ts";
-import { validateRuntime, validateConsumers } from "./validation.ts";
+import * as Validation from "./validation.ts";
 
 export interface RuntimeMessage<P> {
   publish(payload: P): Effect.Effect<void>;
 }
 
-export type UserHandler<P> = (ctx: { readonly payload: P; readonly metadata: MessageMetadata }) => Effect.Effect<void>;
+type UserHandler<P> = (ctx: {
+  readonly payload: P;
+  readonly metadata: Metadata.MessageMetadata;
+}) => Effect.Effect<void>;
 
 export interface RuntimeConsumer<P> {
   handle(handler: UserHandler<P>): Effect.Effect<void>;
@@ -34,17 +37,17 @@ export type RuntimeClient = {
 export function createClient<T extends object>(graph: MessageGraph) {
   return Effect.sync(() => {
     const client: Record<string, unknown> = {};
-    const handlers: HandlerRegistry = new Map();
+    const handlers: Broker.HandlerRegistry = new Map();
 
     for (const [exportIdentifier, exportData] of Object.entries(graph)) {
       client[toPropertyName(exportIdentifier)] = {
         publish(payload: unknown) {
           return Effect.gen(function* () {
-            const broker = yield* Broker;
+            const broker = yield* Broker.Broker;
 
             const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
 
-            const metadata: MessageMetadata = yield* createPublishMetadata();
+            const metadata: Metadata.MessageMetadata = yield* Metadata.createPublishMetadata();
 
             yield* Effect.annotateCurrentSpan({
               "signalgraph.message.id": metadata.messageId,
@@ -115,10 +118,10 @@ export function createClient<T extends object>(graph: MessageGraph) {
 
     client.start = () =>
       Effect.gen(function* () {
-        const broker = yield* Broker;
+        const broker = yield* Broker.Broker;
 
-        yield* validateRuntime(graph);
-        yield* validateConsumers(graph);
+        yield* Validation.validateRuntime(graph);
+        yield* Validation.validateConsumers(graph);
 
         yield* broker.start({
           graph,

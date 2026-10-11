@@ -14,7 +14,7 @@ export const message = <const Name extends string, TSchema extends MessageSchema
 }): Message<Name, TSchema> => ({
   _tag: "Message",
   name: options.name,
-  schema: options.schema,
+  schema: options.schema
 });
 
 export type AnyMessage<TSchema extends MessageSchema = MessageSchema> = Message<string, TSchema>;

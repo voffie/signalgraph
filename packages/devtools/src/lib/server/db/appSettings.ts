@@ -1,11 +1,11 @@
-import { db } from "./index";
+import { getDb } from "./index";
 
 const DEFAULT_GRAPH_LOOKBACK_SECONDS = 24 * 60 * 60;
 
 const GRAPH_LOOKBACK_KEY = "graph_lookback_seconds";
 
 function getValue(key: string): { value: string } | null {
-  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as {
+  const row = getDb().prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as {
     value: string;
   } | null;
 
@@ -13,10 +13,12 @@ function getValue(key: string): { value: string } | null {
 }
 
 function setValue(key: string, value: string) {
-  db.prepare(
-    `INSERT INTO app_settings (key, value) VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-  ).run(key, value);
+  getDb()
+    .prepare(
+      `INSERT INTO app_settings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    )
+    .run(key, value);
 }
 
 export function getGraphLookbackSeconds(): number {

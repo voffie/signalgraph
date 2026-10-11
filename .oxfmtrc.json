@@ -1,8 +1,21 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "bracketSameLine": true,
-  "ignorePatterns": ["**/dist", "**/build", "**/docs", "**/.tsbuildinfo", "node_modules"],
+  "ignorePatterns": [
+    "**/dist",
+    "**/build",
+    "**/.tsbuildinfo",
+    "**/.*",
+    "!.changeset",
+    "!.changeset/**/*",
+    "!.github",
+    "!.github/**/*",
+    "!.gitignore",
+    "!.oxlintrc.json"
+  ],
   "sortImports": true,
   "sortTailwindcss": true,
-  "svelte": true
+  "svelte": true,
+  "printWidth": 120,
+  "trailingComma": "none"
 }

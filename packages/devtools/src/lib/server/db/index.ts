@@ -1,20 +1,32 @@
-import { env } from "$env/dynamic/private";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+import { DATABASE_PATH } from "$app/env/private";
 import Database from "better-sqlite3";
 
-const DB_PATH = env.DATABASE_PATH ?? "signalgraph.db";
+let instance: Database.Database | undefined;
 
-export const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+export function getDb(): Database.Database {
+  if (instance) return instance;
 
-db.exec(`CREATE TABLE IF NOT EXISTS data_source (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
-  vendor TEXT NOT NULL,
-  config TEXT NOT NULL,
-  is_active INTEGER NOT NULL DEFAULT 0
-)`);
+  mkdirSync(dirname(DATABASE_PATH), { recursive: true });
 
-db.exec(`CREATE TABLE IF NOT EXISTS app_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-)`);
+  const db = new Database(DATABASE_PATH);
+  db.pragma("journal_mode = WAL");
+
+  db.exec(`CREATE TABLE IF NOT EXISTS data_source (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    vendor TEXT NOT NULL,
+    config TEXT NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 0
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`);
+
+  instance = db;
+  return db;
+}

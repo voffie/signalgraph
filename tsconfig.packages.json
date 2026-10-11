@@ -7,10 +7,10 @@
       "path": "packages/signalgraph"
     },
     {
-      "path": "packages/runtime"
+      "path": "packages/adapter/memory"
     },
     {
-      "path": "packages/adapter-memory"
-    }
+      "path": "packages/adapter/rabbitmq"
+    },
   ]
 }

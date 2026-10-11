@@ -1,12 +1,6 @@
-import type { Attribute, Trace, TraceSpan, TraceSummary } from "$lib/domain/types";
+import type { Attribute, Trace, TraceSpan, TraceSummary } from "#lib/domain/types.js";
 
-import type {
-  TempoAttribute,
-  TempoAttributeValue,
-  TempoSpan,
-  TempoResponse,
-  TempoSearchResponse,
-} from "./types.ts";
+import type { TempoAttribute, TempoAttributeValue, TempoSpan, TempoResponse, TempoSearchResponse } from "./types.ts";
 
 function base64ToHex(base64: string): string {
   return Buffer.from(base64, "base64").toString("hex");
@@ -47,7 +41,7 @@ function normalizeAttributeValue(value: TempoAttributeValue): string {
 function normalizeAttribute(attribute: TempoAttribute): Attribute {
   return {
     key: attribute.key,
-    value: normalizeAttributeValue(attribute.value),
+    value: normalizeAttributeValue(attribute.value)
   };
 }
 
@@ -69,7 +63,7 @@ function normalizeSpan(span: TempoSpan): TraceSpan {
     name: span.name,
     startTime: normalizeTimestamp(span.startTimeUnixNano),
     endTime: normalizeTimestamp(span.endTimeUnixNano),
-    attributes: span.attributes.map(normalizeAttribute),
+    attributes: span.attributes.map(normalizeAttribute)
   };
 }
 
@@ -100,7 +94,7 @@ export function normalizeTrace(response: TempoResponse): Trace {
   return {
     traceId,
     spans,
-    resourceAttributes,
+    resourceAttributes
   };
 }
 
@@ -110,6 +104,6 @@ export function normalizeSearchResponse(response: TempoSearchResponse): Array<Tr
     rootService: result.rootServiceName,
     rootOperation: result.rootTraceName,
     durationMs: result.durationMs,
-    startTime: normalizeTimestamp(result.startTimeUnixNano),
+    startTime: normalizeTimestamp(result.startTimeUnixNano)
   }));
 }

@@ -1,6 +1,6 @@
-import type { TracesConfig, TraceVendor } from "$lib/telemetry/traces";
+import type { TracesConfig, TraceVendor } from "#lib/telemetry/traces/index.ts";
 
-import { db } from "./index";
+import { getDb } from "./index";
 
 export type DataSourceProfile = {
   id: number;
@@ -24,12 +24,12 @@ function rowToProfile(row: DataSourceRow): DataSourceProfile {
     name: row.name,
     vendor: row.vendor as TraceVendor,
     config: JSON.parse(row.config),
-    isActive: row.is_active === 1,
+    isActive: row.is_active === 1
   };
 }
 
 export function listDataSources(): Array<DataSourceProfile> {
-  const rows = db
+  const rows = getDb()
     .prepare("SELECT id, name, vendor, config, is_active FROM data_source ORDER BY name")
     .all() as Array<DataSourceRow>;
 
@@ -37,7 +37,7 @@ export function listDataSources(): Array<DataSourceProfile> {
 }
 
 export function getDataSourceByName(name: string): DataSourceProfile | null {
-  const row = db
+  const row = getDb()
     .prepare("SELECT id, name, vendor, config, is_active FROM data_source WHERE name = ?")
     .get(name) as DataSourceRow | undefined;
 
@@ -45,7 +45,7 @@ export function getDataSourceByName(name: string): DataSourceProfile | null {
 }
 
 export function getActiveDataSource(): DataSourceProfile | null {
-  const row = db
+  const row = getDb()
     .prepare("SELECT id, name, vendor, config, is_active FROM data_source WHERE is_active = 1")
     .get() as DataSourceRow | undefined;
 
@@ -53,33 +53,25 @@ export function getActiveDataSource(): DataSourceProfile | null {
 }
 
 export function createDataSource(profile: Omit<DataSourceProfile, "id" | "isActive">) {
-  db.prepare("INSERT INTO data_source (name, vendor, config) VALUES (?, ?, ?)").run(
-    profile.name,
-    profile.vendor,
-    JSON.stringify(profile.config),
-  );
+  getDb()
+    .prepare("INSERT INTO data_source (name, vendor, config) VALUES (?, ?, ?)")
+    .run(profile.name, profile.vendor, JSON.stringify(profile.config));
 }
 
-export function updateDataSource(
-  currentName: string,
-  updates: Omit<DataSourceProfile, "id" | "isActive">,
-) {
-  db.prepare("UPDATE data_source SET name = ?, vendor = ?, config = ? WHERE name = ?").run(
-    updates.name,
-    updates.vendor,
-    JSON.stringify(updates.config),
-    currentName,
-  );
+export function updateDataSource(currentName: string, updates: Omit<DataSourceProfile, "id" | "isActive">) {
+  getDb()
+    .prepare("UPDATE data_source SET name = ?, vendor = ?, config = ? WHERE name = ?")
+    .run(updates.name, updates.vendor, JSON.stringify(updates.config), currentName);
 }
 
 export function deleteDataSource(name: string) {
-  db.prepare("DELETE FROM data_source WHERE name = ?").run(name);
+  getDb().prepare("DELETE FROM data_source WHERE name = ?").run(name);
 }
 
 export function setActiveDataSource(name: string) {
-  const run = db.transaction((n: string) => {
-    db.prepare("UPDATE data_source SET is_active = 0 WHERE is_active = 1").run();
-    db.prepare("UPDATE data_source SET is_active = 1 WHERE name = ?").run(n);
+  const run = getDb().transaction((n: string) => {
+    getDb().prepare("UPDATE data_source SET is_active = 0 WHERE is_active = 1").run();
+    getDb().prepare("UPDATE data_source SET is_active = 1 WHERE name = ?").run(n);
   });
 
   run(name);

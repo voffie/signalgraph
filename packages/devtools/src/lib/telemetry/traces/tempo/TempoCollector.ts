@@ -1,4 +1,4 @@
-import type { Trace, TraceListFilters, TraceSummary } from "$lib/domain/types";
+import type { Trace, TraceListFilters, TraceSummary } from "#lib/domain/types.js";
 
 import type { TraceCollector } from "../index";
 import { normalizeSearchResponse, normalizeTrace } from "./normalize";

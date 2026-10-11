@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { cn } from "$lib/utils.js";
+  import { refreshAll } from "$app/navigation";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import CheckIcon from "@lucide/svelte/icons/check";
   import { tick } from "svelte";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Dialog from "#lib/components/ui/dialog/index.js";
+  import { cn } from "#lib/utils.js";
 
   import { moveListIndex } from "../listNavigation";
 
   let {
     open,
     onOpenChange,
-    graphLookbackSeconds,
+    graphLookbackSeconds
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -26,7 +27,7 @@
     { label: "Last 24 hours", seconds: 24 * 60 * 60 },
     { label: "Last 3 days", seconds: 3 * 24 * 60 * 60 },
     { label: "Last 7 days", seconds: 7 * 24 * 60 * 60 },
-    { label: "Last 30 days", seconds: 30 * 24 * 60 * 60 },
+    { label: "Last 30 days", seconds: 30 * 24 * 60 * 60 }
   ];
 
   const SETTINGS = [{ id: "lookback" as const, label: "Graph lookback window" }];
@@ -43,7 +44,7 @@
     if (step === "lookback") {
       valueIndex = Math.max(
         0,
-        LOOKBACK_OPTIONS.findIndex((o) => o.seconds === graphLookbackSeconds),
+        LOOKBACK_OPTIONS.findIndex((o) => o.seconds === graphLookbackSeconds)
       );
       valueListEl?.focus();
     }
@@ -70,7 +71,7 @@
     const formData = new FormData();
     formData.set("lookbackSeconds", String(seconds));
     await fetch("/settings?/saveGraphLookback", { method: "POST", body: formData });
-    await invalidateAll();
+    await refreshAll();
     step = "settings";
   }
 
@@ -105,7 +106,7 @@
     if (currentStep === "lookback") {
       valueIndex = Math.max(
         0,
-        LOOKBACK_OPTIONS.findIndex((option) => option.seconds === graphLookbackSeconds),
+        LOOKBACK_OPTIONS.findIndex((option) => option.seconds === graphLookbackSeconds)
       );
     }
 
@@ -137,11 +138,10 @@
               "flex items-center justify-between rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
               i === settingIndex
                 ? "border-l-primary bg-muted text-foreground"
-                : "text-muted-foreground border-l-transparent",
+                : "text-muted-foreground border-l-transparent"
             )}>
             {setting.label}
-            <span class="text-muted-foreground font-mono text-xs"
-              >{lookbackLabel(graphLookbackSeconds)}</span>
+            <span class="text-muted-foreground font-mono text-xs">{lookbackLabel(graphLookbackSeconds)}</span>
           </button>
         {/each}
       </div>
@@ -168,7 +168,7 @@
               "flex items-center justify-between rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
               i === valueIndex
                 ? "border-l-primary bg-muted text-foreground"
-                : "text-muted-foreground border-l-transparent",
+                : "text-muted-foreground border-l-transparent"
             )}>
             {option.label}
             {#if option.seconds === graphLookbackSeconds}

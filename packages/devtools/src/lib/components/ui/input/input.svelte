@@ -1,48 +1,46 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from "$lib/utils.js";
-	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
+  import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
 
-	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
+  import { cn, type WithElementRef } from "#lib/utils.js";
 
-	type Props = WithElementRef<
-		Omit<HTMLInputAttributes, "type"> &
-			({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined })
-	>;
+  type InputType = Exclude<HTMLInputTypeAttribute, "file">;
 
-	let {
-		ref = $bindable(null),
-		value = $bindable(),
-		type,
-		files = $bindable(),
-		class: className,
-		"data-slot": dataSlot = "input",
-		...restProps
-	}: Props = $props();
+  type Props = WithElementRef<
+    Omit<HTMLInputAttributes, "type"> & ({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined })
+  >;
+
+  let {
+    ref = $bindable(null),
+    value = $bindable(),
+    type,
+    files = $bindable(),
+    class: className,
+    "data-slot": dataSlot = "input",
+    ...restProps
+  }: Props = $props();
 </script>
 
 {#if type === "file"}
-	<input
-		bind:this={ref}
-		data-slot={dataSlot}
-		class={cn(
-			"bg-input/50 border-transparent focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 h-8 rounded-2xl border px-2.5 py-1 text-base transition-[color,box-shadow] duration-200 file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-			className
-		)}
-		type="file"
-		bind:files
-		bind:value
-		{...restProps}
-	/>
+  <input
+    bind:this={ref}
+    data-slot={dataSlot}
+    class={cn(
+      "bg-input/50 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 file:text-foreground placeholder:text-muted-foreground h-8 w-full min-w-0 rounded-2xl border border-transparent px-2.5 py-1 text-base transition-[color,box-shadow] duration-200 outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
+      className
+    )}
+    type="file"
+    bind:files
+    bind:value
+    {...restProps} />
 {:else}
-	<input
-		bind:this={ref}
-		data-slot={dataSlot}
-		class={cn(
-			"bg-input/50 border-transparent focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 h-8 rounded-2xl border px-2.5 py-1 text-base transition-[color,box-shadow] duration-200 file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-			className
-		)}
-		{type}
-		bind:value
-		{...restProps}
-	/>
+  <input
+    bind:this={ref}
+    data-slot={dataSlot}
+    class={cn(
+      "bg-input/50 focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 file:text-foreground placeholder:text-muted-foreground h-8 w-full min-w-0 rounded-2xl border border-transparent px-2.5 py-1 text-base transition-[color,box-shadow] duration-200 outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
+      className
+    )}
+    {type}
+    bind:value
+    {...restProps} />
 {/if}

@@ -1,4 +1,4 @@
-import type { Trace, TraceListFilters, TraceSummary } from "$lib/domain/types";
+import type { Trace, TraceListFilters, TraceSummary } from "#lib/domain/types.js";
 
 import { TempoCollector } from "./tempo/TempoCollector";
 

@@ -1,4 +1,4 @@
-import type * as Message from "./message.ts";
+import type * as Message from "./Message.ts";
 
 export interface Consumer<Name extends string, TMessage extends Message.AnyMessage> {
   readonly _tag: "Consumer";
@@ -15,5 +15,5 @@ export const consumer = <const Name extends string, TMessage extends Message.Any
   _tag: "Consumer",
   name: options.name,
   message: options.message,
-  ...(options.prefetch !== undefined ? { prefetch: options.prefetch } : {}),
+  ...(options.prefetch !== undefined ? { prefetch: options.prefetch } : {})
 });

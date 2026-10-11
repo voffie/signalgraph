@@ -1,27 +1,24 @@
 import { Console, Effect, FileSystem, Option, Path, Stream } from "effect";
-import { Command, Flag } from "effect/unstable/cli";
+import { Command, Flag } from "effect/cli";
 import { register } from "tsx/esm/api";
 
-import { findProjectRoot } from "../findProjectRoot.ts";
-import { generateClient } from "../generateClient.ts";
-import { loadConfig } from "../loadConfig.ts";
-import { loadSchema } from "../loadSchema.ts";
+import * as CLI from "../cli/index.ts";
 
 const loadProject = Effect.fn(function* () {
-  const project = yield* findProjectRoot();
-  const config = yield* loadConfig(project.configPath);
+  const project = yield* CLI.findProjectRoot();
+  const config = yield* CLI.loadConfig(project.configPath);
 
   return {
     project,
-    config,
+    config
   };
 });
 
 const generateProject = Effect.fn(function* () {
   const { project, config } = yield* loadProject();
-  const schema = yield* loadSchema(config.schema);
+  const schema = yield* CLI.loadSchema(config.schema);
 
-  yield* generateClient(config, schema);
+  yield* CLI.generateClient(config, schema);
 
   const path = yield* Path.Path;
 
@@ -30,13 +27,15 @@ const generateProject = Effect.fn(function* () {
   yield* Console.log(`✓ Generated ${output}`);
 });
 
-export const generate = Command.make("generate", {
-  watch: Flag.boolean("watch").pipe(Flag.withAlias("w"), Flag.optional)
-},
+export const generate = Command.make(
+  "generate",
+  {
+    watch: Flag.Boolean("watch").pipe(Flag.withAlias("w"), Flag.optional)
+  },
   Effect.fn(function* ({ watch }) {
     yield* Effect.acquireRelease(
       Effect.sync(() => register()),
-      (unregister) => Effect.promise(() => unregister()),
+      (unregister) => Effect.promise(() => unregister())
     );
 
     const { project, config } = yield* loadProject();
@@ -47,8 +46,8 @@ export const generate = Command.make("generate", {
       const fs = yield* FileSystem.FileSystem;
       // TODO: Restart watchers if the config changes the schema location.
       yield* Stream.merge(fs.watch(project.configPath), fs.watch(config.schema)).pipe(
-        Stream.runForEach(() => generateProject()),
+        Stream.runForEach(() => generateProject())
       );
     }
-  }),
+  })
 ).pipe(Command.withDescription("Generate client from SignalGraph schema"));

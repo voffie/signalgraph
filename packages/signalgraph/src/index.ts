@@ -1,5 +1,3 @@
-export { program } from "./cli.ts";
+export { consumer } from "./Consumer.ts";
 
-export { message, type Message, type AnyMessage, type MessageSchema } from "./message.ts";
-
-export { consumer, type Consumer } from "./consumer.ts";
+export { message } from "./Message.ts";

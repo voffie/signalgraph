@@ -1,4 +1,4 @@
-import { type TraceCollector, createCollector } from "$lib/telemetry/traces";
+import { type TraceCollector, createCollector } from "#lib/telemetry/traces/index.ts";
 
 import { getActiveDataSource } from "../db/dataSource";
 

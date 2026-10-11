@@ -1,20 +1,4 @@
 <script lang="ts">
-  import CommandMenu from "$lib/components/CommandMenu.svelte";
-  import ConnectionsDialog from "$lib/components/ConnectionsDialog.svelte";
-  import EdgeEl from "$lib/components/EdgeEl.svelte";
-  import GraphSearchBar from "$lib/components/GraphSearchBar.svelte";
-  import InspectorPanel from "$lib/components/InspectorPanel.svelte";
-  import NodeEl from "$lib/components/NodeEl.svelte";
-  import SettingsDialog from "$lib/components/SettingsDialog.svelte";
-  import TimelinePanel from "$lib/components/TimelinePanel.svelte";
-  import TraceDialog from "$lib/components/TraceDialog.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Empty from "$lib/components/ui/empty/index.js";
-  import { buildGraph } from "$lib/domain/graph";
-  import { NODE_HEIGHT, NODE_WIDTH, positionGraphNodes } from "$lib/domain/layout";
-  import type { TraceSpan } from "$lib/domain/types";
-  import type { InspTab, SearchField } from "$lib/types";
-  import { buildNmap, cn, matchSearch } from "$lib/utils.js";
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -27,6 +11,23 @@
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import WaypointsIcon from "@lucide/svelte/icons/waypoints";
   import { tick } from "svelte";
+
+  import CommandMenu from "#lib/components/CommandMenu.svelte";
+  import ConnectionsDialog from "#lib/components/ConnectionsDialog.svelte";
+  import EdgeEl from "#lib/components/EdgeEl.svelte";
+  import GraphSearchBar from "#lib/components/GraphSearchBar.svelte";
+  import InspectorPanel from "#lib/components/InspectorPanel.svelte";
+  import NodeEl from "#lib/components/NodeEl.svelte";
+  import SettingsDialog from "#lib/components/SettingsDialog.svelte";
+  import TimelinePanel from "#lib/components/TimelinePanel.svelte";
+  import TraceDialog from "#lib/components/TraceDialog.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Empty from "#lib/components/ui/empty/index.js";
+  import { buildGraph } from "#lib/domain/graph.js";
+  import { NODE_HEIGHT, NODE_WIDTH, positionGraphNodes } from "#lib/domain/layout.js";
+  import type { TraceSpan } from "#lib/domain/types.js";
+  import type { InspTab, SearchField } from "#lib/types.js";
+  import { buildNmap, cn, matchSearch } from "#lib/utils.js";
 
   let { data } = $props();
 
@@ -53,9 +54,7 @@
   const selected = $derived(selectedId ? (nmap[selectedId] ?? null) : null);
 
   const filteredIds: Set<string> | null = $derived(
-    search.trim()
-      ? new Set(positionedNodes.filter((n) => matchSearch(n, search, searchField)).map((n) => n.id))
-      : null,
+    search.trim() ? new Set(positionedNodes.filter((n) => matchSearch(n, search, searchField)).map((n) => n.id)) : null
   );
 
   const matchCount = $derived(filteredIds?.size ?? 0);
@@ -92,16 +91,12 @@
     const graphWidth = maxX - minX;
     const graphHeight = maxY - minY;
 
-    const scale = Math.min(
-      (width - padding * 2) / graphWidth,
-      (height - padding * 2) / graphHeight,
-      1.5,
-    );
+    const scale = Math.min((width - padding * 2) / graphWidth, (height - padding * 2) / graphHeight, 1.5);
 
     transform = {
       x: (width - graphWidth * scale) / 2 - minX * scale,
       y: (height - graphHeight * scale) / 2 - minY * scale,
-      scale,
+      scale
     };
   }
 
@@ -117,7 +112,7 @@
     transform = {
       ...transform,
       x: panRef.tx + (e.clientX - panRef.x),
-      y: panRef.ty + (e.clientY - panRef.y),
+      y: panRef.ty + (e.clientY - panRef.y)
     };
   }
 
@@ -180,9 +175,7 @@
           stroke-width={1}
           opacity={0.45} />
       </svg>
-      <span class="font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
-        SignalGraph
-      </span>
+      <span class="font-semibold tracking-tight group-data-[collapsible=icon]:hidden"> SignalGraph </span>
     </div>
 
     <div class="flex items-center gap-1">
@@ -190,15 +183,9 @@
         onclick={() => (overlay = "command")}
         class="text-muted-foreground hover:text-foreground flex items-center gap-2 px-2 py-1.5 text-xs transition-colors">
         Search
-        <kbd
-          class="bg-popover rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px]"
-          >⌘K</kbd>
+        <kbd class="bg-popover rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
       </button>
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Settings (⌘,)"
-        onclick={() => (overlay = "settings")}>
+      <Button variant="ghost" size="icon" title="Settings (⌘,)" onclick={() => (overlay = "settings")}>
         <SettingsIcon class="size-4" />
       </Button>
     </div>
@@ -266,9 +253,7 @@
           <CircleOffIcon />
         </Empty.Media>
         <Empty.Title>No Active Connection</Empty.Title>
-        <Empty.Description>
-          Set one of your saved connections as active to load a trace.
-        </Empty.Description>
+        <Empty.Description>Set one of your saved connections as active to load a trace.</Empty.Description>
       </Empty.Header>
       <Empty.Content>
         <Button variant="link" onclick={() => (overlay = "connections")}>Switch connection</Button>
@@ -307,8 +292,7 @@
                 size="icon"
                 class="size-7"
                 title="Zoom in"
-                onclick={() =>
-                  (transform = { ...transform, scale: Math.min(3, transform.scale * 1.2) })}>
+                onclick={() => (transform = { ...transform, scale: Math.min(3, transform.scale * 1.2) })}>
                 <PlusIcon class="size-3.5" />
               </Button>
               <Button
@@ -316,16 +300,10 @@
                 size="icon"
                 class="size-7"
                 title="Zoom out"
-                onclick={() =>
-                  (transform = { ...transform, scale: Math.max(0.2, transform.scale * 0.8) })}>
+                onclick={() => (transform = { ...transform, scale: Math.max(0.2, transform.scale * 0.8) })}>
                 <MinusIcon class="size-3.5" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                class="size-7"
-                title="Fit view"
-                onclick={handleFitView}>
+              <Button variant="outline" size="icon" class="size-7" title="Fit view" onclick={handleFitView}>
                 <MaximizeIcon class="size-3.5" />
               </Button>
               <span class="text-muted-foreground ml-1 font-mono text-[10px]">
@@ -366,13 +344,7 @@
             role="application"
             aria-label="Trace graph canvas — drag to pan, scroll to zoom">
             <defs>
-              <pattern
-                id="dotgrid"
-                x={0}
-                y={0}
-                width={28}
-                height={28}
-                patternUnits="userSpaceOnUse">
+              <pattern id="dotgrid" x={0} y={0} width={28} height={28} patternUnits="userSpaceOnUse">
                 <circle cx={0.5} cy={0.5} r={0.6} fill="rgba(255,255,255,0.07)" />
               </pattern>
               <filter id="glow-evt" x="-50%" y="-50%" width="200%" height="200%">
@@ -427,8 +399,7 @@
               </Empty.Media>
               <Empty.Title>No SignalGraph spans found</Empty.Title>
               <Empty.Description>
-                This trace was loaded successfully, but it does not contain spans instrumented with
-                SignalGraph.
+                This trace was loaded successfully, but it does not contain spans instrumented with SignalGraph.
               </Empty.Description>
             </Empty.Header>
           </Empty.Root>
@@ -439,15 +410,12 @@
         <aside
           class={cn(
             "bg-popover flex shrink-0 flex-col overflow-hidden border-l border-white/10",
-            inspCollapsed ? "w-0" : "w-74.5",
+            inspCollapsed ? "w-0" : "w-74.5"
           )}
           style={`transition:width 0.25s cubic-bezier(0.4,0,0.2,1)`}>
           <div class="flex h-full w-74.5 flex-col">
-            <div
-              class="border-b-border flex h-10 shrink-0 items-center justify-between border-b px-3.5">
-              <span class="text-muted-foreground font-mono text-[9.5px] tracking-[0.09em]">
-                INSPECTOR
-              </span>
+            <div class="border-b-border flex h-10 shrink-0 items-center justify-between border-b px-3.5">
+              <span class="text-muted-foreground font-mono text-[9.5px] tracking-[0.09em]"> INSPECTOR </span>
               <Button
                 variant="ghost"
                 size="icon"
@@ -477,12 +445,7 @@
             viewBox="0 0 12 12"
             class={cn("shrink-0", timelineOpen ? "rotate-0" : "rotate-180")}
             style="transition:transform 0.2s cubic-bezier(0.4,0,0.2,1)">
-            <path
-              d="M 2 8 L 6 4 L 10 8"
-              fill="none"
-              stroke="currentColor"
-              stroke-width={1.5}
-              stroke-linecap="round" />
+            <path d="M 2 8 L 6 4 L 10 8" fill="none" stroke="currentColor" stroke-width={1.5} stroke-linecap="round" />
           </svg>
           TIMELINE
         </button>

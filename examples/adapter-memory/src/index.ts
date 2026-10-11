@@ -1,14 +1,16 @@
+import { MemoryBroker } from "@signalgraph/adapter-memory";
 import { Console, Effect } from "effect";
 
-import { makeClient } from "../generated/index.ts";
+import { Client } from "../generated/index.ts";
 
 const program = Effect.gen(function* () {
-  const client = yield* makeClient;
+  const client = yield* Client;
+
   yield* client.billing.handle(({ payload }) =>
     Effect.gen(function* () {
       yield* Console.log("Billing received: ", payload);
       yield* client.billingCompleted.publish(payload);
-    }),
+    })
   );
 
   yield* client.analytics.handle(({ payload }) => Console.log("Analytics received: ", payload));
@@ -16,8 +18,8 @@ const program = Effect.gen(function* () {
   yield* client.email.handle(({ payload }) => Console.log("Email received: ", payload));
 
   yield* client.ordersCreated.publish({
-    orderId: "123",
+    orderId: "123"
   });
 });
 
-Effect.runSync(program);
+Effect.runPromise(program.pipe(Effect.provide(MemoryBroker())));

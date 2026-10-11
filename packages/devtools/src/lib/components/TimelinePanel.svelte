@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { getAttribute } from "$lib/domain/attributes";
-  import type { TraceSpan } from "$lib/domain/types";
-  import { capitalize, cn, fmtMs } from "$lib/utils";
+  import { getAttribute } from "#lib/domain/attributes.ts";
+  import type { TraceSpan } from "#lib/domain/types.ts";
+  import { capitalize, cn, fmtMs } from "#lib/utils.ts";
 
   let {
     spans,
     traceId,
     selectedSpanId,
-    onSpanClick,
+    onSpanClick
   }: {
     spans: Array<TraceSpan>;
     traceId: string;
@@ -15,9 +15,7 @@
     onSpanClick: (s: TraceSpan) => void;
   } = $props();
 
-  const traceStart = $derived(
-    spans.length > 0 ? Math.min(...spans.map((span) => span.startTime)) : 0,
-  );
+  const traceStart = $derived(spans.length > 0 ? Math.min(...spans.map((span) => span.startTime)) : 0);
   const traceEnd = $derived(spans.length > 0 ? Math.max(...spans.map((span) => span.endTime)) : 0);
   const traceDuration = $derived(Math.max(traceEnd - traceStart, 1));
 
@@ -89,7 +87,7 @@
           <span
             class={cn(
               "w-32.5 shrink-0 overflow-hidden font-mono text-[10px] text-ellipsis whitespace-nowrap",
-              sel ? "font-semibold" : "font-normal",
+              sel ? "font-semibold" : "font-normal"
             )}
             style={`transition:color 0.14s, font-weight 0.14s`}>
             {label}
@@ -100,14 +98,10 @@
             <div
               class={cn(
                 "absolute top-0.5 bottom-0.5 box-border flex items-center overflow-hidden rounded-[3px] border pl-1.25 transition-colors",
-                sel ? "bg-primary/25 border-primary/80" : "bg-primary/10 border-primary/35",
+                sel ? "bg-primary/25 border-primary/80" : "bg-primary/10 border-primary/35"
               )}
               style={`left:${position.left}%;width:${position.width}%`}>
-              <span
-                class={cn(
-                  "font-mono text-[9px] whitespace-nowrap",
-                  sel ? "text-primary" : "text-primary/60",
-                )}>
+              <span class={cn("font-mono text-[9px] whitespace-nowrap", sel ? "text-primary" : "text-primary/60")}>
                 {fmtMs(span.endTime - span.startTime)}
               </span>
             </div>

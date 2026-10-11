@@ -1,13 +1,14 @@
 <script lang="ts">
-  import * as Command from "$lib/components/ui/command/index.js";
   import DatabaseIcon from "@lucide/svelte/icons/database";
   import ListTreeIcon from "@lucide/svelte/icons/list-tree";
   import SettingsIcon from "@lucide/svelte/icons/settings";
 
+  import * as Command from "#lib/components/ui/command/index.js";
+
   let {
     open,
     onOpenChange,
-    onNavigate,
+    onNavigate
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "$lib/domain/layout";
+  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "#lib/domain/layout.ts";
 
   let {
     node,
@@ -8,7 +8,7 @@
     hovered,
     onClick,
     onEnter,
-    onLeave,
+    onLeave
   }: {
     node: PositionedGraphNode;
     selected: boolean;
@@ -77,13 +77,7 @@
     opacity={selected ? 0.85 : hovered ? 0.5 : 0.28}
     style="transition: opacity 0.15s" />
 
-  <line
-    x1={0}
-    y1={29}
-    x2={NODE_WIDTH}
-    y2={29}
-    stroke="rgba(255,255,255,0.055)"
-    stroke-width={0.5} />
+  <line x1={0} y1={29} x2={NODE_WIDTH} y2={29} stroke="rgba(255,255,255,0.055)" stroke-width={0.5} />
 
   {#if isMsg}
     <g transform="translate(11,10)">
@@ -112,13 +106,7 @@
     {isMsg ? "MESSAGE" : "HANDLER"}
   </text>
 
-  <text
-    x={11}
-    y={49}
-    font-size={13}
-    font-family="'Inter', sans-serif"
-    font-weight={600}
-    fill="var(--color-foreground)">
+  <text x={11} y={49} font-size={13} font-family="'Inter', sans-serif" font-weight={600} fill="var(--color-foreground)">
     {node.label}
   </text>
 </g>

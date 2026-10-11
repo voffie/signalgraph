@@ -1,6 +1,6 @@
 import { Effect, Path } from "effect";
 
-import { ModuleImportError } from "./errors.ts";
+import { ModuleImportError } from "./CliErrors.ts";
 
 export const importModule = Effect.fn(function* (url: string) {
   const path = yield* Path.Path;
@@ -13,8 +13,8 @@ export const importModule = Effect.fn(function* (url: string) {
     catch: (cause) =>
       new ModuleImportError({
         path: fileUrl.href,
-        cause,
-      }),
+        cause
+      })
   });
 
   return module;

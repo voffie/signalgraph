@@ -1,10 +1,10 @@
 import { Effect, FileSystem, Path, SchemaRepresentation } from "effect";
 
-import type { Config } from "./config.ts";
-import type { Consumer } from "./consumer.ts";
-import { toPropertyName, toTypeName } from "./internal/naming.ts";
+import type { Config } from "../config/index.ts";
+import type { Consumer } from "../Consumer.ts";
+import { toPropertyName, toTypeName } from "../internal/naming.ts";
+import type { AnyMessage, MessageSchema } from "../Message.ts";
 import type { SchemaData } from "./loadSchema.ts";
-import type { AnyMessage, MessageSchema } from "./message.ts";
 
 const indent = (text: string, spaces = 2) =>
   text
@@ -22,22 +22,19 @@ function generateSchemaType(schema: MessageSchema) {
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) =>
-      `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`,
+    (message) => `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`
   );
 }
 
 function generateConsumerEntries(consumers: Iterable<Consumer<string, AnyMessage>>) {
   return [...consumers].map(
-    (consumer) =>
-      `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`,
+    (consumer) => `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`
   );
 }
 
 function generateTypeAliases(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) =>
-      `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`,
+    (message) => `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`
   );
 }
 
@@ -68,25 +65,22 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
 
   const entries = [
     ...generateMessageEntries(data.messages.values()),
-    ...generateConsumerEntries(data.consumers.values()),
+    ...generateConsumerEntries(data.consumers.values())
   ];
 
   let schemaRelativePath = path.relative(outputDir, config.schema);
   if (!schemaRelativePath.startsWith(".")) {
     schemaRelativePath = "./" + schemaRelativePath;
   }
-  const schemaExportNames = [
-    ...data.messageExportNames.values(),
-    ...data.consumerExportNames.values(),
-  ];
+  const schemaExportNames = [...data.messageExportNames.values(), ...data.consumerExportNames.values()];
   const schemaImport =
     schemaExportNames.length > 0
       ? `import {\n${indent(schemaExportNames.join(",\n"))}\n} from "${schemaRelativePath}";`
       : "";
 
   const imports = [
-    'import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient } from "@signalgraph/runtime";',
-    schemaImport,
+    'import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient } from "signalgraph/runtime";',
+    schemaImport
   ]
     .filter(Boolean)
     .join("\n");
@@ -98,13 +92,13 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
     indent("RuntimeClient &"),
     indent("{"),
     indent(entries.join("\n"), 4),
-    indent("};"),
+    indent("};")
   ].join("\n");
 
   const messageGraph = [
     "const messageGraph = {",
     indent(generateMessageGraph(data).join(",\n")),
-    "} satisfies MessageGraph;",
+    "} satisfies MessageGraph;"
   ].join("\n");
 
   const exportClient = `export const Client = createClient<Client>(messageGraph);`;

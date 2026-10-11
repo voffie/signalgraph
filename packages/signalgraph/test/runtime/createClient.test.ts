@@ -1,29 +1,24 @@
 import { expect, layer } from "@effect/vitest";
 import { MemoryBroker } from "@signalgraph/adapter-memory";
-import {
-  type RuntimeConsumer,
-  type RuntimeMessage,
-  type RuntimeClient,
-  createClient,
-} from "@signalgraph/runtime";
 import { Effect, Schema } from "effect";
 import { consumer, message } from "signalgraph";
+import { type RuntimeConsumer, type RuntimeMessage, type RuntimeClient, createClient } from "signalgraph/runtime";
 
 const OrderCreated = message({
   name: "orders.created",
   schema: Schema.Struct({
-    orderId: Schema.String,
-  }),
+    orderId: Schema.String
+  })
 });
 
 const analytics = consumer({
   name: "analytics",
-  message: OrderCreated,
+  message: OrderCreated
 });
 
 const billing = consumer({
   name: "billing",
-  message: OrderCreated,
+  message: OrderCreated
 });
 
 type Order = typeof OrderCreated.schema.Type;
@@ -38,8 +33,8 @@ const createTestClient = () =>
   >({
     ordersCreated: {
       consumers: [analytics, billing],
-      definition: OrderCreated,
-    },
+      definition: OrderCreated
+    }
   });
 
 layer(MemoryBroker)("createClient", (it) => {
@@ -47,7 +42,7 @@ layer(MemoryBroker)("createClient", (it) => {
     Effect.gen(function* () {
       const client = yield* createTestClient();
       expect(client.ordersCreated).toBeDefined();
-    }),
+    })
   );
 
   it.effect("creates consumer resources", () =>
@@ -55,7 +50,7 @@ layer(MemoryBroker)("createClient", (it) => {
       const client = yield* createTestClient();
       expect(client.billing).toBeDefined();
       expect(client.analytics).toBeDefined();
-    }),
+    })
   );
 
   it.effect("publish reaches consumer", () =>
@@ -67,19 +62,19 @@ layer(MemoryBroker)("createClient", (it) => {
       yield* client.billing.handle(({ payload }) =>
         Effect.sync(() => {
           received = payload;
-        }),
+        })
       );
 
       yield* client.start();
 
       yield* client.ordersCreated.publish({
-        orderId: "123",
+        orderId: "123"
       });
 
       expect(received).toEqual({
-        orderId: "123",
+        orderId: "123"
       });
-    }),
+    })
   );
 
   it.effect("supports multiple consumers", () =>
@@ -91,24 +86,24 @@ layer(MemoryBroker)("createClient", (it) => {
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
           analyticsHandled = true;
-        }),
+        })
       );
 
       yield* client.billing.handle(() =>
         Effect.sync(() => {
           billingHandled = true;
-        }),
+        })
       );
 
       yield* client.start();
 
       yield* client.ordersCreated.publish({
-        orderId: "123",
+        orderId: "123"
       });
 
       expect(analyticsHandled).toBe(true);
       expect(billingHandled).toBe(true);
-    }),
+    })
   );
 
   it.effect("supports multiple handlers", () =>
@@ -119,23 +114,23 @@ layer(MemoryBroker)("createClient", (it) => {
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
           output += 1;
-        }),
+        })
       );
 
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
           output += 1;
-        }),
+        })
       );
 
       yield* client.start();
 
       yield* client.ordersCreated.publish({
-        orderId: "123",
+        orderId: "123"
       });
 
       expect(output).toBe(2);
-    }),
+    })
   );
 
   it.effect("ignores consumers without handlers", () =>
@@ -143,6 +138,6 @@ layer(MemoryBroker)("createClient", (it) => {
       const client = yield* createTestClient();
 
       yield* client.ordersCreated.publish({ orderId: "123" });
-    }),
+    })
   );
 });

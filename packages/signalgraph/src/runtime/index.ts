@@ -1,9 +1,11 @@
+export { Broker, type BrokerMessage, type HandlerRegistry } from "./Broker.ts";
+
 export {
   type RuntimeConsumer,
   type RuntimeMessage,
   type MessageGraph,
   type RuntimeClient,
-  createClient,
+  createClient
 } from "./client.ts";
 
 export { type MessageMetadata, createConsumeMetadata } from "./metadata.ts";

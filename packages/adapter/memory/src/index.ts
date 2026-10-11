@@ -1,7 +1,12 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
-import { createConsumeMetadata, type MessageGraph } from "@signalgraph/runtime";
-import { Broker, type BrokerMessage, type HandlerRegistry } from "@signalgraph/runtime/broker";
 import { Effect, Layer } from "effect";
+import {
+  Broker,
+  type BrokerMessage,
+  createConsumeMetadata,
+  type HandlerRegistry,
+  type MessageGraph
+} from "signalgraph/runtime";
 
 export const MemoryBroker = Layer.sync(Broker, () => {
   let handlers: HandlerRegistry | undefined;
@@ -16,11 +21,11 @@ export const MemoryBroker = Layer.sync(Broker, () => {
           ? createConsumeMetadata({
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId,
-              traceContext: data.metadata.traceContext,
+              traceContext: data.metadata.traceContext
             })
           : createConsumeMetadata({
               messageId: data.metadata.messageId,
-              correlationId: data.metadata.correlationId,
+              correlationId: data.metadata.correlationId
             });
 
         const list = handlers?.get(consumer.name) ?? [];
@@ -30,18 +35,18 @@ export const MemoryBroker = Layer.sync(Broker, () => {
           (handler) =>
             handler({
               payload: data.payload,
-              metadata,
+              metadata
             }),
-          { discard: true },
+          { discard: true }
         ).pipe(
           Effect.withSpan("signalgraph.consume", {
             attributes: {
               "signalgraph.message.name": message,
               "signalgraph.consumer.name": consumer.name,
               "signalgraph.message.id": metadata.messageId,
-              "signalgraph.correlation.id": metadata.correlationId,
-            },
-          }),
+              "signalgraph.correlation.id": metadata.correlationId
+            }
+          })
         );
 
         if (metadata.traceContext) {
@@ -54,7 +59,7 @@ export const MemoryBroker = Layer.sync(Broker, () => {
 
   const start = ({
     graph: runtimeGraph,
-    handlers: runtimeHandlers,
+    handlers: runtimeHandlers
   }: {
     handlers: HandlerRegistry;
     graph: MessageGraph;
@@ -66,13 +71,6 @@ export const MemoryBroker = Layer.sync(Broker, () => {
 
   return {
     deliver,
-    start,
+    start
   };
 });
-
-export function memory() {
-  return {
-    package: "@signalgraph/adapter-memory",
-    layer: "MemoryBroker",
-  } as const;
-}

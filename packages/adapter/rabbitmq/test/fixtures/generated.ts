@@ -6,8 +6,8 @@ import {
   type RuntimeMessage,
   type MessageGraph,
   type RuntimeClient,
-  createClient,
-} from "@signalgraph/runtime";
+  createClient
+} from "signalgraph/runtime";
 
 import { OrderCreated, Analytics, Billing } from "./schema.ts";
 
@@ -25,8 +25,8 @@ export type Client = RuntimeClient & {
 const messageGraph = {
   "order.created": {
     definition: OrderCreated,
-    consumers: [Analytics, Billing],
-  },
+    consumers: [Analytics, Billing]
+  }
 } satisfies MessageGraph;
 
 export const Client = createClient<Client>(messageGraph);

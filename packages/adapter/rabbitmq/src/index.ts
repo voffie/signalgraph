@@ -1,13 +1,15 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
-import {
-  ConnectionError,
-  InitializationError,
-  createConsumeMetadata,
-  type MessageGraph,
-} from "@signalgraph/runtime";
-import { Broker, type HandlerRegistry, type BrokerMessage } from "@signalgraph/runtime/broker";
 import * as amqp from "amqplib";
 import { Effect, Layer, Queue, Schema, Scope } from "effect";
+import {
+  Broker,
+  type BrokerMessage,
+  ConnectionError,
+  type HandlerRegistry,
+  InitializationError,
+  createConsumeMetadata,
+  type MessageGraph
+} from "signalgraph/runtime";
 
 type RabbitMQOptions = {
   url: string;
@@ -27,16 +29,16 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           catch: (cause) =>
             new ConnectionError({
               cause,
-              message: "Failed to create connection to RabbitMQ broker",
-            }),
+              message: "Failed to create connection to RabbitMQ broker"
+            })
         }),
-        (connection) => Effect.promise(() => connection.close()),
+        (connection) => Effect.promise(() => connection.close())
       ).pipe(
         Effect.tap((connection) =>
           Effect.sync(() => {
             connection.on("close", () => console.log("RabbitMQ connection closed"));
-          }),
-        ),
+          })
+        )
       );
 
       const publishChannel = yield* Effect.acquireRelease(
@@ -45,32 +47,30 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           catch: (cause) =>
             new ConnectionError({
               cause,
-              message: "Failed to create connection to channel",
-            }),
+              message: "Failed to create connection to channel"
+            })
         }),
-        (connection) => Effect.promise(() => connection.close()),
+        (connection) => Effect.promise(() => connection.close())
       ).pipe(
         Effect.tap((connection) =>
           Effect.sync(() => {
             connection.on("close", () => console.log("RabbitMQ publish channel connection closed"));
-          }),
-        ),
+          })
+        )
       );
 
       const deliver = ({ message, data }: { message: string; data: BrokerMessage }) =>
         Effect.gen(function* () {
-          const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(
-            data.payload,
-          );
+          const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(data.payload);
 
           yield* Effect.sync(() =>
             publishChannel.publish(message, "", Buffer.from(json, "utf-8"), {
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId,
               headers: {
-                traceContext: data.metadata.traceContext,
-              },
-            }),
+                traceContext: data.metadata.traceContext
+              }
+            })
           );
         });
 
@@ -80,13 +80,13 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             yield* Effect.tryPromise({
               try: () =>
                 publishChannel.assertExchange(messageName, "fanout", {
-                  durable: true,
+                  durable: true
                 }),
               catch: (cause) =>
                 new InitializationError({
                   cause,
-                  message: `Failed to create exchange for ${messageName}`,
-                }),
+                  message: `Failed to create exchange for ${messageName}`
+                })
             });
 
             for (const consumer of messageDef.consumers) {
@@ -105,11 +105,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     catch: (cause) =>
                       new ConnectionError({
                         cause,
-                        message: `Failed to create connection to channel for consumer "${consumer.name}"`,
-                      }),
+                        message: `Failed to create connection to channel for consumer "${consumer.name}"`
+                      })
                   }),
-                  (connection) => Effect.promise(() => connection.close()),
-                ),
+                  (connection) => Effect.promise(() => connection.close())
+                )
               );
 
               const prefetch = consumer.prefetch;
@@ -119,21 +119,21 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   catch: (cause) =>
                     new InitializationError({
                       cause,
-                      message: `Failed to set prefetch of ${prefetch} on channel`,
-                    }),
+                      message: `Failed to set prefetch of ${prefetch} on channel`
+                    })
                 });
               }
 
               yield* Effect.tryPromise({
                 try: () =>
                   consumerChannel.assertQueue(consumer.name, {
-                    durable: true,
+                    durable: true
                   }),
                 catch: (cause) =>
                   new InitializationError({
                     cause,
-                    message: `Failed to create queue for ${consumer.name}`,
-                  }),
+                    message: `Failed to create queue for ${consumer.name}`
+                  })
               });
 
               yield* Effect.tryPromise({
@@ -141,8 +141,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 catch: (cause) =>
                   new InitializationError({
                     cause,
-                    message: `Failed to bind queue ${consumer.name} to exchange ${messageName}`,
-                  }),
+                    message: `Failed to bind queue ${consumer.name} to exchange ${messageName}`
+                  })
               });
 
               const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
@@ -157,22 +157,22 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 catch: (cause) =>
                   new InitializationError({
                     cause,
-                    message: `Failed to start consuming ${consumer.name}`,
-                  }),
+                    message: `Failed to start consuming ${consumer.name}`
+                  })
               });
 
               const processMessage = Effect.gen(function* () {
                 const msg = yield* Queue.take(messages);
 
                 yield* Effect.gen(function* () {
-                  const payload = yield* Schema.decodeUnknownEffect(
-                    Schema.fromJsonString(Schema.Unknown),
-                  )(msg.content.toString("utf-8"));
+                  const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
+                    msg.content.toString("utf-8")
+                  );
 
                   const metadata = createConsumeMetadata({
                     messageId: msg.properties.messageId ?? "",
                     correlationId: msg.properties.correlationId ?? "",
-                    traceContext: msg.properties.headers?.traceContext,
+                    traceContext: msg.properties.headers?.traceContext
                   });
 
                   const list = consumerHandlers;
@@ -181,7 +181,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     for (const handler of list) {
                       yield* handler({
                         payload,
-                        metadata,
+                        metadata
                       });
                     }
                   }).pipe(
@@ -190,9 +190,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                         "signalgraph.message.name": messageName,
                         "signalgraph.consumer.name": consumer.name,
                         "signalgraph.message.id": metadata.messageId,
-                        "signalgraph.correlation.id": metadata.correlationId,
-                      },
-                    }),
+                        "signalgraph.correlation.id": metadata.correlationId
+                      }
+                    })
                   );
 
                   if (metadata.traceContext) {
@@ -203,31 +203,22 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 }).pipe(
                   Effect.matchEffect({
                     onSuccess: () => Effect.sync(() => consumerChannel.ack(msg)),
-                    onFailure: () => Effect.sync(() => consumerChannel.nack(msg)),
-                  }),
+                    onFailure: () => Effect.sync(() => consumerChannel.nack(msg))
+                  })
                 );
               });
 
               // Fork into the broker's own scope so this loop outlives
               // the start() call itself.
-              yield* Effect.forkIn(layerScope)(
-                Effect.forever(processMessage).pipe(Effect.catchCause(Effect.logError)),
-              );
+              yield* Effect.forkIn(layerScope)(Effect.forever(processMessage).pipe(Effect.catchCause(Effect.logError)));
             }
           }
         });
 
       return {
         deliver,
-        start,
+        start
       };
-    }),
+    })
   );
-}
-
-export function rabbitmq() {
-  return {
-    package: "@signalgraph/adapter-rabbitmq",
-    layer: "RabbitMQBroker",
-  } as const;
 }

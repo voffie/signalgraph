@@ -2,7 +2,7 @@ import { Effect, FileSystem, Path, SchemaRepresentation } from "effect";
 
 import type { Config } from "../config/index.ts";
 import type { Consumer } from "../Consumer.ts";
-import { toPropertyName, toTypeName } from "../internal/naming.ts";
+import * as Naming from "../internal/naming.ts";
 import type { AnyMessage, MessageSchema } from "../Message.ts";
 import type { SchemaData } from "./loadSchema.ts";
 

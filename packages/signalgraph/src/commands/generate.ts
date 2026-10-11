@@ -2,14 +2,11 @@ import { Console, Effect, FileSystem, Option, Path, Stream } from "effect";
 import { Command, Flag } from "effect/cli";
 import { register } from "tsx/esm/api";
 
-import { findProjectRoot } from "../cli/findProjectRoot.ts";
-import { generateClient } from "../cli/generateClient.ts";
-import { loadConfig } from "../cli/loadConfig.ts";
-import { loadSchema } from "../cli/loadSchema.ts";
+import * as CLI from "../cli/index.ts";
 
 const loadProject = Effect.fn(function* () {
-  const project = yield* findProjectRoot();
-  const config = yield* loadConfig(project.configPath);
+  const project = yield* CLI.findProjectRoot();
+  const config = yield* CLI.loadConfig(project.configPath);
 
   return {
     project,
@@ -19,9 +16,9 @@ const loadProject = Effect.fn(function* () {
 
 const generateProject = Effect.fn(function* () {
   const { project, config } = yield* loadProject();
-  const schema = yield* loadSchema(config.schema);
+  const schema = yield* CLI.loadSchema(config.schema);
 
-  yield* generateClient(config, schema);
+  yield* CLI.generateClient(config, schema);
 
   const path = yield* Path.Path;
 

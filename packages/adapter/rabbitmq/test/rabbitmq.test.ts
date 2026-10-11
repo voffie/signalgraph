@@ -4,15 +4,14 @@ import { RabbitMQContainer, type StartedRabbitMQContainer } from "@testcontainer
 import * as amqp from "amqplib";
 import { Effect, Deferred } from "effect";
 
-import { Client } from "./fixtures/generated.ts";
-import type { OrderCreatedPayload } from "./fixtures/generated.ts";
+import { Client, type OrderCreatedPayload } from "./fixtures/generated.ts";
 
 async function getExistingQueues(container: StartedRabbitMQContainer): Promise<Array<string>> {
   const port = container.getMappedPort(15672);
   const response = await fetch(`http://${container.getHost()}:${port}/api/queues/`, {
     headers: {
-      Authorization: `Basic ${Buffer.from("guest:guest").toString("base64")}`,
-    },
+      Authorization: `Basic ${Buffer.from("guest:guest").toString("base64")}`
+    }
   });
 
   if (!response.ok) {
@@ -28,9 +27,7 @@ describe("RabbitMQBroker", () => {
   let rabbitmq: StartedRabbitMQContainer;
 
   beforeAll(async () => {
-    rabbitmq = await new RabbitMQContainer("rabbitmq:4.1-management")
-      .withExposedPorts(15672)
-      .start();
+    rabbitmq = await new RabbitMQContainer("rabbitmq:4.1-management").withExposedPorts(15672).start();
   });
 
   afterEach(async () => {
@@ -47,7 +44,7 @@ describe("RabbitMQBroker", () => {
           } finally {
             await channel.close();
           }
-        }),
+        })
       );
     } finally {
       await connection.close();
@@ -71,21 +68,21 @@ describe("RabbitMQBroker", () => {
           yield* client.start();
 
           yield* client.orderCreated.publish({
-            orderId: 123,
+            orderId: 123
           });
 
           const payload = yield* Deferred.await(received);
           expect(payload).toEqual({
-            orderId: 123,
+            orderId: 123
           });
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
-              url: rabbitmq.getAmqpUrl(),
-            }),
-          ),
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
         ),
-      60000,
+      60000
     );
   });
 
@@ -106,7 +103,7 @@ describe("RabbitMQBroker", () => {
           yield* client.start();
 
           yield* client.orderCreated.publish({
-            orderId: 123,
+            orderId: 123
           });
 
           const analyticsPayload = yield* Deferred.await(analytics);
@@ -117,11 +114,11 @@ describe("RabbitMQBroker", () => {
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
-              url: rabbitmq.getAmqpUrl(),
-            }),
-          ),
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
         ),
-      60000,
+      60000
     );
   });
 
@@ -143,14 +140,14 @@ describe("RabbitMQBroker", () => {
               if (received.length === 5) {
                 yield* Deferred.succeed(finished, undefined);
               }
-            }),
+            })
           );
 
           yield* client.start();
 
           for (const id of [1, 2, 3, 4, 5]) {
             yield* client.orderCreated.publish({
-              orderId: id,
+              orderId: id
             });
           }
 
@@ -160,11 +157,11 @@ describe("RabbitMQBroker", () => {
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
-              url: rabbitmq.getAmqpUrl(),
-            }),
-          ),
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
         ),
-      60000,
+      60000
     );
   });
 
@@ -189,7 +186,7 @@ describe("RabbitMQBroker", () => {
               if (receivedA.length === 10) {
                 yield* Deferred.succeed(doneA, undefined);
               }
-            }),
+            })
           );
 
           yield* clientB.billing.handle(({ payload }) =>
@@ -199,7 +196,7 @@ describe("RabbitMQBroker", () => {
               if (receivedB.length === 10) {
                 yield* Deferred.succeed(doneB, undefined);
               }
-            }),
+            })
           );
 
           yield* clientA.start();
@@ -207,7 +204,7 @@ describe("RabbitMQBroker", () => {
 
           for (const id of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
             yield* clientA.orderCreated.publish({
-              orderId: id,
+              orderId: id
             });
           }
 
@@ -219,11 +216,11 @@ describe("RabbitMQBroker", () => {
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
-              url: rabbitmq.getAmqpUrl(),
-            }),
-          ),
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
         ),
-      60000,
+      60000
     );
   });
 });

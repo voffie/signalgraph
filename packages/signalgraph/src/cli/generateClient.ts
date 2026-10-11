@@ -22,19 +22,21 @@ function generateSchemaType(schema: MessageSchema) {
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) => `${toPropertyName(message.name)}: RuntimeMessage<${toTypeName(message.name)}Payload>;`
+    (message) =>
+      `${Naming.toPropertyName(message.name)}: Runtime.RuntimeMessage<${Naming.toTypeName(message.name)}Payload>;`
   );
 }
 
 function generateConsumerEntries(consumers: Iterable<Consumer<string, AnyMessage>>) {
   return [...consumers].map(
-    (consumer) => `${toPropertyName(consumer.name)}: RuntimeConsumer<${toTypeName(consumer.message.name)}Payload>;`
+    (consumer) =>
+      `${Naming.toPropertyName(consumer.name)}: Runtime.RuntimeConsumer<${Naming.toTypeName(consumer.message.name)}Payload>;`
   );
 }
 
 function generateTypeAliases(messages: Iterable<AnyMessage>) {
   return [...messages].map(
-    (message) => `export type ${toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`
+    (message) => `export type ${Naming.toTypeName(message.name)}Payload = ${generateSchemaType(message.schema)}`
   );
 }
 
@@ -78,18 +80,13 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
       ? `import {\n${indent(schemaExportNames.join(",\n"))}\n} from "${schemaRelativePath}";`
       : "";
 
-  const imports = [
-    'import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient } from "signalgraph/runtime";',
-    schemaImport
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const imports = ['import * as Runtime from "signalgraph/runtime";', schemaImport].filter(Boolean).join("\n");
 
   const aliases = generateTypeAliases(data.messages.values()).join("\n\n");
 
   const client = [
     "export type Client =",
-    indent("RuntimeClient &"),
+    indent("Runtime.RuntimeClient &"),
     indent("{"),
     indent(entries.join("\n"), 4),
     indent("};")
@@ -98,10 +95,10 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
   const messageGraph = [
     "const messageGraph = {",
     indent(generateMessageGraph(data).join(",\n")),
-    "} satisfies MessageGraph;"
+    "} satisfies Runtime.MessageGraph;"
   ].join("\n");
 
-  const exportClient = `export const Client = createClient<Client>(messageGraph);`;
+  const exportClient = `export const Client = Runtime.createClient<Client>(messageGraph);`;
 
   const source = [header, imports, aliases, client, messageGraph, exportClient].join("\n\n");
 

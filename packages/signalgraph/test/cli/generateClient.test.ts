@@ -77,9 +77,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("imports runtime APIs", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain(
-          "import { type RuntimeConsumer, type RuntimeMessage, type MessageGraph, type RuntimeClient, createClient }"
-        );
+        expect(content).toContain("import * as Runtime");
       })
     );
   });
@@ -101,28 +99,28 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("exports Client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export type Client =\n  RuntimeClient");
+        expect(content).toContain("export type Client =\n  Runtime.RuntimeClient");
       })
     );
 
     it.effect("generates message entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("ordersCreated: RuntimeMessage<OrdersCreatedPayload>");
+        expect(content).toContain("ordersCreated: Runtime.RuntimeMessage<OrdersCreatedPayload>");
       })
     );
 
     it.effect("generates consumer entries", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("billing: RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("billing: Runtime.RuntimeConsumer<OrdersCreatedPayload>");
       })
     );
 
     it.effect("creates runtime client", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("export const Client = createClient<Client>(messageGraph)");
+        expect(content).toContain("export const Client = Runtime.createClient<Client>(messageGraph)");
       })
     );
   });
@@ -140,7 +138,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("uses runtime Routing type", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("} satisfies MessageGraph;");
+        expect(content).toContain("} satisfies Runtime.MessageGraph;");
       })
     );
   });
@@ -158,7 +156,7 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("emits one message entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content.match(/ordersCreated: RuntimeMessage<OrdersCreatedPayload>/g)).toHaveLength(1);
+        expect(content.match(/ordersCreated: Runtime.RuntimeMessage<OrdersCreatedPayload>/g)).toHaveLength(1);
       })
     );
 
@@ -172,9 +170,9 @@ layer(NodeServices.layer)("generateClient", (it) => {
     it.effect("generates every consumer entry", () =>
       Effect.gen(function* () {
         const content = yield* readGenerated(getOut());
-        expect(content).toContain("analytics: RuntimeConsumer<OrdersCreatedPayload>");
-        expect(content).toContain("billing: RuntimeConsumer<OrdersCreatedPayload>");
-        expect(content).toContain("inventory: RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("analytics: Runtime.RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("billing: Runtime.RuntimeConsumer<OrdersCreatedPayload>");
+        expect(content).toContain("inventory: Runtime.RuntimeConsumer<OrdersCreatedPayload>");
       })
     );
   });

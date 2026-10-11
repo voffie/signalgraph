@@ -1,5 +1,6 @@
-import { moveListIndex } from "$lib/listNavigation";
 import { describe, expect, it } from "vitest";
+
+import { moveListIndex } from "#lib/listNavigation.js";
 
 describe("moveListIndex", () => {
   it("moves down until the final item", () => {

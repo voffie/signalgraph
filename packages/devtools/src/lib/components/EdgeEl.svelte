@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { PositionedGraphNode } from "$lib/domain/layout";
-  import type { GraphEdge } from "$lib/domain/types";
-  import { epath } from "$lib/utils";
+  import type { PositionedGraphNode } from "#lib/domain/layout.ts";
+  import type { GraphEdge } from "#lib/domain/types.ts";
+  import { epath } from "#lib/utils.ts";
 
   let {
     edge,
     nmap,
     hovered,
     onEnter,
-    onLeave,
+    onLeave
   }: {
     edge: GraphEdge;
     nmap: Record<string, PositionedGraphNode>;
@@ -51,11 +51,7 @@
       opacity={flowOpacity}
       style="transition: opacity 0.18s, stroke-width 0.18s" />
 
-    <circle
-      r={2.5}
-      fill="var(--color-primary)"
-      opacity={hovered ? 0.9 : 0.5}
-      style="transition: opacity 0.18s">
+    <circle r={2.5} fill="var(--color-primary)" opacity={hovered ? 0.9 : 0.5} style="transition: opacity 0.18s">
       <animateMotion dur={`${particleDur}s`} repeatCount="indefinite" path={d} />
     </circle>
 

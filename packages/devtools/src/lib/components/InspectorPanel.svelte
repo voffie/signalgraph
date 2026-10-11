@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { getAttribute } from "$lib/domain/attributes";
-  import type { GraphNode } from "$lib/domain/types";
-  import type { InspTab } from "$lib/types";
-  import { capitalize, cn } from "$lib/utils";
+  import { getAttribute } from "#lib/domain/attributes.ts";
+  import type { GraphNode } from "#lib/domain/types.ts";
+  import type { InspTab } from "#lib/types.ts";
+  import { capitalize, cn } from "#lib/utils.ts";
 
   let {
     node,
     tab,
-    onTabChange,
+    onTabChange
   }: {
     node: GraphNode | null;
     tab: InspTab;
@@ -29,29 +29,26 @@
 
   const TABS: Array<{ id: InspTab; label: string }> = $derived([
     { id: "overview", label: "Overview" },
-    { id: "attributes", label: "Attributes" },
+    { id: "attributes", label: "Attributes" }
   ]);
 
   const traceId = $derived(node ? (node?.traceId ?? "-") : "-");
 
-  const corrId = $derived(
-    node ? (getAttribute(node.attributes, "signalgraph.correlation.id") ?? "-") : "-",
-  );
+  const corrId = $derived(node ? (getAttribute(node.attributes, "signalgraph.correlation.id") ?? "-") : "-");
 
   const overviewRows = $derived(
     node
       ? [
           { label: "Kind", value: isHnd ? "Handler (Service)" : "Event (Message)" },
           { label: "Trace ID", value: traceId },
-          { label: "Correlation ID", value: corrId },
+          { label: "Correlation ID", value: corrId }
         ]
-      : [],
+      : []
   );
 </script>
 
 {#if !node}
-  <div
-    class="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+  <div class="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
     <svg
       width={28}
       height={28}
@@ -62,9 +59,7 @@
       stroke-linecap="round">
       <circle cx={11} cy={11} r={8} /><path d="m21 21-4.35-4.35" />
     </svg>
-    <p class="max-w-48 text-xs">
-      Click any node in the graph to inspect its runtime data and span attributes.
-    </p>
+    <p class="max-w-48 text-xs">Click any node in the graph to inspect its runtime data and span attributes.</p>
   </div>
 {:else}
   <div class="insp-panel flex h-full flex-col">
@@ -75,7 +70,7 @@
             "rounded-sm border px-1.75 py-0.5 font-mono text-[7.5px] tracking-widest uppercase",
             node.kind === "message"
               ? "text-chart-1 bg-chart-1/10 border-chart-1/20"
-              : "text-primary bg-primary/10 border-primary/20",
+              : "text-primary bg-primary/10 border-primary/20"
           )}>
           {node.kind}
         </span>
@@ -89,7 +84,7 @@
           onclick={() => onTabChange(t.id)}
           class={cn(
             "-mb-px flex cursor-pointer items-center gap-1.25 border-b-2 px-2 py-1.75 text-xs font-medium whitespace-nowrap transition-colors",
-            tab === t.id ? "text-primary border-b-primary" : "border-b-transparent",
+            tab === t.id ? "text-primary border-b-primary" : "border-b-transparent"
           )}>
           {t.label}
         </button>
@@ -100,8 +95,7 @@
       {#if tab === "overview"}
         <div class="flex flex-col gap-2.5">
           {#each overviewRows as row (row.label)}
-            <div
-              class="border-b-border flex items-center justify-between gap-2 border-b px-0 py-1.25">
+            <div class="border-b-border flex items-center justify-between gap-2 border-b px-0 py-1.25">
               <span class="shrink-0 text-[11px]">{row.label}</span>
               <span
                 class="text-muted-foreground max-w-[58%] overflow-hidden font-mono text-[11px] text-ellipsis whitespace-nowrap"
@@ -118,22 +112,20 @@
           {#if node.attributes.length > 0}
             <div class="flex flex-col">
               {#each node.attributes as attribute, i (attribute.key)}
-                {@const isTrace =
-                  attribute.key.includes("trace_id") || attribute.key.includes("span_id")}
+                {@const isTrace = attribute.key.includes("trace_id") || attribute.key.includes("span_id")}
                 {@const isErr = attribute.key === "error" && attribute.value === "true"}
                 <div
                   class={cn(
                     "grid grid-cols-[46%_54%] gap-1.5 px-0 py-1.25 font-mono text-[11px]",
-                    i < node.attributes.length - 1 ? "border-b border-b-white/4" : "",
+                    i < node.attributes.length - 1 ? "border-b border-b-white/4" : ""
                   )}>
-                  <span
-                    class="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
+                  <span class="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
                     {formatAttributeKey(attribute.key)}
                   </span>
                   <span
                     class={cn(
                       "overflow-hidden, text-ellipsis whitespace-nowrap",
-                      isErr ? "text-destructive" : isTrace ? "text-primary" : "",
+                      isErr ? "text-destructive" : isTrace ? "text-primary" : ""
                     )}
                     title={attribute.value}>
                     {attribute.value}

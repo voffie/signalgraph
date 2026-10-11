@@ -1,5 +1,6 @@
-import { TempoCollector } from "$lib/telemetry/traces/tempo/TempoCollector";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TempoCollector } from "#lib/telemetry/traces/tempo/TempoCollector.js";
 
 const fetchMock = vi.fn();
 
@@ -7,8 +8,8 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      "Content-Type": "application/json",
-    },
+      "Content-Type": "application/json"
+    }
   });
 }
 
@@ -17,12 +18,12 @@ const tempoTrace = {
     resourceSpans: [
       {
         resource: {
-          attributes: [],
+          attributes: []
         },
         scopeSpans: [
           {
             scope: {
-              name: "signalgraph",
+              name: "signalgraph"
             },
             spans: [
               {
@@ -35,23 +36,23 @@ const tempoTrace = {
                   {
                     key: "signalgraph.message.id",
                     value: {
-                      stringValue: "message-1",
-                    },
+                      stringValue: "message-1"
+                    }
                   },
                   {
                     key: "signalgraph.message.name",
                     value: {
-                      stringValue: "orders.created",
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
+                      stringValue: "orders.created"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 };
 
 describe("TempoCollector", () => {
@@ -96,10 +97,10 @@ describe("TempoCollector", () => {
         jsonResponse({
           traces: [
             {
-              traceID: "latest-trace-id",
-            },
-          ],
-        }),
+              traceID: "latest-trace-id"
+            }
+          ]
+        })
       )
       .mockResolvedValueOnce(jsonResponse(tempoTrace));
 
@@ -111,10 +112,7 @@ describe("TempoCollector", () => {
     expect(trace?.spans).toHaveLength(1);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:3200/api/v2/traces/latest-trace-id",
-    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:3200/api/v2/traces/latest-trace-id");
   });
 
   it("normalizes listed trace summaries and sends service filters to Tempo", async () => {
@@ -126,10 +124,10 @@ describe("TempoCollector", () => {
             rootServiceName: "orders",
             rootTraceName: "orders.created",
             durationMs: 42,
-            startTimeUnixNano: "1000000",
-          },
-        ],
-      }),
+            startTimeUnixNano: "1000000"
+          }
+        ]
+      })
     );
 
     const collector = new TempoCollector("http://localhost:3200");
@@ -138,16 +136,16 @@ describe("TempoCollector", () => {
       collector.listTraces({
         start: 100,
         end: 200,
-        service: ["orders"],
-      }),
+        service: ["orders"]
+      })
     ).resolves.toEqual([
       {
         traceId: "trace-1",
         rootService: "orders",
         rootOperation: "orders.created",
         durationMs: 42,
-        startTime: 1,
-      },
+        startTime: 1
+      }
     ]);
 
     const searchUrl = new URL(fetchMock.mock.calls[0][0] as string);
@@ -165,8 +163,8 @@ describe("TempoCollector", () => {
     await expect(
       collector.listTraces({
         start: 100,
-        end: 200,
-      }),
+        end: 200
+      })
     ).rejects.toThrow("Tempo search failed: 500");
   });
 });

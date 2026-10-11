@@ -1,21 +1,22 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import type { TraceSummary } from "$lib/domain/types";
-  import { cn } from "$lib/utils.js";
   import CheckIcon from "@lucide/svelte/icons/check";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import { tick } from "svelte";
 
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Dialog from "#lib/components/ui/dialog/index.js";
+  import type { TraceSummary } from "#lib/domain/types.js";
+  import { cn } from "#lib/utils.js";
+
   import { moveListIndex } from "../listNavigation";
 
   let {
     open,
     selectedTraceId,
-    onOpenChange,
+    onOpenChange
   }: {
     open: boolean;
     selectedTraceId: string | null;
@@ -85,9 +86,7 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-  <Dialog.Content
-    onOpenAutoFocus={(event) => event.preventDefault()}
-    class="flex max-w-md flex-col gap-4 p-5">
+  <Dialog.Content onOpenAutoFocus={(event) => event.preventDefault()} class="flex max-w-md flex-col gap-4 p-5">
     <Dialog.Title class="text-sm font-semibold">Switch trace</Dialog.Title>
 
     {#if loading}
@@ -123,7 +122,7 @@
             onclick={() => selectTrace(trace.traceId)}
             class={cn(
               "flex items-center justify-between rounded-md border-l-2 px-3 py-2 text-left transition-colors",
-              i === selectedIndex ? "border-l-primary bg-muted" : "border-l-transparent",
+              i === selectedIndex ? "border-l-primary bg-muted" : "border-l-transparent"
             )}>
             <span class="font-mono text-xs">{trace.traceId}</span>
             <span class="text-muted-foreground text-xs">

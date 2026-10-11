@@ -1,4 +1,6 @@
-import { getGraphLookbackSeconds, saveGraphLookbackSeconds } from "$lib/server/db/appSettings";
+import { fail } from "@sveltejs/kit";
+
+import { getGraphLookbackSeconds, saveGraphLookbackSeconds } from "#lib/server/db/appSettings.js";
 import {
   createDataSource,
   deleteDataSource,
@@ -6,17 +8,16 @@ import {
   getDataSourceByName,
   listDataSources,
   setActiveDataSource,
-  updateDataSource,
-} from "$lib/server/db/dataSource";
-import { isTraceVendor } from "$lib/telemetry/traces";
-import { fail } from "@sveltejs/kit";
+  updateDataSource
+} from "#lib/server/db/dataSource.js";
+import { isTraceVendor } from "#lib/telemetry/traces/index.ts";
 
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = () => {
   return {
     dataSources: listDataSources(),
-    graphLookbackSeconds: getGraphLookbackSeconds(),
+    graphLookbackSeconds: getGraphLookbackSeconds()
   };
 };
 
@@ -44,7 +45,7 @@ export const actions: Actions = {
     if (conflict && name !== currentName) {
       return fail(400, {
         action: "save" as const,
-        error: "A connection with that name already exists.",
+        error: "A connection with that name already exists."
       });
     }
 
@@ -90,11 +91,11 @@ export const actions: Actions = {
     if (!Number.isFinite(seconds) || seconds <= 0) {
       return fail(400, {
         action: "saveGraphLookback" as const,
-        error: "Please choose a valid lookback window.",
+        error: "Please choose a valid lookback window."
       });
     }
 
     saveGraphLookbackSeconds(seconds);
     return { action: "saveGraphLookback" as const, success: true };
-  },
+  }
 };

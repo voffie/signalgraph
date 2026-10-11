@@ -1,8 +1,9 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Empty from "$lib/components/ui/empty/index.js";
   import XIcon from "@lucide/svelte/icons/x";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Empty from "#lib/components/ui/empty/index.js";
 </script>
 
 <Empty.Root class="flex-1">

@@ -1,23 +1,24 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  import type { DataSourceProfile } from "$lib/server/db/dataSource";
-  import { TRACE_VENDORS, type TraceVendor } from "$lib/telemetry/traces";
-  import { cn } from "$lib/utils";
+  import { refreshAll } from "$app/navigation";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import CheckIcon from "@lucide/svelte/icons/check";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { tick } from "svelte";
+
+  import { Button } from "#lib/components/ui/button/index.js";
+  import * as Dialog from "#lib/components/ui/dialog/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Label } from "#lib/components/ui/label/index.js";
+  import type { DataSourceProfile } from "#lib/server/db/dataSource.ts";
+  import { TRACE_VENDORS, type TraceVendor } from "#lib/telemetry/traces/index.ts";
+  import { cn } from "#lib/utils.ts";
 
   import { moveListIndex } from "../listNavigation";
 
   let {
     open,
     onOpenChange,
-    dataSources,
+    dataSources
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -59,7 +60,7 @@
     formUrl = row.config.url;
     vendorIndex = Math.max(
       0,
-      TRACE_VENDORS.findIndex((v) => v.value === row.vendor),
+      TRACE_VENDORS.findIndex((v) => v.value === row.vendor)
     );
     error = null;
     step = "name";
@@ -69,7 +70,7 @@
     const formData = new FormData();
     formData.set("name", name);
     await fetch("/settings?/setActive", { method: "POST", body: formData });
-    await invalidateAll();
+    await refreshAll();
   }
 
   async function deleteConnection(name: string) {
@@ -77,7 +78,7 @@
     const formData = new FormData();
     formData.set("name", name);
     await fetch("/settings?/delete", { method: "POST", body: formData });
-    await invalidateAll();
+    await refreshAll();
     selectedIndex = Math.max(0, Math.min(selectedIndex, dataSources.length - 1));
   }
 
@@ -175,7 +176,7 @@
         return;
       }
 
-      await invalidateAll();
+      await refreshAll();
       step = "list";
     } finally {
       saving = false;
@@ -233,7 +234,7 @@
               aria-selected={i === selectedIndex}
               class={cn(
                 "flex items-center gap-3 rounded-md border-l-2 px-2.5 py-2 transition-colors",
-                i === selectedIndex ? "border-l-primary bg-muted" : "border-l-transparent",
+                i === selectedIndex ? "border-l-primary bg-muted" : "border-l-transparent"
               )}>
               <button
                 title={source.isActive ? "Active" : "Set active"}
@@ -249,13 +250,7 @@
                   {source.vendor} · {source.config.url}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-7 px-2 text-xs"
-                onclick={() => startEdit(source)}>
-                Edit
-              </Button>
+              <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={() => startEdit(source)}>Edit</Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -268,9 +263,7 @@
         {/if}
       </div>
       {#if dataSources.length > 0}
-        <p class="text-muted-foreground text-xs">
-          ↑↓/j k move · Enter/Space set active · e edit · d delete
-        </p>
+        <p class="text-muted-foreground text-xs">↑↓/j k move · Enter/Space set active · e edit · d delete</p>
       {/if}
     {:else if step === "name"}
       <div class="flex items-center gap-2">
@@ -327,7 +320,7 @@
               "flex items-center justify-between rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
               i === vendorIndex
                 ? "border-l-primary bg-muted text-foreground"
-                : "text-muted-foreground border-l-transparent",
+                : "text-muted-foreground border-l-transparent"
             )}>
             {v.label}
             {#if v.value === formVendor}

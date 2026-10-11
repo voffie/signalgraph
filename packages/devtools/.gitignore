@@ -1,5 +1,8 @@
 node_modules
-signalgraph.db*
+*.db
+*.db-wal
+*.db-shm
+.dev/
 
 # Output
 .output

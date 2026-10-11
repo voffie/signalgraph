@@ -1,6 +1,5 @@
-import { getActiveTraceCollector } from "$lib/server/datasources/registry";
-import { getGraphLookbackSeconds } from "$lib/server/db/appSettings";
-import { json } from "@sveltejs/kit";
+import { getActiveTraceCollector } from "#lib/server/datasources/registry.js";
+import { getGraphLookbackSeconds } from "#lib/server/db/appSettings.js";
 
 import type { RequestHandler } from "./$types";
 
@@ -8,7 +7,7 @@ export const GET: RequestHandler = async () => {
   const collector = getActiveTraceCollector();
 
   if (!collector) {
-    return json({ message: "No active connection." }, { status: 409 });
+    return Response.json({ message: "No active connection." }, { status: 409 });
   }
 
   const lookbackSeconds = getGraphLookbackSeconds();
@@ -18,11 +17,11 @@ export const GET: RequestHandler = async () => {
   try {
     const traces = await collector.listTraces({ start, end });
 
-    return json({ traces });
+    return Response.json({ traces });
   } catch (error) {
-    return json(
+    return Response.json(
       { message: error instanceof Error ? error.message : "Unable to load traces." },
-      { status: 502 },
+      { status: 502 }
     );
   }
 };

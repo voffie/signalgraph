@@ -1,6 +1,6 @@
-import { getActiveTraceCollector } from "$lib/server/datasources/registry";
-import { getGraphLookbackSeconds } from "$lib/server/db/appSettings";
-import { listDataSources } from "$lib/server/db/dataSource";
+import { getActiveTraceCollector } from "#lib/server/datasources/registry.js";
+import { getGraphLookbackSeconds } from "#lib/server/db/appSettings.js";
+import { listDataSources } from "#lib/server/db/dataSource.js";
 
 import type { PageServerLoad } from "./$types";
 
@@ -19,16 +19,14 @@ export const load: PageServerLoad = async ({ url }) => {
       hasAnyDataSource,
       hasActiveDataSource,
       dataSources,
-      graphLookbackSeconds,
+      graphLookbackSeconds
     };
   }
 
   try {
     const traceId = url.searchParams.get("trace");
 
-    const trace = traceId
-      ? await collector.getTrace(traceId)
-      : await collector.getLatestTrace(graphLookbackSeconds);
+    const trace = traceId ? await collector.getTrace(traceId) : await collector.getLatestTrace(graphLookbackSeconds);
 
     return {
       trace,
@@ -36,7 +34,7 @@ export const load: PageServerLoad = async ({ url }) => {
       hasAnyDataSource,
       hasActiveDataSource,
       dataSources,
-      graphLookbackSeconds,
+      graphLookbackSeconds
     };
   } catch (error) {
     return {
@@ -45,7 +43,7 @@ export const load: PageServerLoad = async ({ url }) => {
       hasAnyDataSource,
       hasActiveDataSource,
       dataSources,
-      graphLookbackSeconds,
+      graphLookbackSeconds
     };
   }
 };

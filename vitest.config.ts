@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { defineConfig, mergeConfig, type ViteUserConfig } from "vitest/config";
 
@@ -64,10 +65,34 @@ export default defineConfig({
   test: {
     passWithNoTests: true,
     projects: [
-      ...project("signalgraph", "packages/signalgraph"),
-      ...project("@signalgraph/devtools", "packages/devtools"),
+      ...project("signalgraph", "packages/signalgraph", true, {
+        test: {
+          sequence: {
+            concurrent: false
+          }
+        }
+      }),
+      ...project("@signalgraph/devtools", "packages/devtools", true, {
+        resolve: {
+          alias: {
+            "#lib": fileURLToPath(new URL("packages/devtools/src/lib", import.meta.url))
+          }
+        },
+        test: {
+          include: ["src/lib/test/**/*.test.ts"],
+          sequence: {
+            concurrent: false
+          }
+        }
+      }),
       ...project("@signalgraph/adapter-memory", "packages/adapter/memory"),
-      ...project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq")
+      ...project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq", true, {
+        test: {
+          sequence: {
+            concurrent: false
+          }
+        }
+      })
     ]
   }
 });

@@ -75,7 +75,6 @@
     "tsx": "^4.23.15"
   },
   "devDependencies": {
-    "@signalgraph/adapter-memory": "workspace:^",
     "effect": "^4.0.3"
   },
   "peerDependencies": {

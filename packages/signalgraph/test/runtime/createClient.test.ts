@@ -1,6 +1,6 @@
 import { expect, layer } from "@effect/vitest";
 import { MemoryBroker } from "@signalgraph/adapter-memory";
-import { Effect, Schema } from "effect";
+import { Deferred, Effect, Schema } from "effect";
 import { consumer, message } from "signalgraph";
 import { type RuntimeConsumer, type RuntimeMessage, type RuntimeClient, createClient } from "signalgraph/runtime";
 
@@ -37,7 +37,7 @@ const createTestClient = () =>
     }
   });
 
-layer(MemoryBroker)("createClient", (it) => {
+layer(MemoryBroker())("createClient", (it) => {
   it.effect("creates message resources", () =>
     Effect.gen(function* () {
       const client = yield* createTestClient();
@@ -55,15 +55,10 @@ layer(MemoryBroker)("createClient", (it) => {
 
   it.effect("publish reaches consumer", () =>
     Effect.gen(function* () {
-      let received: Order | undefined;
-
+      const received = yield* Deferred.make<Order>();
       const client = yield* createTestClient();
 
-      yield* client.billing.handle(({ payload }) =>
-        Effect.sync(() => {
-          received = payload;
-        })
-      );
+      yield* client.billing.handle(({ payload }) => Deferred.succeed(received, payload));
 
       yield* client.start();
 
@@ -71,7 +66,9 @@ layer(MemoryBroker)("createClient", (it) => {
         orderId: "123"
       });
 
-      expect(received).toEqual({
+      const payload = yield* Deferred.await(received);
+
+      expect(payload).toEqual({
         orderId: "123"
       });
     })
@@ -79,21 +76,13 @@ layer(MemoryBroker)("createClient", (it) => {
 
   it.effect("supports multiple consumers", () =>
     Effect.gen(function* () {
-      let analyticsHandled = false;
-      let billingHandled = false;
+      const analyticsHandled = yield* Deferred.make<boolean>();
+      const billingHandled = yield* Deferred.make<boolean>();
       const client = yield* createTestClient();
 
-      yield* client.analytics.handle(() =>
-        Effect.sync(() => {
-          analyticsHandled = true;
-        })
-      );
+      yield* client.analytics.handle(() => Deferred.succeed(analyticsHandled, true));
 
-      yield* client.billing.handle(() =>
-        Effect.sync(() => {
-          billingHandled = true;
-        })
-      );
+      yield* client.billing.handle(() => Deferred.succeed(billingHandled, true));
 
       yield* client.start();
 
@@ -101,14 +90,18 @@ layer(MemoryBroker)("createClient", (it) => {
         orderId: "123"
       });
 
-      expect(analyticsHandled).toBe(true);
-      expect(billingHandled).toBe(true);
+      const analyticsDone = yield* Deferred.await(analyticsHandled);
+      const billingDone = yield* Deferred.await(billingHandled);
+
+      expect(analyticsDone).toBe(true);
+      expect(billingDone).toBe(true);
     })
   );
 
   it.effect("supports multiple handlers", () =>
     Effect.gen(function* () {
       let output = 0;
+      const done = yield* Deferred.make();
       const client = yield* createTestClient();
 
       yield* client.analytics.handle(() =>
@@ -120,7 +113,7 @@ layer(MemoryBroker)("createClient", (it) => {
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
           output += 1;
-        })
+        }).pipe(Effect.andThen(Deferred.succeed(done, undefined)))
       );
 
       yield* client.start();
@@ -128,6 +121,8 @@ layer(MemoryBroker)("createClient", (it) => {
       yield* client.ordersCreated.publish({
         orderId: "123"
       });
+
+      yield* Deferred.await(done);
 
       expect(output).toBe(2);
     })

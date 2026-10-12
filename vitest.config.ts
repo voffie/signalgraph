@@ -85,7 +85,6 @@ export default defineConfig({
           }
         }
       }),
-      ...project("@signalgraph/adapter-memory", "packages/adapter/memory"),
       ...project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq", true, {
         test: {
           sequence: {

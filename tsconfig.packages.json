@@ -7,9 +7,6 @@
       "path": "packages/signalgraph"
     },
     {
-      "path": "packages/adapter/memory"
-    },
-    {
       "path": "packages/adapter/rabbitmq"
     },
   ]

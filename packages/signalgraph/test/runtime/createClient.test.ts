@@ -1,8 +1,9 @@
 import { expect, layer } from "@effect/vitest";
-import { MemoryBroker } from "@signalgraph/adapter-memory";
 import { Effect, Schema } from "effect";
 import { consumer, message } from "signalgraph";
 import { type RuntimeConsumer, type RuntimeMessage, type RuntimeClient, createClient } from "signalgraph/runtime";
+
+import { TestBroker } from "../utils/TestBroker.ts";
 
 const OrderCreated = message({
   name: "orders.created",
@@ -37,7 +38,7 @@ const createTestClient = () =>
     }
   });
 
-layer(MemoryBroker)("createClient", (it) => {
+layer(TestBroker)("createClient", (it) => {
   it.effect("creates message resources", () =>
     Effect.gen(function* () {
       const client = yield* createTestClient();

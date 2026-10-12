@@ -32,12 +32,6 @@
       "signalgraph/*": [
         "./packages/signalgraph/src/*.ts"
       ],
-      "@signalgraph/adapter-memory": [
-        "./packages/adapter/memory/src/index.ts"
-      ],
-      "@signalgraph/adapter-memory/*": [
-        "./packages/adapter/memory/src/*.ts"
-      ],
       "@signalgraph/adapter-rabbitmq": [
         "./packages/adapter/rabbitmq/src/index.ts"
       ],

@@ -3,7 +3,7 @@
 
 import * as Runtime from "signalgraph/runtime";
 
-import { OrderCreated, Analytics, Billing } from "./schema.ts";
+import { OrderCreated, OrderCompleted, Analytics, Billing, RetryingAnalytics, DlqAnalytics } from "./schema.ts";
 
 export type OrderCreatedPayload = { readonly orderId: number };
 
@@ -14,12 +14,18 @@ export type Client = Runtime.RuntimeClient & {
   orderCompleted: Runtime.RuntimeMessage<OrderCompletedPayload>;
   analytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
   billing: Runtime.RuntimeConsumer<OrderCreatedPayload>;
+  retryingAnalytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
+  dlqAnalytics: Runtime.RuntimeConsumer<OrderCompletedPayload>;
 };
 
 const messageGraph = {
   "order.created": {
     definition: OrderCreated,
-    consumers: [Analytics, Billing]
+    consumers: [Analytics, Billing, RetryingAnalytics]
+  },
+  "order.completed": {
+    definition: OrderCompleted,
+    consumers: [DlqAnalytics]
   }
 } satisfies Runtime.MessageGraph;
 

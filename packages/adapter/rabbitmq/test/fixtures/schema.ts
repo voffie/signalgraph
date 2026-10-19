@@ -8,6 +8,13 @@ export const OrderCreated = message({
   })
 });
 
+export const OrderCompleted = message({
+  name: "order.created",
+  schema: Schema.Struct({
+    orderId: Schema.Number
+  })
+});
+
 export const Analytics = consumer({
   name: "analytics",
   message: OrderCreated

@@ -33,5 +33,9 @@ export const consumer = <const Name extends string, TMessage extends Message.Any
   readonly dlq?: boolean;
 }): Consumer<Name, TMessage> => ({
   _tag: "Consumer",
-  ...options
+  name: options.name,
+  message: options.message,
+  ...(options.prefetch !== undefined && { prefetch: options.prefetch }),
+  ...(options.retry !== undefined && { retry: options.retry }),
+  ...(options.dlq !== undefined && { dlq: options.dlq })
 });

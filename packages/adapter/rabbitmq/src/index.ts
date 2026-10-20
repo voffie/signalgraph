@@ -79,8 +79,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             publishChannel.publish(message, "", Buffer.from(json, "utf-8"), {
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId,
+              persistent: true,
               headers: {
-                traceContext: data.metadata.traceContext
+                traceContext: data.metadata.traceContext,
+                [RETRY_ATTEMPT_HEADER]: data.metadata.retryAttempt
               }
             })
           );
@@ -222,16 +224,17 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               const processMessage = Effect.gen(function* () {
                 const msg = yield* Queue.take(messages);
 
+                const metadata = Runtime.createConsumeMetadata({
+                  messageId: msg.properties.messageId ?? "",
+                  correlationId: msg.properties.correlationId ?? "",
+                  retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
+                  traceContext: msg.properties.headers?.traceContext
+                });
+
                 yield* Effect.gen(function* () {
                   const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
                     msg.content.toString("utf-8")
                   );
-
-                  const metadata = Runtime.createConsumeMetadata({
-                    messageId: msg.properties.messageId ?? "",
-                    correlationId: msg.properties.correlationId ?? "",
-                    traceContext: msg.properties.headers?.traceContext
-                  });
 
                   const list = consumerHandlers;
 
@@ -262,18 +265,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   Effect.matchEffect({
                     onSuccess: () => {
                       consumerChannel.ack(msg);
-
-                      if (consumer.hooks?.onSuccess) {
-                        return consumer.hooks.onSuccess({
-                          messageId: msg.properties.messageId
-                        });
-                      }
-
                       return Effect.void;
                     },
-                    onFailure: (cause) =>
+                    onFailure: () =>
                       Effect.gen(function* () {
-                        const nextAttempt = (msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1) + 1;
+                        const nextAttempt = metadata.retryAttempt + 1;
 
                         if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
                           yield* Effect.sync(() =>
@@ -298,14 +294,6 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
                           consumerChannel.ack(msg);
 
-                          if (consumer.hooks?.onRetry) {
-                            yield* consumer.hooks.onRetry({
-                              attempt: nextAttempt,
-                              cause,
-                              messageId: msg.properties.messageId
-                            });
-                          }
-
                           return;
                         }
 
@@ -328,26 +316,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
                           consumerChannel.ack(msg);
 
-                          if (consumer.hooks?.onFailure) {
-                            yield* consumer.hooks.onFailure({
-                              attempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1,
-                              cause,
-                              messageId: msg.properties.messageId
-                            });
-                          }
-
                           return;
                         }
 
                         consumerChannel.nack(msg, false, false);
-
-                        if (consumer.hooks?.onFailure) {
-                          yield* consumer.hooks.onFailure({
-                            attempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER] ?? 1,
-                            cause,
-                            messageId: msg.properties.messageId
-                          });
-                        }
                       })
                   })
                 );

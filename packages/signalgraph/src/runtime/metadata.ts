@@ -7,6 +7,7 @@ import { CurrentMessageMetadata } from "./references.ts";
 export interface MessageMetadata {
   readonly messageId: string;
   readonly correlationId: string;
+  readonly retryAttempt: number;
   readonly traceContext?: SpanContext;
 }
 
@@ -32,7 +33,8 @@ export function createPublishMetadata() {
     return {
       messageId,
       correlationId,
-      traceContext: span.spanContext(),
+      retryAttempt: 1,
+      traceContext: span.spanContext()
     };
   });
 }
@@ -40,13 +42,15 @@ export function createPublishMetadata() {
 export function createConsumeMetadata(args: {
   messageId: string;
   correlationId: string;
+  retryAttempt: number;
   traceContext?: SpanContext;
 }): MessageMetadata {
   return {
     messageId: args.messageId,
     correlationId: args.correlationId,
+    retryAttempt: args.retryAttempt,
     ...(args.traceContext && {
-      traceContext: args.traceContext,
-    }),
+      traceContext: args.traceContext
+    })
   };
 }

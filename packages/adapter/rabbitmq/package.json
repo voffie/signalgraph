@@ -35,7 +35,7 @@
   "sideEffects": [],
   "exports": {
     "./package.json": "./package.json",
-    ".": "src/index.ts",
+    ".": "./src/index.ts",
     "./*": "./src/*.ts",
     "./internal/*": null,
     "./index": null,

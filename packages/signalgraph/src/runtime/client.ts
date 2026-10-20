@@ -16,7 +16,7 @@ export interface RuntimeMessage<P> {
 type UserHandler<P> = (ctx: {
   readonly payload: P;
   readonly metadata: Metadata.MessageMetadata;
-}) => Effect.Effect<void>;
+}) => Effect.Effect<void, unknown>;
 
 export interface RuntimeConsumer<P> {
   handle(handler: UserHandler<P>): Effect.Effect<void>;

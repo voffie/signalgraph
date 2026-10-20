@@ -1,12 +1,31 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import * as amqp from "amqplib";
-import { Effect, Layer, Queue, Schema, Scope } from "effect";
+import { Duration, Effect, Layer, Queue, Schema, Scope } from "effect";
+import type { RetryPolicy } from "signalgraph";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
 
 type RabbitMQOptions = {
   url: string;
 };
+
+const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
+
+function retryDelay(policy: RetryPolicy, attempt: number) {
+  switch (policy.type) {
+    case "fixed":
+      return Math.round(Duration.toMillis(policy.delay));
+
+    case "exponential":
+      const delay = Math.round(Duration.toMillis(policy.initialDelay)) * Math.pow(policy.factor ?? 2, attempt - 1);
+
+      if (policy.maxDelay === undefined) {
+        return delay;
+      } else {
+        return Math.min(delay, Math.round(Duration.toMillis(policy.maxDelay)));
+      }
+  }
+}
 
 export function RabbitMQBroker(options: RabbitMQOptions) {
   return Layer.effect(
@@ -36,7 +55,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       const publishChannel = yield* Effect.acquireRelease(
         Effect.tryPromise({
-          try: () => conn.createChannel(),
+          try: () => conn.createConfirmChannel(),
           catch: (cause) =>
             new Runtime.ConnectionError({
               cause,
@@ -60,11 +79,22 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             publishChannel.publish(message, "", Buffer.from(json, "utf-8"), {
               messageId: data.metadata.messageId,
               correlationId: data.metadata.correlationId,
+              persistent: true,
               headers: {
-                traceContext: data.metadata.traceContext
+                traceContext: data.metadata.traceContext,
+                [RETRY_ATTEMPT_HEADER]: data.metadata.retryAttempt
               }
             })
           );
+
+          yield* Effect.tryPromise({
+            try: () => publishChannel.waitForConfirms(),
+            catch: (cause) =>
+              new Runtime.ConnectionError({
+                cause,
+                message: "Failed to confirm published message"
+              })
+          });
         });
 
       const start = ({ graph, handlers }: { graph: Runtime.MessageGraph; handlers: Broker.HandlerRegistry }) =>
@@ -138,6 +168,43 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   })
               });
 
+              if (consumer.retry !== undefined) {
+                for (let attempt = 1; attempt < consumer.retry.maxAttempts; attempt++) {
+                  const delay = retryDelay(consumer.retry, attempt);
+
+                  const queue = `${consumer.name}.retry.${attempt + 1}`;
+
+                  yield* Effect.tryPromise({
+                    try: () =>
+                      consumerChannel.assertQueue(queue, {
+                        durable: true,
+                        deadLetterExchange: "",
+                        deadLetterRoutingKey: consumer.name,
+                        messageTtl: delay
+                      }),
+                    catch: (cause) =>
+                      new Runtime.InitializationError({
+                        cause,
+                        message: `Failed to create retry queue "${queue}"`
+                      })
+                  });
+                }
+              }
+
+              if (consumer.dlq === true) {
+                yield* Effect.tryPromise({
+                  try: () =>
+                    consumerChannel.assertQueue(`${consumer.name}.dlq`, {
+                      durable: true
+                    }),
+                  catch: (cause) =>
+                    new Runtime.InitializationError({
+                      cause,
+                      message: `Failed to create DLQ "${consumer.name}.dlq"`
+                    })
+                });
+              }
+
               const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
 
               yield* Effect.tryPromise({
@@ -157,16 +224,17 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               const processMessage = Effect.gen(function* () {
                 const msg = yield* Queue.take(messages);
 
+                const metadata = Runtime.createConsumeMetadata({
+                  messageId: msg.properties.messageId ?? "",
+                  correlationId: msg.properties.correlationId ?? "",
+                  retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
+                  traceContext: msg.properties.headers?.traceContext
+                });
+
                 yield* Effect.gen(function* () {
                   const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
                     msg.content.toString("utf-8")
                   );
-
-                  const metadata = Runtime.createConsumeMetadata({
-                    messageId: msg.properties.messageId ?? "",
-                    correlationId: msg.properties.correlationId ?? "",
-                    traceContext: msg.properties.headers?.traceContext
-                  });
 
                   const list = consumerHandlers;
 
@@ -195,8 +263,64 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   }
                 }).pipe(
                   Effect.matchEffect({
-                    onSuccess: () => Effect.sync(() => consumerChannel.ack(msg)),
-                    onFailure: () => Effect.sync(() => consumerChannel.nack(msg))
+                    onSuccess: () => {
+                      consumerChannel.ack(msg);
+                      return Effect.void;
+                    },
+                    onFailure: () =>
+                      Effect.gen(function* () {
+                        const nextAttempt = metadata.retryAttempt + 1;
+
+                        if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
+                          yield* Effect.sync(() =>
+                            publishChannel.publish("", `${consumer.name}.retry.${nextAttempt}`, msg.content, {
+                              ...msg.properties,
+                              persistent: true,
+                              headers: {
+                                ...msg.properties.headers,
+                                [RETRY_ATTEMPT_HEADER]: nextAttempt
+                              }
+                            })
+                          );
+
+                          yield* Effect.tryPromise({
+                            try: () => publishChannel.waitForConfirms(),
+                            catch: (confirmCause) =>
+                              new Runtime.ConnectionError({
+                                cause: confirmCause,
+                                message: "Failed to confirm published message"
+                              })
+                          });
+
+                          consumerChannel.ack(msg);
+
+                          return;
+                        }
+
+                        if (consumer.dlq === true) {
+                          yield* Effect.sync(() =>
+                            publishChannel.publish("", `${consumer.name}.dlq`, msg.content, {
+                              ...msg.properties,
+                              persistent: true
+                            })
+                          );
+
+                          yield* Effect.tryPromise({
+                            try: () => publishChannel.waitForConfirms(),
+                            catch: (confirmCause) =>
+                              new Runtime.ConnectionError({
+                                cause: confirmCause,
+                                message: "Failed to confirm published message"
+                              })
+                          });
+
+                          consumerChannel.ack(msg);
+
+                          return;
+                        }
+
+                        consumerChannel.nack(msg, false, false);
+                      })
                   })
                 );
               });

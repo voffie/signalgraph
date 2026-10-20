@@ -6,6 +6,8 @@ import { Effect, Deferred, Schema } from "effect";
 
 import { Client, type OrderCreatedPayload } from "./fixtures/generated.ts";
 
+const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
+
 class TestError extends Schema.TaggedError<TestError>()("TestError", {
   reason: Schema.String
 }) {}
@@ -235,14 +237,14 @@ describe("RabbitMQBroker", () => {
         Effect.gen(function* () {
           const client = yield* Client;
 
-          let attempts = 0;
+          const attempts: Array<number> = [];
           const finished = yield* Deferred.make<void>();
 
-          yield* client.retryingAnalytics.handle(() =>
+          yield* client.retryingAnalytics.handle(({ metadata }) =>
             Effect.gen(function* () {
-              attempts += 1;
+              attempts.push(metadata.retryAttempt);
 
-              if (attempts === 2) {
+              if (metadata.retryAttempt === 2) {
                 yield* Deferred.succeed(finished, undefined);
                 return;
               }
@@ -259,7 +261,7 @@ describe("RabbitMQBroker", () => {
 
           yield* Deferred.await(finished);
 
-          expect(attempts).toEqual(2);
+          expect(attempts).toEqual([1, 2]);
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
@@ -271,15 +273,15 @@ describe("RabbitMQBroker", () => {
     );
 
     it.effect(
-      "does not retry when maxAttempts is one",
+      "handles the initial attempt when maxAttempts is one",
       () =>
         Effect.gen(function* () {
           const client = yield* Client;
-          const attempts = yield* Deferred.make<number>();
+          const attempt = yield* Deferred.make<number>();
 
-          yield* client.analytics.handle(() =>
+          yield* client.noRetryAnalytics.handle(({ metadata }) =>
             Effect.gen(function* () {
-              yield* Deferred.succeed(attempts, 1);
+              yield* Deferred.succeed(attempt, metadata.retryAttempt);
 
               return yield* new TestError({ reason: "permanent failure" });
             })
@@ -291,7 +293,7 @@ describe("RabbitMQBroker", () => {
             orderId: 123
           });
 
-          expect(yield* Deferred.await(attempts)).toBe(1);
+          expect(yield* Deferred.await(attempt)).toBe(1);
         }).pipe(
           Effect.provide(
             RabbitMQBroker({
@@ -427,12 +429,12 @@ describe("RabbitMQBroker", () => {
           );
 
           const client = yield* Client;
-          const attempts = yield* Deferred.make<number>();
+          const attempts: Array<number> = [];
           const dlqMessage = yield* Deferred.make<amqp.ConsumeMessage>();
 
-          yield* client.dlqAnalytics.handle(() =>
+          yield* client.dlqAnalytics.handle(({ metadata }) =>
             Effect.gen(function* () {
-              yield* Deferred.succeed(attempts, 2);
+              attempts.push(metadata.retryAttempt);
 
               return yield* new TestError({ reason: "permanent failure" });
             })
@@ -453,8 +455,6 @@ describe("RabbitMQBroker", () => {
             orderId: 123
           });
 
-          expect(yield* Deferred.await(attempts)).toBe(2);
-
           const msg = yield* Deferred.await(dlqMessage);
 
           const payload = yield* Schema.decodeUnknownEffect(
@@ -465,6 +465,8 @@ describe("RabbitMQBroker", () => {
             )
           )(msg.content.toString("utf-8"));
 
+          expect(attempts).toStrictEqual([1, 2]);
+          expect(msg.properties.headers?.[RETRY_ATTEMPT_HEADER]).toBe(2);
           expect(payload).toEqual({
             orderId: 123
           });

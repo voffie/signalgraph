@@ -9,7 +9,7 @@ export const OrderCreated = message({
 });
 
 export const OrderCompleted = message({
-  name: "order.created",
+  name: "order.completed",
   schema: Schema.Struct({
     orderId: Schema.Number
   })
@@ -32,6 +32,16 @@ export const RetryingAnalytics = consumer({
     type: "fixed",
     delay: Duration.millis(100),
     maxAttempts: 2
+  }
+});
+
+export const NoRetryAnalytics = consumer({
+  name: "noRetryAnalytics",
+  message: OrderCreated,
+  retry: {
+    type: "fixed",
+    delay: Duration.millis(100),
+    maxAttempts: 1
   }
 });
 

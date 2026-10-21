@@ -1,6 +1,8 @@
-import { expect, layer } from "@effect/vitest";
-import { Effect, Schema } from "effect";
+import { describe, expect, it } from "@effect/vitest";
+import { Deferred, Effect, Fiber, Schema } from "effect";
+import { TestClock } from "effect/testing";
 import { consumer, message } from "signalgraph";
+import * as Broker from "signalgraph/broker";
 import { type RuntimeConsumer, type RuntimeMessage, type RuntimeClient, createClient } from "signalgraph/runtime";
 
 import { TestBroker } from "../utils/TestBroker.ts";
@@ -38,12 +40,12 @@ const createTestClient = () =>
     }
   });
 
-layer(TestBroker)("createClient", (it) => {
+describe("createClient", () => {
   it.effect("creates message resources", () =>
     Effect.gen(function* () {
       const client = yield* createTestClient();
       expect(client.ordersCreated).toBeDefined();
-    })
+    }).pipe(Effect.provide(TestBroker))
   );
 
   it.effect("creates consumer resources", () =>
@@ -51,7 +53,7 @@ layer(TestBroker)("createClient", (it) => {
       const client = yield* createTestClient();
       expect(client.billing).toBeDefined();
       expect(client.analytics).toBeDefined();
-    })
+    }).pipe(Effect.provide(TestBroker))
   );
 
   it.effect("publish reaches consumer", () =>
@@ -75,7 +77,7 @@ layer(TestBroker)("createClient", (it) => {
       expect(received).toEqual({
         orderId: "123"
       });
-    })
+    }).pipe(Effect.provide(TestBroker))
   );
 
   it.effect("supports multiple consumers", () =>
@@ -104,7 +106,7 @@ layer(TestBroker)("createClient", (it) => {
 
       expect(analyticsHandled).toBe(true);
       expect(billingHandled).toBe(true);
-    })
+    }).pipe(Effect.provide(TestBroker))
   );
 
   it.effect("supports multiple handlers", () =>
@@ -131,7 +133,7 @@ layer(TestBroker)("createClient", (it) => {
       });
 
       expect(output).toBe(2);
-    })
+    }).pipe(Effect.provide(TestBroker))
   );
 
   it.effect("ignores consumers without handlers", () =>
@@ -139,6 +141,178 @@ layer(TestBroker)("createClient", (it) => {
       const client = yield* createTestClient();
 
       yield* client.ordersCreated.publish({ orderId: "123" });
-    })
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("tracks active handler dispatches and waits until they finish", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      const broker = yield* Broker.Broker;
+
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* client.analytics.handle(() =>
+        Effect.gen(function* () {
+          yield* Deferred.succeed(started, undefined);
+          yield* Deferred.await(release);
+        })
+      );
+
+      yield* client.start();
+
+      const delivery = yield* Effect.forkChild(
+        client.ordersCreated.publish({
+          orderId: "123"
+        })
+      );
+
+      yield* Deferred.await(started);
+
+      expect((yield* broker.status).activeHandlers).toBe(1);
+
+      const idle = yield* Effect.forkChild(broker.awaitIdle);
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(delivery);
+      yield* Fiber.join(idle);
+
+      expect((yield* broker.status).activeHandlers).toBe(0);
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("stops the broker and removes signal listeners after SIGINT", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      let received = false;
+
+      yield* client.analytics.handle(() =>
+        Effect.sync(() => {
+          received = true;
+        })
+      );
+
+      const sigintListeners = process.listenerCount("SIGINT");
+      const sigtermListeners = process.listenerCount("SIGTERM");
+
+      const listening = yield* Effect.forkChild(client.listen());
+      yield* Effect.yieldNow;
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners + 1);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners + 1);
+
+      yield* Effect.sync(() => {
+        process.emit("SIGINT");
+      });
+
+      yield* Fiber.join(listening);
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
+
+      yield* client.ordersCreated.publish({
+        orderId: "123"
+      });
+
+      expect(received).toBe(false);
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("stops the broker and removes signal listeners after SIGTERM", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+
+      const sigintListeners = process.listenerCount("SIGINT");
+      const sigtermListeners = process.listenerCount("SIGTERM");
+
+      const listening = yield* Effect.forkChild(client.listen());
+      yield* Effect.yieldNow;
+
+      yield* Effect.sync(() => {
+        process.emit("SIGTERM");
+      });
+
+      yield* Fiber.join(listening);
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  const waitUntil = (condition: Effect.Effect<boolean>) =>
+    Effect.gen(function* () {
+      while (!(yield* condition)) {
+        yield* Effect.yieldNow;
+      }
+    });
+
+  it.effect("closes after the grace period when a handler is still running", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      const broker = yield* Broker.Broker;
+
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* client.analytics.handle(() =>
+        Effect.gen(function* () {
+          yield* Deferred.succeed(started, undefined);
+          yield* Deferred.await(release);
+        })
+      );
+
+      const sigintListeners = process.listenerCount("SIGINT");
+
+      const listening = yield* Effect.forkChild(
+        client.listen({
+          gracePeriod: "1 second"
+        })
+      );
+
+      yield* waitUntil(Effect.sync(() => process.listenerCount("SIGINT") > sigintListeners));
+
+      const delivery = yield* Effect.forkChild(
+        client.ordersCreated.publish({
+          orderId: "123"
+        })
+      );
+
+      yield* Deferred.await(started);
+
+      yield* Effect.sync(() => {
+        process.emit("SIGINT");
+      });
+
+      yield* Effect.race(
+        Fiber.join(listening),
+        TestClock.adjust("1 second").pipe(Effect.andThen(Effect.yieldNow), Effect.forever)
+      );
+
+      expect((yield* broker.status).activeHandlers).toBe(1);
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(delivery);
+      expect((yield* broker.status).activeHandlers).toBe(0);
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("removes signal listeners when listen is interrupted", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+
+      const sigintListeners = process.listenerCount("SIGINT");
+      const sigtermListeners = process.listenerCount("SIGTERM");
+
+      const listening = yield* Effect.forkChild(client.listen());
+      yield* Effect.yieldNow;
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners + 1);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners + 1);
+
+      yield* Fiber.interrupt(listening);
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
+    }).pipe(Effect.provide(TestBroker))
   );
 });

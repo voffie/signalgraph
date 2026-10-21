@@ -2,7 +2,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "@effect/vi
 import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
 import { RabbitMQContainer, type StartedRabbitMQContainer } from "@testcontainers/rabbitmq";
 import * as amqp from "amqplib";
-import { Effect, Deferred, Schema } from "effect";
+import { Effect, Deferred, Option, Schema } from "effect";
+import * as Broker from "signalgraph/broker";
 
 import { Client, type OrderCreatedPayload } from "./fixtures/generated.ts";
 
@@ -27,6 +28,22 @@ async function getExistingQueues(container: StartedRabbitMQContainer): Promise<A
   const data = await response.json();
 
   return data.map(({ name }: { name: string }) => name);
+}
+
+async function getQueueMessageCount(container: StartedRabbitMQContainer, queue: string): Promise<number> {
+  const connection = await amqp.connect(container.getAmqpUrl());
+
+  try {
+    const channel = await connection.createChannel();
+
+    try {
+      return (await channel.checkQueue(queue)).messageCount;
+    } finally {
+      await channel.close();
+    }
+  } finally {
+    await connection.close();
+  }
 }
 
 describe("RabbitMQBroker", () => {
@@ -219,6 +236,140 @@ describe("RabbitMQBroker", () => {
 
           expect(receivedA).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
           expect(receivedB).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        }).pipe(
+          Effect.provide(
+            RabbitMQBroker({
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
+        ),
+      60000
+    );
+  });
+
+  describe("graceful shutdown", () => {
+    it.live(
+      "stops new deliveries",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+          const received = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(() => Deferred.succeed(received, undefined));
+
+          yield* client.start();
+          yield* broker.stop;
+
+          yield* client.orderCreated.publish({ orderId: 1 });
+
+          const delivery = yield* Deferred.await(received).pipe(Effect.timeoutOption("250 millis"));
+
+          expect(Option.isNone(delivery)).toBe(true);
+
+          yield* broker.close;
+
+          expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(1);
+        }).pipe(
+          Effect.provide(
+            RabbitMQBroker({
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
+        ),
+      60000
+    );
+
+    it.effect(
+      "acknowledges a handler that finishes within the grace period",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(() =>
+            Effect.gen(function* () {
+              yield* Deferred.succeed(started, undefined);
+              yield* Deferred.await(release);
+            })
+          );
+
+          yield* client.start();
+
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(started);
+
+          yield* broker.stop;
+          yield* Deferred.succeed(release, undefined);
+          yield* broker.awaitIdle;
+          yield* broker.close;
+
+          expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(0);
+        }).pipe(
+          Effect.provide(
+            RabbitMQBroker({
+              url: rabbitmq.getAmqpUrl()
+            })
+          )
+        ),
+      60000
+    );
+
+    it.effect(
+      "requeues an unacknowledged message when the consumer channel closes",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+          const redelivered = yield* Deferred.make<amqp.ConsumeMessage>();
+
+          yield* client.analytics.handle(() =>
+            Effect.gen(function* () {
+              yield* Deferred.succeed(started, undefined);
+              yield* Deferred.await(release);
+            })
+          );
+
+          yield* client.start();
+
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(started);
+
+          yield* broker.stop;
+          yield* broker.close;
+
+          const connection = yield* Effect.acquireRelease(
+            Effect.promise(() => amqp.connect(rabbitmq.getAmqpUrl())),
+            (connection) => Effect.promise(() => connection.close())
+          );
+
+          const channel = yield* Effect.acquireRelease(
+            Effect.promise(() => connection.createChannel()),
+            (channel) => Effect.promise(() => channel.close())
+          );
+
+          yield* Effect.promise(() =>
+            channel.consume("analytics", (message) => {
+              if (message) {
+                channel.ack(message);
+
+                Deferred.doneUnsafe(redelivered, Effect.succeed(message));
+              }
+            })
+          );
+
+          const message = yield* Deferred.await(redelivered);
+
+          expect(message.fields.redelivered).toBe(true);
+
+          yield* Deferred.succeed(release, undefined);
+          yield* broker.awaitIdle;
         }).pipe(
           Effect.provide(
             RabbitMQBroker({

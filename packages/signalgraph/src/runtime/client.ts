@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Duration, Effect, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
 import type { Consumer } from "../Consumer.ts";
@@ -31,7 +31,7 @@ export type MessageGraph = Record<string, MessageNode>;
 
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
-  listen(): Effect.Effect<void>;
+  listen(options?: { readonly gracePeriod?: Duration.Input }): Effect.Effect<void>;
 };
 
 export function createClient<T extends object>(graph: MessageGraph) {
@@ -129,12 +129,13 @@ export function createClient<T extends object>(graph: MessageGraph) {
         });
       });
 
-    client.listen = () =>
+    client.listen = (options?: { readonly gracePeriod?: Duration.Input }) =>
       Effect.gen(function* () {
+        const broker = yield* Broker.Broker;
+        const gracePeriod = options?.gracePeriod ?? "30 seconds";
+
         yield* (client as RuntimeClient).start();
 
-        // Suspend until SIGINT/SIGTERM, then resolve normally - this is
-        // what keeps the process alive without the caller ever seeing it.
         yield* Effect.callback<void>((resume) => {
           const onSignal = () => {
             process.removeListener("SIGINT", onSignal);
@@ -145,13 +146,30 @@ export function createClient<T extends object>(graph: MessageGraph) {
           process.once("SIGINT", onSignal);
           process.once("SIGTERM", onSignal);
 
-          // Runs if this Effect is interrupted from elsewhere (e.g. a
-          // test wraps run() in a timeout) - avoids leaking listeners.
           return Effect.sync(() => {
             process.removeListener("SIGINT", onSignal);
             process.removeListener("SIGTERM", onSignal);
           });
         });
+
+        yield* Effect.onExit(
+          Effect.gen(function* () {
+            yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
+
+            yield* broker.stop;
+
+            const { activeHandlers } = yield* broker.status;
+            yield* Effect.logInfo(`Active handlers at shutdown: ${activeHandlers}`);
+
+            yield* broker.awaitIdle.pipe(
+              Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
+              Effect.catchTag("TimeoutError", () =>
+                Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
+              )
+            );
+          }),
+          () => broker.close
+        );
       });
 
     return client as T;

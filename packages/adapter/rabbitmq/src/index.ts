@@ -1,6 +1,6 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import * as amqp from "amqplib";
-import { Duration, Effect, Layer, Queue, Schema, Scope } from "effect";
+import { Duration, Effect, Layer, Queue, Ref, Result, Schema, Scope } from "effect";
 import type { RetryPolicy } from "signalgraph";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
@@ -34,6 +34,13 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
       const { url } = options;
 
       const layerScope = yield* Effect.scope;
+
+      let isStopping = false;
+      const activeDispatches = yield* Ref.make(0);
+      const activeChanged = yield* Queue.dropping<void>(1);
+      const cancelConsumers: Array<() => Promise<amqp.Replies.Empty>> = [];
+      const shutdownQueues: Array<Queue.Queue<amqp.ConsumeMessage>> = [];
+      const closeConsumerChannels: Array<() => Promise<void>> = [];
 
       const conn = yield* Effect.acquireRelease(
         Effect.tryPromise({
@@ -119,6 +126,17 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 continue;
               }
 
+              let consumerChannelClosed = false;
+
+              const closeConsumerChannel = (channel: amqp.Channel) => {
+                if (consumerChannelClosed) {
+                  return Promise.resolve();
+                }
+
+                consumerChannelClosed = true;
+                return channel.close();
+              };
+
               // Pin this channel's release to the broker's scope,
               // not to whatever scope surrounds this call to start().
               const consumerChannel = yield* Scope.provide(layerScope)(
@@ -131,7 +149,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                         message: `Failed to create connection to channel for consumer "${consumer.name}"`
                       })
                   }),
-                  (connection) => Effect.promise(() => connection.close())
+                  (channel) => Effect.promise(() => closeConsumerChannel(channel))
                 )
               );
 
@@ -206,11 +224,12 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               }
 
               const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
+              shutdownQueues.push(messages);
 
-              yield* Effect.tryPromise({
+              const consumerTag = yield* Effect.tryPromise({
                 try: () =>
                   consumerChannel.consume(consumer.name, (msg) => {
-                    if (msg) {
+                    if (msg && !isStopping) {
                       Queue.offerUnsafe(messages, msg);
                     }
                   }),
@@ -221,8 +240,15 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   })
               });
 
+              cancelConsumers.push(() => consumerChannel.cancel(consumerTag.consumerTag));
+              closeConsumerChannels.push(() => closeConsumerChannel(consumerChannel));
+
               const processMessage = Effect.gen(function* () {
                 const msg = yield* Queue.take(messages);
+
+                if (isStopping) {
+                  return;
+                }
 
                 const metadata = Runtime.createConsumeMetadata({
                   messageId: msg.properties.messageId ?? "",
@@ -230,6 +256,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
                   traceContext: msg.properties.headers?.traceContext
                 });
+
+                yield* Ref.update(activeDispatches, (count) => count + 1);
 
                 yield* Effect.gen(function* () {
                   const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
@@ -263,12 +291,18 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   }
                 }).pipe(
                   Effect.matchEffect({
-                    onSuccess: () => {
-                      consumerChannel.ack(msg);
-                      return Effect.void;
-                    },
+                    onSuccess: () =>
+                      Effect.sync(() => {
+                        if (!consumerChannelClosed) {
+                          consumerChannel.ack(msg);
+                        }
+                      }),
                     onFailure: () =>
                       Effect.gen(function* () {
+                        if (consumerChannelClosed) {
+                          return;
+                        }
+
                         const nextAttempt = metadata.retryAttempt + 1;
 
                         if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
@@ -292,7 +326,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                               })
                           });
 
-                          consumerChannel.ack(msg);
+                          if (!consumerChannelClosed) {
+                            consumerChannel.ack(msg);
+                          }
 
                           return;
                         }
@@ -314,27 +350,92 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                               })
                           });
 
-                          consumerChannel.ack(msg);
+                          if (!consumerChannelClosed) {
+                            consumerChannel.ack(msg);
+                          }
 
                           return;
                         }
 
-                        consumerChannel.nack(msg, false, false);
+                        if (!consumerChannelClosed) {
+                          consumerChannel.nack(msg, false, false);
+                        }
                       })
                   })
                 );
-              });
+              }).pipe(
+                Effect.ensuring(
+                  Effect.gen(function* () {
+                    yield* Ref.update(activeDispatches, (count) => Math.max(0, count - 1));
+                    yield* Queue.offer(activeChanged, undefined);
+                  })
+                )
+              );
 
-              // Fork into the broker's own scope so this loop outlives
-              // the start() call itself.
-              yield* Effect.forkIn(layerScope)(Effect.forever(processMessage).pipe(Effect.catchCause(Effect.logError)));
+              yield* Effect.forkIn(layerScope)(
+                Effect.forever(processMessage).pipe(
+                  Effect.catchCause((cause) =>
+                    isStopping ? Effect.void : Effect.logError("RabbitMQ consumer processing loop stopped", cause)
+                  )
+                )
+              );
             }
           }
         });
 
+      const stop = Effect.gen(function* () {
+        isStopping = true;
+
+        yield* Effect.forEach(
+          cancelConsumers,
+          (cancel) =>
+            Effect.tryPromise({
+              try: cancel,
+              catch: (cause) =>
+                new Runtime.ConnectionError({
+                  cause,
+                  message: "Failed to cancel RabbitMQ consumer"
+                })
+            }),
+          { discard: true }
+        );
+
+        yield* Effect.forEach(shutdownQueues, Queue.shutdown, { discard: true });
+      });
+
+      const awaitIdle = Effect.gen(function* () {
+        while ((yield* Ref.get(activeDispatches)) > 0) {
+          yield* Queue.take(activeChanged);
+        }
+      });
+
+      const close = Effect.gen(function* () {
+        const results = yield* Effect.forEach(closeConsumerChannels, (closeChannel) =>
+          Effect.tryPromise({
+            try: closeChannel,
+            catch: (cause) =>
+              new Runtime.ConnectionError({ cause, message: "Failed to close RabbitMQ consumer channel" })
+          }).pipe(Effect.result)
+        );
+
+        const firstFailure = results.find((result) => Result.isFailure(result));
+
+        if (firstFailure !== undefined) {
+          return yield* Effect.fail(firstFailure.failure);
+        }
+      });
+
       return {
         deliver,
-        start
+        start,
+        stop,
+        awaitIdle,
+        close,
+        status: Ref.get(activeDispatches).pipe(
+          Effect.map((activeHandlers) => ({
+            activeHandlers
+          }))
+        )
       };
     })
   );

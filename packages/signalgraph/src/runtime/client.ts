@@ -1,7 +1,8 @@
-import { Effect, Schema } from "effect";
+import { Effect, Layer, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
 import type { Consumer } from "../Consumer.ts";
+import type { Integration } from "../integration/index.ts";
 import { toPropertyName } from "../internal/naming.ts";
 import type { AnyMessage } from "../Message.ts";
 import { InvalidPayloadError } from "./errors.ts";
@@ -29,9 +30,13 @@ type MessageNode = {
 
 export type MessageGraph = Record<string, MessageNode>;
 
+interface ListenOptions {
+  readonly integrations?: ReadonlyArray<Integration>;
+}
+
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
-  listen(): Effect.Effect<void>;
+  listen(options?: ListenOptions): Effect.Effect<void>;
 };
 
 export function createClient<T extends object>(graph: MessageGraph) {
@@ -129,9 +134,13 @@ export function createClient<T extends object>(graph: MessageGraph) {
         });
       });
 
-    client.listen = () =>
+    client.listen = (options?: ListenOptions) =>
       Effect.gen(function* () {
         yield* (client as RuntimeClient).start();
+
+        for (const integration of options?.integrations ?? []) {
+          yield* Layer.build(integration);
+        }
 
         // Suspend until SIGINT/SIGTERM, then resolve normally - this is
         // what keeps the process alive without the caller ever seeing it.
@@ -152,7 +161,7 @@ export function createClient<T extends object>(graph: MessageGraph) {
             process.removeListener("SIGTERM", onSignal);
           });
         });
-      });
+      }).pipe(Effect.scoped);
 
     return client as T;
   });

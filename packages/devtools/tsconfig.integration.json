@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "integration"
+  ],
+  "compilerOptions": {
+    "rootDir": "${configDir}/integration",
+    "types": [
+      "node"
+    ]
+  }
+}

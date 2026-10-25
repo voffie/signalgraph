@@ -17,6 +17,7 @@
     "@opentelemetry/sdk-trace-node": "^2.12.0",
     "@opentelemetry/sdk-trace-web": "^2.12.0",
     "@signalgraph/adapter-rabbitmq": "workspace:^",
+    "@signalgraph/devtools": "workspace:^",
     "effect": "^4.0.3",
     "signalgraph": "workspace:^"
   }

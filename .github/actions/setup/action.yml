@@ -9,13 +9,16 @@ runs:
   using: composite
   steps:
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      env:
+        npm_config_audit: "false"
+        npm_config_fund: "false"
     - name: Install node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
       with:
-        node-version: ${{ inputs.node-version || '24' }}
+        node-version: ${{ inputs.node-version || '26.12.1' }}
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
     - name: Install dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: pnpm install

@@ -1,0 +1,55 @@
+---
+title: Devtools
+description: SignalGraph's own web devtools
+---
+
+SignalGraph maintains a package called `@signalgraph/devtools` which enables to view the lifecycle of a message.
+It uses the traces emitted from the application & the SignalGraph core package to build the entire lifecycle from the initial publish,
+to what message it ends up as or which handler consumes it last. It launches the web server as a separate process on startup and kills/releases it on shutdown.
+
+## Prerequisites
+
+- A MQ broker instance
+- A generated SignalGraph client
+- A trace backend instance
+
+## Installation
+
+<CodeGroup>
+```sh npm
+npm install @signalgraph/devtools
+```
+
+```sh pnpm
+pnpm add @signalgraph/devtools
+```
+
+```sh bun
+bun add @signalgraph/devtools
+```
+
+```sh yarn
+yarn add @signalgraph/devtools
+```
+</CodeGroup>
+
+## Usage
+
+To enable the Devtools integration you pass it as an index of the integration array option on the listen method:
+```ts title="Devtools usage example"
+yield* client.listen({
+  integrations: [
+    Devtools({
+      // options
+    })
+  ]
+});
+```
+
+The options that the Devtools integration exposes are:
+- `port?: number` - The port to host the devtools web server. Defaults to 4300.
+- `host?: string` - The host where the web server will be hosted. Defaults to 127.0.0.1.
+- `databasePath?: string` - The path relative to the root where it will generate the sqlite db it uses to store connection information & user preferences.
+
+Currently the Devtools integration supports these trace backends:
+- Tempo

@@ -1,0 +1,62 @@
+---
+title: Retry
+description: Enable custom retry policies
+---
+
+SignalGraph currently supports two different retry policies. These are `fixed` & `expontential`
+
+## Fixed
+```ts title="Fixed retry definition"
+export const RetryingAnalytics = consumer({
+  name: "retryingAnalytics",
+  message: OrderCreated,
+  retry: {
+    type: "fixed",
+    delay: Duration.millis(100),
+    maxAttempts: 2
+  }
+});
+```
+
+**Fields**
+```ts
+{
+  type: "fixed";
+  delay: Duration.Input;
+  maxAttempts: number;
+}
+```
+
+* `type` - The retry policy type
+* `delay` - The duration between attempts
+* `maxAttempts` - The max amount of attempts before dropping the message or sending it to DLQ if enabled
+
+## Exponential
+```ts title="Exponential retry definition"
+export const RetryingAnalytics = consumer({
+  name: "retryingAnalytics",
+  message: OrderCreated,
+  retry: {
+    type: "fixed",
+    delay: Duration.millis(100),
+    maxAttempts: 2
+  }
+});
+```
+
+**Fields**
+```ts
+{
+  type: "exponential";
+  initialDelay: Duration.Input;
+  maxAttempts: number;
+  factor?: number;
+  maxDelay?: Duration.Input;
+};
+```
+
+* `type` - The retry policy type
+* `initialDelay` - The duration before the initial retry attempt
+* `maxAttempts` - The max amount of attempts before dropping the message or sending it to DLQ if enabled
+* `factor` - The number the last retry delay will be multiplied by. Defaults to 2 if not provided
+* `maxDelay` - The max duration a delay can reach. If not provided the delay will continue to multiply until `maxAttempts` have been satisfied

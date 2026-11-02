@@ -1,0 +1,10 @@
+---
+title: Generate
+---
+
+The `generate` command is what SignalGraph uses to generate the custom client the user interacts with.
+When it runs it reads the `schema` field in `signalgraph.config.ts` and generates a topology/message graph.
+After that it generates an `index.ts` file that the end user imports. This file gets generated inside the directory
+which has been set by the `out` field inside the same config file.
+
+You can find more information about the generated client [here](../client)

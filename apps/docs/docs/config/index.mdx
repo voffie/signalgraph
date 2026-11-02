@@ -1,0 +1,20 @@
+---
+title: Config
+description: Configure how SignalGraph works
+---
+
+SignalGraph uses a config file called `signalgraph.config.ts` to describe which schema to use
+and where to output the generated client that the application uses. It should live in the root of the application
+
+```ts title="signalgraph.config.ts"
+import { defineConfig } from "signalgraph/config";
+
+export default defineConfig({
+  schema: "./src/schema/schema.ts",
+  out: "./generated",
+});
+```
+
+**Fields**
+- `schema: string`: The URL to the schema definition relative to the config file
+- `out: string`: The URL to the directory where SignalGraph will generate the client the application uses

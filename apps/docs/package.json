@@ -1,0 +1,17 @@
+{
+  "name": "signalgraph-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build",
+    "doctor": "blume doctor"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.4.2",
+    "blume": "^2.2.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  }
+}

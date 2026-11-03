@@ -1,0 +1,30 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/docs/**"
+      - ".github/workflows/docs-check.yml"
+      - ".github/actions/setup/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    name: Docs Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 #v6
+      - uses: ./.github/actions/setup
+      - working-directory: apps/docs
+        run: |
+          pnpm exec blume doctor
+          pnpm exec blume build

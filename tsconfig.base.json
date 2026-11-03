@@ -44,11 +44,12 @@
         },
         "includeSuggestionsInTsc": false,
         "ignoreEffectWarningsInTscExitCode": true,
-        "ignoreEffectErrorsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": false,
         "overrides": [
           {
             "exclude": [
               "**/index.ts",
+              "**/test/**/*"
             ],
             "options": {
               "diagnosticSeverity": {

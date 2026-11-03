@@ -1,6 +1,21 @@
 {
   "name": "@signalgraph/devtools",
   "version": "0.0.1",
+  "description": "Devtools integration for the SignalGraph library",
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/devtools"
+  },
   "files": [
     "dist",
     "build"
@@ -15,6 +30,14 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "exports": {
+      "./package.json": "./package.json",
+      ".": "./dist/index.js"
+    },
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "dev": "vite dev",

@@ -1,6 +1,6 @@
 {
   "name": "@signalgraph/adapter-rabbitmq",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "RabbitMQ broker adapter for SignalGraph",
   "keywords": [
     "adapter",

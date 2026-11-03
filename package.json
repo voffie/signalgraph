@@ -7,7 +7,9 @@
     "coverage": "vitest --coverage",
     "check": "tsc -b tsconfig.json",
     "lint": "oxlint -f unix && oxfmt --check .",
-    "lint-fix": "oxlint --fix && oxfmt ."
+    "lint-fix": "oxlint --fix && oxfmt .",
+    "changeset-version": "changeset version",
+    "changeset-publish": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@babel/cli": "^8.0.6",

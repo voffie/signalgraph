@@ -1,42 +1,14 @@
-# sv
+# @signalgraph/devtools
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A SignalGraph integration to view the message flows through OTEL spans. It parses SignalGraph specific spans and creates a clean view of a message's lifecycle, from first publish to the last handler and/or publish (it tracks if the original message gets published as a another message).
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
+## Installation
 
 ```sh
-# create a new project
-npx sv create my-app
+npm install signalgraph @signalgraph/devtools
 ```
 
-To recreate this project with the same configuration:
+## Links
 
-```sh
-# recreate this project
-pnpm dlx sv@0.17.0 create --template minimal --types ts --add tailwindcss="plugins:none" --install pnpm devtools
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- [Docs](https://signalgraph-docs.voffie.workers.dev): Documentation
+- [Issues](https://github.com/voffie/signalgraph/issues): Report bugs and share feature requests

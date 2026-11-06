@@ -8,6 +8,8 @@
     "rootDir": "${configDir}/integration",
     "types": [
       "node"
-    ]
+    ],
+    "declarationMap": false,
+    "sourceMap": false
   }
 }

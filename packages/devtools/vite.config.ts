@@ -15,7 +15,9 @@ export default defineConfig({
         }
       },
 
-      adapter: adapter()
+      adapter: adapter({
+        precompress: false
+      })
     })
   ],
   ssr: {

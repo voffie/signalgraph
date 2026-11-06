@@ -18,7 +18,8 @@
   },
   "files": [
     "dist",
-    "build"
+    "build",
+    "!build/**/*.map"
   ],
   "type": "module",
   "imports": {

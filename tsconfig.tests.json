@@ -38,12 +38,6 @@
       "@signalgraph/adapter-rabbitmq/*": [
         "./packages/adapter/rabbitmq/src/*.ts"
       ],
-      "@signalgraph/devtools": [
-        "./packages/devtools/src/index.ts"
-      ],
-      "@signalgraph/devtools/*": [
-        "./packages/devtools/src/*.ts"
-      ]
     },
     "plugins": [
       {

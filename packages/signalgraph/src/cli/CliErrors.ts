@@ -26,3 +26,8 @@ export class ModuleImportError extends Schema.TaggedError<ModuleImportError>()("
   path: Schema.String,
   cause: Schema.Unknown
 }) {}
+
+export class NotEsmProjectError extends Schema.TaggedError<NotEsmProjectError>()("NotEsmProjectError", {
+  configPath: Schema.String,
+  reason: Schema.String
+}) {}

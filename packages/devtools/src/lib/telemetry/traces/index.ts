@@ -1,6 +1,6 @@
 import type { Trace, TraceListFilters, TraceSummary } from "#lib/domain/types.js";
 
-import { TempoCollector } from "./tempo/TempoCollector";
+import { TempoCollector } from "./tempo/TempoCollector.js";
 
 export const TRACE_VENDORS = [{ value: "tempo", label: "Tempo" }] as const;
 

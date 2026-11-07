@@ -1,6 +1,6 @@
 import type { Attribute, Trace, TraceSpan, TraceSummary } from "#lib/domain/types.js";
 
-import type { TempoAttribute, TempoAttributeValue, TempoSpan, TempoResponse, TempoSearchResponse } from "./types.ts";
+import type { TempoAttribute, TempoAttributeValue, TempoSpan, TempoResponse, TempoSearchResponse } from "./types.js";
 
 function base64ToHex(base64: string): string {
   return Buffer.from(base64, "base64").toString("hex");

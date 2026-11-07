@@ -1,7 +1,7 @@
 import type { Trace, TraceListFilters, TraceSummary } from "#lib/domain/types.js";
 
-import type { TraceCollector } from "../index";
-import { normalizeSearchResponse, normalizeTrace } from "./normalize";
+import type { TraceCollector } from "../index.js";
+import { normalizeSearchResponse, normalizeTrace } from "./normalize.js";
 
 function buildTraceQlQuery(filters: TraceListFilters): string | undefined {
   const conditions: Array<string> = [];

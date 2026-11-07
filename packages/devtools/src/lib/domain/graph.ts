@@ -1,5 +1,5 @@
-import { getAttribute } from "./attributes";
-import type { Graph, GraphEdge, GraphNode, Trace } from "./types";
+import { getAttribute } from "./attributes.js";
+import type { Graph, GraphEdge, GraphNode, Trace } from "./types.js";
 
 export function buildGraph(trace: Trace): Graph {
   const nodes = new Map<string, GraphNode>();

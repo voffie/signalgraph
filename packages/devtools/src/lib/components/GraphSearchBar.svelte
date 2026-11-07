@@ -5,8 +5,8 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import * as Select from "#lib/components/ui/select/index.js";
-  import type { SearchField } from "#lib/types.ts";
-  import { cn } from "#lib/utils.ts";
+  import type { SearchField } from "#lib/types.js";
+  import { cn } from "#lib/utils.js";
 
   let {
     search,

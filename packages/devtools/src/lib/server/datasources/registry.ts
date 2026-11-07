@@ -1,6 +1,6 @@
-import { type TraceCollector, createCollector } from "#lib/telemetry/traces/index.ts";
+import { type TraceCollector, createCollector } from "#lib/telemetry/traces/index.js";
 
-import { getActiveDataSource } from "../db/dataSource";
+import { getActiveDataSource } from "../db/dataSource.js";
 
 export function getActiveTraceCollector(): TraceCollector | null {
   const source = getActiveDataSource();

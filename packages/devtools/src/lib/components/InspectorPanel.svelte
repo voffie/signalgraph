@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { getAttribute } from "#lib/domain/attributes.ts";
-  import type { GraphNode } from "#lib/domain/types.ts";
-  import type { InspTab } from "#lib/types.ts";
-  import { capitalize, cn } from "#lib/utils.ts";
+  import { getAttribute } from "#lib/domain/attributes.js";
+  import type { GraphNode } from "#lib/domain/types.js";
+  import type { InspTab } from "#lib/types.js";
+  import { capitalize, cn } from "#lib/utils.js";
 
   let {
     node,

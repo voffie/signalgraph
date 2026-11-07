@@ -10,7 +10,7 @@ import {
   setActiveDataSource,
   updateDataSource
 } from "#lib/server/db/dataSource.js";
-import { isTraceVendor } from "#lib/telemetry/traces/index.ts";
+import { isTraceVendor } from "#lib/telemetry/traces/index.js";
 
 import type { Actions, PageServerLoad } from "./$types";
 

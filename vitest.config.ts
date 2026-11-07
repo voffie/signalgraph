@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { defineConfig, mergeConfig, type ViteUserConfig } from "vitest/config";
 
@@ -73,11 +72,6 @@ export default defineConfig({
         }
       }),
       ...project("@signalgraph/devtools", "packages/devtools", true, {
-        resolve: {
-          alias: {
-            "#lib": fileURLToPath(new URL("packages/devtools/src/lib", import.meta.url))
-          }
-        },
         test: {
           include: ["src/lib/test/**/*.test.ts"],
           sequence: {

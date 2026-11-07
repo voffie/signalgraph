@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "#lib/domain/layout.ts";
+  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "#lib/domain/layout.js";
 
   let {
     node,

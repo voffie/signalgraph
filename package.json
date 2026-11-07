@@ -5,7 +5,7 @@
     "build": "tsc -b tsconfig.packages.json && pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
     "test": "vitest",
     "coverage": "vitest --coverage",
-    "check": "tsc -b tsconfig.json",
+    "check": "tsc -b tsconfig.json && pnpm --filter @signalgraph/devtools check",
     "lint": "oxlint -f unix && oxfmt --check .",
     "lint-fix": "oxlint --fix && oxfmt .",
     "changeset-version": "changeset version",

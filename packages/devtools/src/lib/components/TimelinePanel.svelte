@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getAttribute } from "#lib/domain/attributes.ts";
-  import type { TraceSpan } from "#lib/domain/types.ts";
-  import { capitalize, cn, fmtMs } from "#lib/utils.ts";
+  import { getAttribute } from "#lib/domain/attributes.js";
+  import type { TraceSpan } from "#lib/domain/types.js";
+  import { capitalize, cn, fmtMs } from "#lib/utils.js";
 
   let {
     spans,

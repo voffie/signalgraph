@@ -9,9 +9,9 @@
   import * as Dialog from "#lib/components/ui/dialog/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
-  import type { DataSourceProfile } from "#lib/server/db/dataSource.ts";
-  import { TRACE_VENDORS, type TraceVendor } from "#lib/telemetry/traces/index.ts";
-  import { cn } from "#lib/utils.ts";
+  import type { DataSourceProfile } from "#lib/server/db/dataSource.js";
+  import { TRACE_VENDORS, type TraceVendor } from "#lib/telemetry/traces/index.js";
+  import { cn } from "#lib/utils.js";
 
   import { moveListIndex } from "../listNavigation";
 

@@ -1,4 +1,4 @@
-import type { TracesConfig, TraceVendor } from "#lib/telemetry/traces/index.ts";
+import type { TracesConfig, TraceVendor } from "#lib/telemetry/traces/index.js";
 
 import { getDb } from "./index";
 

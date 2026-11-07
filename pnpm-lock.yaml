@@ -242,7 +242,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^26.6.4
-        version: 26.6.5
+        version: 26.6.6
       effect:
         specifier: ^4.0.3
         version: 4.1.2

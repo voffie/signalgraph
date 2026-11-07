@@ -7,23 +7,6 @@
     "perf": "error"
   },
   "rules": {
-    // Effect custom rules
-    "effect/no-bigint-literals": "error",
-    "effect/no-import-from-barrel-package": [
-      "error",
-      {
-        "checkPatterns": [
-          "^signalgraph$",
-          "^signalgraph/(.+/)?[a-z][a-z0-9]*$",
-          "^@signalgraph/[^/]+$",
-          "^@signalgraph/[^/]+/(.+/)?[a-z][a-z0-9]*$"
-        ],
-        "checkRelativeIndexImports": true
-      }
-    ],
-    "effect/no-js-extension-imports": "error",
-    "effect/no-opaque-instance-fields": "error",
-    "effect/no-unused-internal": "error",
     // Tune native rules
     // Import rules
     "typescript/consistent-type-imports": [
@@ -36,12 +19,18 @@
     "import/no-duplicates": "error",
     "import/no-self-import": "error",
     "import/no-empty-named-blocks": "error",
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css"]
+      }
+    ],
     // TypeScript cleanup
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-useless-empty-export": "error",
     // Code quality
-    "eslint/no-console": "error",
+    "eslint/no-console": "warn",
     "eslint/no-var": "error",
     "eslint/no-useless-constructor": "error",
     "unicorn/no-abusive-eslint-disable": "error",
@@ -103,15 +92,14 @@
     "!.github/**/*",
     "!.gitignore",
     "!.oxlintrc.json",
-    "!oxfmtrc.json"
+    "!oxfmtrc.json",
+    "packages/devtools/src/lib/components/ui/**/*"
   ],
   "overrides": [
     {
       "files": ["**/{test}"],
       "rules": {
-        "effect/no-bigint-literals": "off",
-        "eslint/no-console": "off",
-        "effect/no-import-from-barrel-package": "off"
+        "eslint/no-console": "off"
       }
     }
   ]

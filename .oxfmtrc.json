@@ -11,7 +11,8 @@
     "!.github",
     "!.github/**/*",
     "!.gitignore",
-    "!.oxlintrc.json"
+    "!.oxlintrc.json",
+    "apps/docs"
   ],
   "sortImports": true,
   "sortTailwindcss": true,

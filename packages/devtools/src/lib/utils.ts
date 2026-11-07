@@ -52,7 +52,7 @@ export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode): { x: n
 
   return {
     x: 0.125 * sx + 0.375 * cx1 + 0.375 * cx2 + 0.125 * tx,
-    y: 0.125 * sy + 0.375 * cy1 + 0.375 * cy2 + 0.125 * ty,
+    y: 0.125 * sy + 0.375 * cy1 + 0.375 * cy2 + 0.125 * ty
   };
 }
 
@@ -73,33 +73,22 @@ export function matchSearch(node: PositionedGraphNode, q: string, field: SearchF
       return node.label.toLowerCase().includes(ql);
 
     case "service":
-      return attrs.some(
-        (attribute) =>
-          attribute.key === "service.name" && attribute.value.toLowerCase().includes(ql),
-      );
+      return attrs.some((attribute) => attribute.key === "service.name" && attribute.value.toLowerCase().includes(ql));
 
     case "msg-id":
       return attrs.some(
-        (attribute) =>
-          attribute.key.includes("message_id") && attribute.value.toLowerCase().includes(ql),
+        (attribute) => attribute.key.includes("message_id") && attribute.value.toLowerCase().includes(ql)
       );
 
     case "corr-id":
       return attrs.some(
-        (attribute) =>
-          attribute.key.includes("correlation") && attribute.value.toLowerCase().includes(ql),
+        (attribute) => attribute.key.includes("correlation") && attribute.value.toLowerCase().includes(ql)
       );
 
     case "trace-id":
-      return attrs.some(
-        (attribute) =>
-          attribute.key.includes("trace") && attribute.value.toLowerCase().includes(ql),
-      );
+      return attrs.some((attribute) => attribute.key.includes("trace") && attribute.value.toLowerCase().includes(ql));
 
     default:
-      return [node.label, node.id, ...attrs.map((a) => a.value)]
-        .join(" ")
-        .toLowerCase()
-        .includes(ql);
+      return [node.label, node.id, ...attrs.map((a) => a.value)].join(" ").toLowerCase().includes(ql);
   }
 }

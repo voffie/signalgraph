@@ -27,7 +27,7 @@ export function buildGraph(trace: Trace): Graph {
           kind: "message",
           attributes: span.attributes,
           traceId: span.traceId,
-          primarySpanId: span.spanId,
+          primarySpanId: span.spanId
         });
 
         spanNodeIds[span.spanId] = messageId;
@@ -47,7 +47,7 @@ export function buildGraph(trace: Trace): Graph {
           kind: "handler",
           attributes: span.attributes,
           traceId: span.traceId,
-          primarySpanId: span.spanId,
+          primarySpanId: span.spanId
         });
 
         spanNodeIds[span.spanId] = consumerName;
@@ -84,7 +84,7 @@ export function buildGraph(trace: Trace): Graph {
       edges.set(`${messageId}-${consumerName}`, {
         id: `${messageId}-${consumerName}`,
         source: messageId,
-        target: consumerName,
+        target: consumerName
       });
     }
 
@@ -110,7 +110,7 @@ export function buildGraph(trace: Trace): Graph {
       edges.set(`${consumerName}-${messageId}`, {
         id: `${consumerName}-${messageId}`,
         source: consumerName,
-        target: messageId,
+        target: messageId
       });
     }
   }
@@ -119,6 +119,6 @@ export function buildGraph(trace: Trace): Graph {
     nodes: [...nodes.values()],
     edges: [...edges.values()],
     traceSpans: signalGraphSpans,
-    spanNodeIds,
+    spanNodeIds
   };
 }

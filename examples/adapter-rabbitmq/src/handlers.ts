@@ -10,14 +10,14 @@ const program = Effect.gen(function* () {
     Effect.gen(function* () {
       yield* Console.log("Analytics received: ", payload);
       yield* client.orderCompleted.publish(payload);
-    }),
+    })
   );
 
   yield* client.shipping.handle(({ payload }) =>
     Effect.gen(function* () {
       yield* Console.log("Shipping received: ", payload);
       yield* client.orderCreated.publish({ orderId: payload.orderId + 1 });
-    }),
+    })
   );
 
   yield* client.listen();
@@ -27,8 +27,8 @@ Effect.runPromise(
   program.pipe(
     Effect.provide(
       RabbitMQBroker({
-        url: "amqp://localhost",
-      }),
-    ),
-  ),
+        url: "amqp://localhost"
+      })
+    )
+  )
 );

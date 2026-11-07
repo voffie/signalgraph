@@ -23,9 +23,7 @@ export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   }
 
   const levels = new Map<string, number>();
-  const queue = graph.nodes
-    .filter((node) => remainingIncoming.get(node.id) === 0)
-    .map((node) => node.id);
+  const queue = graph.nodes.filter((node) => remainingIncoming.get(node.id) === 0).map((node) => node.id);
 
   for (const nodeId of queue) {
     levels.set(nodeId, 0);
@@ -72,7 +70,7 @@ export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
       positions.set(node.id, {
         ...node,
         x: 48 + level * (NODE_WIDTH + 96),
-        y: 48 + row * (NODE_HEIGHT + 44),
+        y: 48 + row * (NODE_HEIGHT + 44)
       });
     }
   }

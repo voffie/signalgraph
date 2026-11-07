@@ -11,17 +11,17 @@ const program = Effect.gen(function* () {
   const client = yield* Client;
 
   yield* client.ordersCreated.publish({
-    orderId: "123",
+    orderId: "123"
   });
 });
 
 const telemetryExporter = new OTLPTraceExporter({
-  url: "http://localhost:4318/v1/traces",
+  url: "http://localhost:4318/v1/traces"
 });
 
 const nodeSdkLive = NodeSdk.layer(() => ({
   resource: { serviceName: "example" },
-  spanProcessor: new SimpleSpanProcessor(telemetryExporter),
+  spanProcessor: new SimpleSpanProcessor(telemetryExporter)
 }));
 
 Effect.runPromise(
@@ -29,12 +29,12 @@ Effect.runPromise(
     Effect.provide(
       Layer.merge(
         RabbitMQBroker({
-          url: "amqp://localhost",
+          url: "amqp://localhost"
         }),
-        nodeSdkLive,
-      ),
-    ),
-  ),
+        nodeSdkLive
+      )
+    )
+  )
 );
 
 await new Promise((r) => setTimeout(r, 500));

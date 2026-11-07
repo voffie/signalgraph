@@ -2,6 +2,8 @@
 
 SignalGraph is a library for building event-driven, and type-safe messaging infrastructure in TypeScript. Define your schema in one place and apply it to any supported message broker.
 
+> FYI: SignalGraph is ESM-only. It needs `"type": "module"` set.
+
 ## Installation
 
 ```sh

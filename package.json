@@ -20,6 +20,7 @@
     "@changesets/cli": "3.0.3",
     "@effect/tsgo": "^0.51.0",
     "@effect/vitest": "^4.0.3",
+    "@oxlint/plugins": "^1.86.0",
     "@types/node": "^26.6.4",
     "@vitest/coverage-v8": "^5.0.3",
     "babel-plugin-annotate-pure-calls": "^0.5.0",

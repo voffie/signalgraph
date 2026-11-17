@@ -35,7 +35,7 @@ export const consumer = <const Name extends string, TMessage extends Message.Any
   _tag: "Consumer",
   name: options.name,
   message: options.message,
+  dlq: options.dlq ?? true,
   ...(options.prefetch !== undefined && { prefetch: options.prefetch }),
-  ...(options.retry !== undefined && { retry: options.retry }),
-  ...(options.dlq !== undefined && { dlq: options.dlq })
+  ...(options.retry !== undefined && { retry: options.retry })
 });

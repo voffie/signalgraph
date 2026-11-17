@@ -34,6 +34,24 @@ export type RuntimeClient = {
   listen(options?: { readonly gracePeriod?: Duration.Input }): Effect.Effect<void>;
 };
 
+// Resolves on the next SIGINT or SIGTERM and removes its own listeners
+// (also on interruption), so it can be used once per shutdown stage.
+const waitForSignal = Effect.callback<void>((resume) => {
+  const onSignal = () => {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+    resume(Effect.void);
+  };
+
+  process.once("SIGINT", onSignal);
+  process.once("SIGTERM", onSignal);
+
+  return Effect.sync(() => {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+  });
+});
+
 export function createClient<T extends object>(graph: MessageGraph) {
   return Effect.sync(() => {
     const client: Record<string, unknown> = {};
@@ -136,21 +154,7 @@ export function createClient<T extends object>(graph: MessageGraph) {
 
         yield* (client as RuntimeClient).start();
 
-        yield* Effect.callback<void>((resume) => {
-          const onSignal = () => {
-            process.removeListener("SIGINT", onSignal);
-            process.removeListener("SIGTERM", onSignal);
-            resume(Effect.void);
-          };
-
-          process.once("SIGINT", onSignal);
-          process.once("SIGTERM", onSignal);
-
-          return Effect.sync(() => {
-            process.removeListener("SIGINT", onSignal);
-            process.removeListener("SIGTERM", onSignal);
-          });
-        });
+        yield* waitForSignal;
 
         yield* Effect.onExit(
           Effect.gen(function* () {
@@ -158,13 +162,16 @@ export function createClient<T extends object>(graph: MessageGraph) {
 
             yield* broker.stop;
 
-            const { activeHandlers } = yield* broker.status;
-            yield* Effect.logInfo(`Active handlers at shutdown: ${activeHandlers}`);
-
             yield* broker.awaitIdle.pipe(
               Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
               Effect.catchTag("TimeoutError", () =>
                 Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
+              ),
+              // A second signal skips the rest of the grace period.
+              Effect.race(
+                waitForSignal.pipe(
+                  Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
+                )
               )
             );
           }),

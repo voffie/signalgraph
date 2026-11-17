@@ -144,7 +144,7 @@ describe("createClient", () => {
     }).pipe(Effect.provide(TestBroker))
   );
 
-  it.effect("tracks active handler dispatches and waits until they finish", () =>
+  it.effect("awaitIdle waits for a running handler", () =>
     Effect.gen(function* () {
       const client = yield* createTestClient();
       const broker = yield* Broker.Broker;
@@ -169,15 +169,23 @@ describe("createClient", () => {
 
       yield* Deferred.await(started);
 
-      expect((yield* broker.status).activeHandlers).toBe(1);
-
-      const idle = yield* Effect.forkChild(broker.awaitIdle);
+      let idle = false;
+      const idleFiber = yield* Effect.forkChild(
+        broker.awaitIdle.pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              idle = true;
+            })
+          )
+        )
+      );
+      yield* Effect.yieldNow;
+      expect(idle).toBe(false);
 
       yield* Deferred.succeed(release, undefined);
       yield* Fiber.join(delivery);
-      yield* Fiber.join(idle);
-
-      expect((yield* broker.status).activeHandlers).toBe(0);
+      yield* Fiber.join(idleFiber);
+      expect(idle).toBe(true);
     }).pipe(Effect.provide(TestBroker))
   );
 
@@ -288,11 +296,58 @@ describe("createClient", () => {
         TestClock.adjust("1 second").pipe(Effect.andThen(Effect.yieldNow), Effect.forever)
       );
 
-      expect((yield* broker.status).activeHandlers).toBe(1);
+      let idle = false;
+      const idleFiber = yield* Effect.forkChild(
+        broker.awaitIdle.pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              idle = true;
+            })
+          )
+        )
+      );
+      yield* Effect.yieldNow;
+      expect(idle).toBe(false); // handler still running after listen() returned
 
       yield* Deferred.succeed(release, undefined);
       yield* Fiber.join(delivery);
-      expect((yield* broker.status).activeHandlers).toBe(0);
+      yield* Fiber.join(idleFiber);
+      expect(idle).toBe(true);
+    }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("a second signal forces shutdown without waiting for the grace period", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* client.analytics.handle(() =>
+        Effect.gen(function* () {
+          yield* Deferred.succeed(started, undefined);
+          yield* Deferred.await(release);
+        })
+      );
+
+      const sigintListeners = process.listenerCount("SIGINT");
+      const listening = yield* Effect.forkChild(client.listen({ gracePeriod: "30 seconds" }));
+      yield* waitUntil(Effect.sync(() => process.listenerCount("SIGINT") > sigintListeners));
+
+      const delivery = yield* Effect.forkChild(client.ordersCreated.publish({ orderId: "123" }));
+      yield* Deferred.await(started);
+
+      yield* Effect.sync(() => process.emit("SIGINT"));
+      // The second-stage listener is registered once the first signal has been handled.
+      yield* waitUntil(Effect.sync(() => process.listenerCount("SIGINT") > sigintListeners));
+      yield* Effect.sync(() => process.emit("SIGINT"));
+
+      yield* Fiber.join(listening); // resolves without advancing TestClock
+
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(delivery);
     }).pipe(Effect.provide(TestBroker))
   );
 

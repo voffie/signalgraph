@@ -1,6 +1,6 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import * as amqp from "amqplib";
-import { Duration, Effect, Layer, Queue, Ref, Result, Schema, Scope } from "effect";
+import { Duration, Effect, Fiber, Layer, Queue, Result, Schema, Scope } from "effect";
 import type { RetryPolicy } from "signalgraph";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
@@ -27,6 +27,8 @@ function retryDelay(policy: RetryPolicy, attempt: number) {
   }
 }
 
+type Delivery = { readonly msg: amqp.ConsumeMessage; readonly leave: () => void };
+
 export function RabbitMQBroker(options: RabbitMQOptions) {
   return Layer.effect(
     Broker.Broker,
@@ -35,12 +37,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       const layerScope = yield* Effect.scope;
 
+      const inFlight = Broker.makeInFlight();
       let isStopping = false;
-      const activeDispatches = yield* Ref.make(0);
-      const activeChanged = yield* Queue.dropping<void>(1);
       const cancelConsumers: Array<() => Promise<amqp.Replies.Empty>> = [];
-      const shutdownQueues: Array<Queue.Queue<amqp.ConsumeMessage>> = [];
       const closeConsumerChannels: Array<() => Promise<void>> = [];
+      const consumerLoops: Array<Fiber.Fiber<unknown, unknown>> = [];
 
       const conn = yield* Effect.acquireRelease(
         Effect.tryPromise({
@@ -223,15 +224,25 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 });
               }
 
-              const messages = yield* Queue.unbounded<amqp.ConsumeMessage>();
-              shutdownQueues.push(messages);
+              const messages = yield* Queue.unbounded<Delivery>();
 
               const consumerTag = yield* Effect.tryPromise({
                 try: () =>
                   consumerChannel.consume(consumer.name, (msg) => {
-                    if (msg && !isStopping) {
-                      Queue.offerUnsafe(messages, msg);
+                    if (!msg) {
+                      return;
                     }
+
+                    if (isStopping) {
+                      // Arrived after stop(): hand it straight back.
+                      if (!consumerChannelClosed) {
+                        consumerChannel.nack(msg, false, true);
+                      }
+                      return;
+                    }
+
+                    // Counted on receipt, so buffered messages are covered by awaitIdle too.
+                    Queue.offerUnsafe(messages, { msg, leave: inFlight.enter() });
                   }),
                 catch: (cause) =>
                   new Runtime.InitializationError({
@@ -244,141 +255,139 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               closeConsumerChannels.push(() => closeConsumerChannel(consumerChannel));
 
               const processMessage = Effect.gen(function* () {
-                const msg = yield* Queue.take(messages);
-
-                if (isStopping) {
-                  return;
-                }
-
-                const metadata = Runtime.createConsumeMetadata({
-                  messageId: msg.properties.messageId ?? "",
-                  correlationId: msg.properties.correlationId ?? "",
-                  retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
-                  traceContext: msg.properties.headers?.traceContext
-                });
-
-                yield* Ref.update(activeDispatches, (count) => count + 1);
+                const { msg, leave } = yield* Queue.take(messages);
 
                 yield* Effect.gen(function* () {
-                  const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
-                    msg.content.toString("utf-8")
-                  );
-
-                  const list = consumerHandlers;
-
-                  const dispatch = Effect.gen(function* () {
-                    for (const handler of list) {
-                      yield* handler({
-                        payload,
-                        metadata
-                      });
+                  if (isStopping) {
+                    // Received before stop() but never started: return it instead of handling it.
+                    if (!consumerChannelClosed) {
+                      consumerChannel.nack(msg, false, true);
                     }
-                  }).pipe(
-                    Effect.withSpan("signalgraph.consume", {
-                      attributes: {
-                        "signalgraph.message.name": messageName,
-                        "signalgraph.consumer.name": consumer.name,
-                        "signalgraph.message.id": metadata.messageId,
-                        "signalgraph.correlation.id": metadata.correlationId
-                      }
-                    })
-                  );
-
-                  if (metadata.traceContext) {
-                    yield* withSpanContext(dispatch, metadata.traceContext);
-                  } else {
-                    yield* dispatch;
+                    return;
                   }
-                }).pipe(
-                  Effect.matchEffect({
-                    onSuccess: () =>
-                      Effect.sync(() => {
-                        if (!consumerChannelClosed) {
-                          consumerChannel.ack(msg);
-                        }
-                      }),
-                    onFailure: () =>
-                      Effect.gen(function* () {
-                        if (consumerChannelClosed) {
-                          return;
-                        }
 
-                        const nextAttempt = metadata.retryAttempt + 1;
+                  const metadata = Runtime.createConsumeMetadata({
+                    messageId: msg.properties.messageId ?? "",
+                    correlationId: msg.properties.correlationId ?? "",
+                    retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
+                    traceContext: msg.properties.headers?.traceContext
+                  });
 
-                        if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
-                          yield* Effect.sync(() =>
-                            publishChannel.publish("", `${consumer.name}.retry.${nextAttempt}`, msg.content, {
-                              ...msg.properties,
-                              persistent: true,
-                              headers: {
-                                ...msg.properties.headers,
-                                [RETRY_ATTEMPT_HEADER]: nextAttempt
-                              }
-                            })
-                          );
+                  yield* Effect.gen(function* () {
+                    const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
+                      msg.content.toString("utf-8")
+                    );
 
-                          yield* Effect.tryPromise({
-                            try: () => publishChannel.waitForConfirms(),
-                            catch: (confirmCause) =>
-                              new Runtime.ConnectionError({
-                                cause: confirmCause,
-                                message: "Failed to confirm published message"
-                              })
-                          });
+                    const list = consumerHandlers;
 
-                          if (!consumerChannelClosed) {
-                            consumerChannel.ack(msg);
-                          }
-
-                          return;
-                        }
-
-                        if (consumer.dlq === true) {
-                          yield* Effect.sync(() =>
-                            publishChannel.publish("", `${consumer.name}.dlq`, msg.content, {
-                              ...msg.properties,
-                              persistent: true
-                            })
-                          );
-
-                          yield* Effect.tryPromise({
-                            try: () => publishChannel.waitForConfirms(),
-                            catch: (confirmCause) =>
-                              new Runtime.ConnectionError({
-                                cause: confirmCause,
-                                message: "Failed to confirm published message"
-                              })
-                          });
-
-                          if (!consumerChannelClosed) {
-                            consumerChannel.ack(msg);
-                          }
-
-                          return;
-                        }
-
-                        if (!consumerChannelClosed) {
-                          consumerChannel.nack(msg, false, false);
+                    const dispatch = Effect.gen(function* () {
+                      for (const handler of list) {
+                        yield* handler({
+                          payload,
+                          metadata
+                        });
+                      }
+                    }).pipe(
+                      Effect.withSpan("signalgraph.consume", {
+                        attributes: {
+                          "signalgraph.message.name": messageName,
+                          "signalgraph.consumer.name": consumer.name,
+                          "signalgraph.message.id": metadata.messageId,
+                          "signalgraph.correlation.id": metadata.correlationId
                         }
                       })
-                  })
-                );
-              }).pipe(
-                Effect.ensuring(
-                  Effect.gen(function* () {
-                    yield* Ref.update(activeDispatches, (count) => Math.max(0, count - 1));
-                    yield* Queue.offer(activeChanged, undefined);
-                  })
-                )
-              );
+                    );
 
-              yield* Effect.forkIn(layerScope)(
+                    if (metadata.traceContext) {
+                      yield* withSpanContext(dispatch, metadata.traceContext);
+                    } else {
+                      yield* dispatch;
+                    }
+                  }).pipe(
+                    Effect.matchEffect({
+                      onSuccess: () =>
+                        Effect.sync(() => {
+                          if (!consumerChannelClosed) {
+                            consumerChannel.ack(msg);
+                          }
+                        }),
+                      onFailure: () =>
+                        Effect.gen(function* () {
+                          if (consumerChannelClosed) {
+                            return;
+                          }
+
+                          const nextAttempt = metadata.retryAttempt + 1;
+
+                          if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
+                            yield* Effect.sync(() =>
+                              publishChannel.publish("", `${consumer.name}.retry.${nextAttempt}`, msg.content, {
+                                ...msg.properties,
+                                persistent: true,
+                                headers: {
+                                  ...msg.properties.headers,
+                                  [RETRY_ATTEMPT_HEADER]: nextAttempt
+                                }
+                              })
+                            );
+
+                            yield* Effect.tryPromise({
+                              try: () => publishChannel.waitForConfirms(),
+                              catch: (confirmCause) =>
+                                new Runtime.ConnectionError({
+                                  cause: confirmCause,
+                                  message: "Failed to confirm published message"
+                                })
+                            });
+
+                            if (!consumerChannelClosed) {
+                              consumerChannel.ack(msg);
+                            }
+
+                            return;
+                          }
+
+                          if (consumer.dlq === true) {
+                            yield* Effect.sync(() =>
+                              publishChannel.publish("", `${consumer.name}.dlq`, msg.content, {
+                                ...msg.properties,
+                                persistent: true
+                              })
+                            );
+
+                            yield* Effect.tryPromise({
+                              try: () => publishChannel.waitForConfirms(),
+                              catch: (confirmCause) =>
+                                new Runtime.ConnectionError({
+                                  cause: confirmCause,
+                                  message: "Failed to confirm published message"
+                                })
+                            });
+
+                            if (!consumerChannelClosed) {
+                              consumerChannel.ack(msg);
+                            }
+
+                            return;
+                          }
+
+                          if (!consumerChannelClosed) {
+                            consumerChannel.nack(msg, false, false);
+                          }
+                        })
+                    })
+                  );
+                }).pipe(Effect.ensuring(Effect.sync(leave)));
+              });
+
+              const loop = yield* Effect.forkIn(layerScope)(
                 Effect.forever(processMessage).pipe(
                   Effect.catchCause((cause) =>
                     isStopping ? Effect.void : Effect.logError("RabbitMQ consumer processing loop stopped", cause)
                   )
                 )
               );
+              consumerLoops.push(loop);
             }
           }
         });
@@ -386,8 +395,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
       const stop = Effect.gen(function* () {
         isStopping = true;
 
+        yield* Effect.logInfo(`Stopping RabbitMQ consumers; ${inFlight.count()} messages in flight`);
+
+        // splice(0) takes and clears the list, so a repeated stop() is a no-op.
         yield* Effect.forEach(
-          cancelConsumers,
+          cancelConsumers.splice(0),
           (cancel) =>
             Effect.tryPromise({
               try: cancel,
@@ -399,24 +411,26 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             }),
           { discard: true }
         );
-
-        yield* Effect.forEach(shutdownQueues, Queue.shutdown, { discard: true });
-      });
-
-      const awaitIdle = Effect.gen(function* () {
-        while ((yield* Ref.get(activeDispatches)) > 0) {
-          yield* Queue.take(activeChanged);
-        }
       });
 
       const close = Effect.gen(function* () {
-        const results = yield* Effect.forEach(closeConsumerChannels, (closeChannel) =>
+        isStopping = true;
+
+        // Closing the channels first means the broker requeues every unacked message,
+        // and an interrupted handler can no longer ack.
+        const results = yield* Effect.forEach(closeConsumerChannels.splice(0), (closeChannel) =>
           Effect.tryPromise({
             try: closeChannel,
             catch: (cause) =>
               new Runtime.ConnectionError({ cause, message: "Failed to close RabbitMQ consumer channel" })
           }).pipe(Effect.result)
         );
+
+        // Interrupts handlers that are still running (forced shutdown).
+        yield* Effect.forEach(consumerLoops.splice(0), Fiber.interrupt, { discard: true });
+
+        // Whatever is left was handed back to the broker by the channel close.
+        inFlight.releaseAll();
 
         const firstFailure = results.find((result) => Result.isFailure(result));
 
@@ -429,13 +443,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         deliver,
         start,
         stop,
-        awaitIdle,
-        close,
-        status: Ref.get(activeDispatches).pipe(
-          Effect.map((activeHandlers) => ({
-            activeHandlers
-          }))
-        )
+        awaitIdle: inFlight.awaitIdle,
+        close
       };
     })
   );

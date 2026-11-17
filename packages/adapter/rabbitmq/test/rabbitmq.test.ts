@@ -379,6 +379,79 @@ describe("RabbitMQBroker", () => {
         ),
       60000
     );
+
+    it.effect(
+      "returns messages that were never started when stopping",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(() =>
+            Effect.gen(function* () {
+              yield* Deferred.succeed(started, undefined);
+              yield* Deferred.await(release);
+            })
+          );
+
+          yield* client.start();
+
+          for (const orderId of [1, 2, 3]) {
+            yield* client.orderCreated.publish({ orderId });
+          }
+          yield* Deferred.await(started);
+
+          yield* broker.stop;
+          yield* Deferred.succeed(release, undefined);
+          yield* broker.awaitIdle;
+          yield* broker.close;
+
+          // Message 1 was acked; 2 and 3 were never handled and must still be queued.
+          expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(2);
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
+
+    it.effect(
+      "close interrupts a running handler and returns its message",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const never = yield* Deferred.make<void>();
+          let finished = false;
+
+          yield* client.analytics.handle(() =>
+            Effect.gen(function* () {
+              yield* Deferred.succeed(started, undefined);
+              yield* Deferred.await(never);
+            }).pipe(
+              Effect.ensuring(
+                Effect.sync(() => {
+                  finished = true;
+                })
+              )
+            )
+          );
+
+          yield* client.start();
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(started);
+
+          yield* broker.stop;
+          yield* broker.close;
+          yield* broker.awaitIdle; // must not hang after a forced close
+
+          expect(finished).toBe(true);
+          expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(1);
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
   });
 
   describe("retry", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber, Layer, Schema } from "effect";
+import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { consumer, message } from "signalgraph";
 import * as Broker from "signalgraph/broker";
@@ -40,6 +40,16 @@ const createTestClient = () =>
     }
   });
 
+// start() requires a handler for every consumer. Handlers are appended, so a test's own
+// handlers run after these no-ops.
+const createHandledClient = () =>
+  Effect.gen(function* () {
+    const client = yield* createTestClient();
+    yield* client.analytics.handle(() => Effect.void);
+    yield* client.billing.handle(() => Effect.void);
+    return client;
+  });
+
 const HangingStopBroker = Layer.effect(
   Broker.Broker,
   Effect.gen(function* () {
@@ -68,7 +78,7 @@ describe("createClient", () => {
     Effect.gen(function* () {
       let received: Order | undefined;
 
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       yield* client.billing.handle(({ payload }) =>
         Effect.sync(() => {
@@ -92,7 +102,7 @@ describe("createClient", () => {
     Effect.gen(function* () {
       let analyticsHandled = false;
       let billingHandled = false;
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
@@ -120,7 +130,7 @@ describe("createClient", () => {
   it.effect("supports multiple handlers", () =>
     Effect.gen(function* () {
       let output = 0;
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       yield* client.analytics.handle(() =>
         Effect.sync(() => {
@@ -144,17 +154,9 @@ describe("createClient", () => {
     }).pipe(Effect.provide(TestBroker))
   );
 
-  it.effect("ignores consumers without handlers", () =>
-    Effect.gen(function* () {
-      const client = yield* createTestClient();
-
-      yield* client.ordersCreated.publish({ orderId: "123" });
-    }).pipe(Effect.provide(TestBroker))
-  );
-
   it.effect("awaitIdle waits for a running handler", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
       const broker = yield* Broker.Broker;
 
       const started = yield* Deferred.make<void>();
@@ -199,7 +201,7 @@ describe("createClient", () => {
 
   it.effect("stops the broker and removes signal listeners after SIGINT", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
       let received = false;
 
       yield* client.analytics.handle(() =>
@@ -236,7 +238,7 @@ describe("createClient", () => {
 
   it.effect("stops the broker and removes signal listeners after SIGTERM", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       const sigintListeners = process.listenerCount("SIGINT");
       const sigtermListeners = process.listenerCount("SIGTERM");
@@ -264,7 +266,7 @@ describe("createClient", () => {
 
   it.effect("closes after the grace period when a handler is still running", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
       const broker = yield* Broker.Broker;
 
       const started = yield* Deferred.make<void>();
@@ -326,7 +328,7 @@ describe("createClient", () => {
 
   it.effect("a second signal forces shutdown without waiting for the grace period", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       const started = yield* Deferred.make<void>();
       const release = yield* Deferred.make<void>();
@@ -361,7 +363,7 @@ describe("createClient", () => {
 
   it.effect("removes signal listeners when listen is interrupted", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
 
       const sigintListeners = process.listenerCount("SIGINT");
       const sigtermListeners = process.listenerCount("SIGTERM");
@@ -381,7 +383,7 @@ describe("createClient", () => {
 
   it.effect("a second signal forces shutdown even when stop hangs", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
+      const client = yield* createHandledClient();
       const sigintListeners = process.listenerCount("SIGINT");
 
       const listening = yield* Effect.forkChild(client.listen());
@@ -394,5 +396,16 @@ describe("createClient", () => {
       yield* Fiber.join(listening);
       expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
     }).pipe(Effect.provide(HangingStopBroker))
+  );
+
+  it.effect("start fails when a consumer has no handler", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+
+      yield* client.analytics.handle(() => Effect.void); // billing has none
+
+      const exit = yield* Effect.exit(client.start());
+      expect(Exit.isFailure(exit)).toBe(true);
+    }).pipe(Effect.provide(TestBroker))
   );
 });

@@ -144,8 +144,8 @@ export function createClient<T extends object>(graph: MessageGraph) {
       Effect.gen(function* () {
         const broker = yield* Broker.Broker;
 
-        yield* Validation.validateRuntime(graph);
         yield* Validation.validateConsumers(graph);
+        yield* Validation.validateHandlers(graph, handlers);
 
         yield* broker.start({
           graph,
@@ -157,11 +157,11 @@ export function createClient<T extends object>(graph: MessageGraph) {
       Effect.gen(function* () {
         const broker = yield* Broker.Broker;
         const gracePeriod = options?.gracePeriod ?? "30 seconds";
-      
+
         for (const integration of options?.integrations ?? []) {
           yield* Layer.build(integration);
         }
-      
+
         yield* (client as RuntimeClient).start();
 
         yield* waitForSignal;

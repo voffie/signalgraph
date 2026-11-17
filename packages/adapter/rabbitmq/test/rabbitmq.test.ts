@@ -4,8 +4,10 @@ import { RabbitMQContainer, type StartedRabbitMQContainer } from "@testcontainer
 import * as amqp from "amqplib";
 import { Effect, Deferred, Option, Schema } from "effect";
 import * as Broker from "signalgraph/broker";
+import * as Runtime from "signalgraph/runtime";
 
 import { Client, type OrderCreatedPayload } from "./fixtures/generated.ts";
+import { Analytics, Billing, OrderCreated } from "./fixtures/schema.ts";
 
 const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
 
@@ -46,6 +48,23 @@ async function getQueueMessageCount(container: StartedRabbitMQContainer, queue: 
   }
 }
 
+const makeClient = Effect.gen(function* () {
+  const client = yield* Client;
+
+  yield* Effect.all(
+    [
+      client.analytics.handle(() => Effect.void),
+      client.billing.handle(() => Effect.void),
+      client.retryingAnalytics.handle(() => Effect.void),
+      client.noRetryAnalytics.handle(() => Effect.void),
+      client.dlqAnalytics.handle(() => Effect.void)
+    ],
+    { discard: true }
+  );
+
+  return client;
+});
+
 describe("RabbitMQBroker", () => {
   let rabbitmq: StartedRabbitMQContainer;
 
@@ -83,7 +102,7 @@ describe("RabbitMQBroker", () => {
       "delivers a published message",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const received = yield* Deferred.make<OrderCreatedPayload>();
 
           yield* client.analytics.handle(({ payload }) => Deferred.succeed(received, payload));
@@ -114,7 +133,7 @@ describe("RabbitMQBroker", () => {
       "delivers to every consumer",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
 
           const analytics = yield* Deferred.make<boolean>();
           const billing = yield* Deferred.make<boolean>();
@@ -150,7 +169,7 @@ describe("RabbitMQBroker", () => {
       "preserves message order",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
 
           const received: Array<number> = [];
 
@@ -193,8 +212,23 @@ describe("RabbitMQBroker", () => {
       "each queue gets one non-competing consumer for multiple clients",
       () =>
         Effect.gen(function* () {
-          const clientA = yield* Client;
-          const clientB = yield* Client;
+          // Two "services" that share the order.created message but own different consumers.
+          type ServiceA = Runtime.RuntimeClient & {
+            orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
+            analytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
+          };
+          type ServiceB = Runtime.RuntimeClient & {
+            orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
+            billing: Runtime.RuntimeConsumer<OrderCreatedPayload>;
+          };
+
+          const clientA = yield* Runtime.createClient<ServiceA>({
+            "order.created": { definition: OrderCreated, consumers: [Analytics] }
+          });
+
+          const clientB = yield* Runtime.createClient<ServiceB>({
+            "order.created": { definition: OrderCreated, consumers: [Billing] }
+          });
 
           const receivedA: Array<number> = [];
           const receivedB: Array<number> = [];
@@ -252,7 +286,7 @@ describe("RabbitMQBroker", () => {
       "stops new deliveries",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
           const received = yield* Deferred.make<void>();
 
@@ -284,7 +318,7 @@ describe("RabbitMQBroker", () => {
       "acknowledges a handler that finishes within the grace period",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           const started = yield* Deferred.make<void>();
@@ -322,7 +356,7 @@ describe("RabbitMQBroker", () => {
       "requeues an unacknowledged message when the consumer channel closes",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           const started = yield* Deferred.make<void>();
@@ -384,7 +418,7 @@ describe("RabbitMQBroker", () => {
       "returns messages that were never started when stopping",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           const started = yield* Deferred.make<void>();
@@ -419,7 +453,7 @@ describe("RabbitMQBroker", () => {
       "close interrupts a running handler and returns its message",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           const started = yield* Deferred.make<void>();
@@ -457,7 +491,7 @@ describe("RabbitMQBroker", () => {
       "stop and close can be called repeatedly, in any order",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           yield* client.analytics.handle(() => Effect.void);
@@ -476,7 +510,7 @@ describe("RabbitMQBroker", () => {
       "deliver still works after stop, including from a draining handler",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const broker = yield* Broker.Broker;
 
           const started = yield* Deferred.make<void>();
@@ -511,7 +545,7 @@ describe("RabbitMQBroker", () => {
       "retries a failed message and succeeds on a latter attempt",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
 
           const attempts: Array<number> = [];
           const finished = yield* Deferred.make<void>();
@@ -552,7 +586,7 @@ describe("RabbitMQBroker", () => {
       "handles the initial attempt when maxAttempts is one",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
           const attempt = yield* Deferred.make<number>();
 
           yield* client.noRetryAnalytics.handle(({ metadata }) =>
@@ -586,7 +620,7 @@ describe("RabbitMQBroker", () => {
       "retries only the consumer that failed",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
 
           let retryingAttempts = 0;
           const billingReceived = yield* Deferred.make<void>();
@@ -633,7 +667,7 @@ describe("RabbitMQBroker", () => {
       "does not redeliver a successful consumer when another consumer retries",
       () =>
         Effect.gen(function* () {
-          const client = yield* Client;
+          const client = yield* makeClient;
 
           let billingAttempts = 0;
           let retryingAttempts = 0;
@@ -704,7 +738,7 @@ describe("RabbitMQBroker", () => {
             (chan) => Effect.promise(() => chan.close())
           );
 
-          const client = yield* Client;
+          const client = yield* makeClient;
           const attempts: Array<number> = [];
           const dlqMessage = yield* Deferred.make<amqp.ConsumeMessage>();
 

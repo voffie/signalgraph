@@ -1,4 +1,4 @@
-import { Effect, Layer, Schema } from "effect";
+import { Duration, Effect, Layer, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
 import type { Consumer } from "../Consumer.ts";
@@ -32,12 +32,31 @@ export type MessageGraph = Record<string, MessageNode>;
 
 interface ListenOptions {
   readonly integrations?: ReadonlyArray<Integration>;
+  readonly gracePeriod?: Duration.Input;
 }
 
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
   listen(options?: ListenOptions): Effect.Effect<void>;
 };
+
+// Resolves on the next SIGINT or SIGTERM and removes its own listeners
+// (also on interruption), so it can be used once per shutdown stage.
+const waitForSignal = Effect.callback<void>((resume) => {
+  const onSignal = () => {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+    resume(Effect.void);
+  };
+
+  process.once("SIGINT", onSignal);
+  process.once("SIGTERM", onSignal);
+
+  return Effect.sync(() => {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+  });
+});
 
 export function createClient<T extends object>(graph: MessageGraph) {
   return Effect.sync(() => {
@@ -136,31 +155,38 @@ export function createClient<T extends object>(graph: MessageGraph) {
 
     client.listen = (options?: ListenOptions) =>
       Effect.gen(function* () {
-        yield* (client as RuntimeClient).start();
-
+        const broker = yield* Broker.Broker;
+        const gracePeriod = options?.gracePeriod ?? "30 seconds";
+      
         for (const integration of options?.integrations ?? []) {
           yield* Layer.build(integration);
         }
+      
+        yield* (client as RuntimeClient).start();
 
-        // Suspend until SIGINT/SIGTERM, then resolve normally - this is
-        // what keeps the process alive without the caller ever seeing it.
-        yield* Effect.callback<void>((resume) => {
-          const onSignal = () => {
-            process.removeListener("SIGINT", onSignal);
-            process.removeListener("SIGTERM", onSignal);
-            resume(Effect.void);
-          };
+        yield* waitForSignal;
 
-          process.once("SIGINT", onSignal);
-          process.once("SIGTERM", onSignal);
+        const drain = Effect.gen(function* () {
+          yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
 
-          // Runs if this Effect is interrupted from elsewhere (e.g. a
-          // test wraps run() in a timeout) - avoids leaking listeners.
-          return Effect.sync(() => {
-            process.removeListener("SIGINT", onSignal);
-            process.removeListener("SIGTERM", onSignal);
-          });
+          yield* broker.stop.pipe(
+            Effect.catchCause((cause) => Effect.logError("Failed to stop message consumers cleanly", cause))
+          );
+
+          yield* broker.awaitIdle.pipe(
+            Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
+            Effect.catchTag("TimeoutError", () =>
+              Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
+            )
+          );
         });
+
+        // Registered before `stop` starts, so a second signal is caught at any point of the drain.
+        const forced = waitForSignal.pipe(
+          Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
+        );
+
+        yield* Effect.onExit(drain.pipe(Effect.race(forced)), () => broker.close);
       }).pipe(Effect.scoped);
 
     return client as T;

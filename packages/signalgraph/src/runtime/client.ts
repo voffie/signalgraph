@@ -1,7 +1,8 @@
-import { Duration, Effect, Schema } from "effect";
+import { Duration, Effect, Layer, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
 import type { Consumer } from "../Consumer.ts";
+import type { Integration } from "../integration/index.ts";
 import { toPropertyName } from "../internal/naming.ts";
 import type { AnyMessage } from "../Message.ts";
 import { InvalidPayloadError } from "./errors.ts";
@@ -29,9 +30,14 @@ type MessageNode = {
 
 export type MessageGraph = Record<string, MessageNode>;
 
+interface ListenOptions {
+  readonly integrations?: ReadonlyArray<Integration>;
+  readonly gracePeriod?: Duration.Input;
+}
+
 export type RuntimeClient = {
   start(): Effect.Effect<void>;
-  listen(options?: { readonly gracePeriod?: Duration.Input }): Effect.Effect<void>;
+  listen(options?: ListenOptions): Effect.Effect<void>;
 };
 
 // Resolves on the next SIGINT or SIGTERM and removes its own listeners
@@ -147,11 +153,15 @@ export function createClient<T extends object>(graph: MessageGraph) {
         });
       });
 
-    client.listen = (options?: { readonly gracePeriod?: Duration.Input }) =>
+    client.listen = (options?: ListenOptions) =>
       Effect.gen(function* () {
         const broker = yield* Broker.Broker;
         const gracePeriod = options?.gracePeriod ?? "30 seconds";
-
+      
+        for (const integration of options?.integrations ?? []) {
+          yield* Layer.build(integration);
+        }
+      
         yield* (client as RuntimeClient).start();
 
         yield* waitForSignal;
@@ -177,7 +187,7 @@ export function createClient<T extends object>(graph: MessageGraph) {
         );
 
         yield* Effect.onExit(drain.pipe(Effect.race(forced)), () => broker.close);
-      });
+      }).pipe(Effect.scoped);
 
     return client as T;
   });

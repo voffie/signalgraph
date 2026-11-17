@@ -1,0 +1,17 @@
+---
+title: Integration
+description: What is an integration?
+---
+
+A SignalGraph integration is an application/tool that connects to the root application and provides useful features.
+Each integration needs to implement the `Integration` Effect layer which can be found [here](https://github.com/voffie/signalgraph/blob/main/packages/signalgraph/src/integration/index.ts).
+
+All integrations export their implementation and to enable one you need to pass it as part of the integration array option in the `listen` method that lives on the generated client.
+See specific integration for how to configure it. Each integration's lifecycle is connected to the application.
+
+<Callout type="warning" title="Beware of non-verified integrations">
+All integrations released by SignalGraph lives under the "@signalgraph" scope. Any other integration outside of that is use at your own risk!
+</Callout>
+
+Currently SignalGraph has these integrations:
+- [`@signalgraph/devtools`](https://github.com/voffie/signalgraph/tree/main/packages/devtools) - A web application that connects to your trace backend to visualize the full message lifecycle, including handlers and publishing other messages

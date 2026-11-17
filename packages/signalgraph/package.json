@@ -43,6 +43,7 @@
     "./config": "./src/config/index.ts",
     "./runtime": "./src/runtime/index.ts",
     "./broker": "./src/broker/index.ts",
+    "./integration": "./src/integration/index.ts",
     "./*": "./src/*.ts",
     "./internal/*": null,
     "./index": null,
@@ -56,6 +57,7 @@
       "./config": "./dist/config/index.js",
       "./runtime": "./dist/runtime/index.js",
       "./broker": "./dist/broker/index.js",
+      "./integration": "./dist/integration/index.js",
       "./internal/*": null,
       "./index": null,
       "./*/index": null

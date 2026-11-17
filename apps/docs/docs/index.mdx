@@ -1,0 +1,123 @@
+---
+title: SignalGraph
+description: TypeScript IaC for MQ Brokers. Build & handle your MQ Broker infrastructure in one place
+sidebar:
+  label: Overview
+  icon: home
+  order: 0
+---
+
+<Badge variant="accent">Built with Effect</Badge>
+<Badge variant="accent">Broker-agnostic</Badge>
+
+SignalGraph is infrastructure as code for message brokers. You describe your
+messages, who consumes them, and how failures are handled in TypeScript, and
+SignalGraph applies that definition to your broker.
+
+## The idea
+
+Message-driven systems tend to scatter their structure. Queues and exchanges are
+created in one place, message shapes live in a shared types package (or just in
+people's heads), and nothing ties them together. The only way to learn how a
+message flows through your system is to read every service that touches it.
+
+SignalGraph puts that structure in one place. You define each message with a
+schema and declare which consumers handle it. That definition is the single
+source of truth: the broker topology is derived from it, and your handlers are
+typed against it. It works with any supported [broker](./adapters).
+
+It started as a side project, an attempt at something I hadn't seen in the
+TypeScript ecosystem. If you're building event-driven systems and want your
+messaging topology to live in code, it's for you.
+
+### Define the graph
+```ts title="schema.ts"
+import { Schema } from "effect";
+import { consumer, message } from "signalgraph";
+
+export const OrderCreated = message({
+  name: "order.created",
+  schema: Schema.Struct({
+    orderId: Schema.Number
+  })
+});
+
+export const Analytics = consumer({
+  name: "analytics",
+  message: OrderCreated
+});
+```
+
+### Handle and publish
+
+From this definition SignalGraph generates a typed `Client`. Handlers receive a
+payload typed by the message schema, and publishing is checked against it too.
+Read more about the generated client [here](./client).
+
+```ts title="handlers.ts"
+import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
+import { Console, Effect } from "effect";
+
+import { Client } from "../generated/index.ts";
+
+const program = Effect.gen(function* () {
+  const client = yield* Client;
+
+  yield* client.analytics.handle(({ payload }) =>
+    Console.log("Analytics received: ", payload)
+  );
+
+  yield* client.listen();
+});
+
+Effect.runPromise(
+  program.pipe(
+    Effect.provide(RabbitMQBroker({ url: "amqp://localhost" }))
+  )
+);
+```
+
+```ts title="publish.ts"
+import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
+import { Effect } from "effect";
+
+import { Client } from "../generated/index.ts";
+
+const program = Effect.gen(function* () {
+  const client = yield* Client;
+  yield* client.orderCreated.publish({ orderId: 1 });
+});
+
+Effect.runPromise(
+  program.pipe(
+    Effect.provide(RabbitMQBroker({ url: "amqp://localhost" }))
+  )
+);
+```
+
+Run `handlers.ts` first, since it declares the exchanges and queues that
+`publish.ts` depends on. To target a different broker, provide a different
+adapter layer. Nothing else changes.
+
+## All in on Effect
+
+SignalGraph is built entirely on [Effect](https://effect.website), and that's a
+deliberate choice rather than an implementation detail. Messaging is mostly
+about things going wrong: redelivery, partial failure, slow consumers, a broker
+that disappears mid-flight. Effect is built for modeling exactly that.
+
+- **Errors are values.** Failures are typed and show up in a handler's
+  signature, so you can see what can go wrong without reading the body.
+- **Dependencies are layers.** Every [adapter](./adapters) and
+  [integration](./integrations) is an Effect layer. Swapping a broker or adding
+  an integration means providing a different layer, not rewiring your code.
+- **Config is Effect-native.** Message schemas, consumer retries and the rest
+  use Effect modules rather than a parallel set of options. If you already know
+  Effect, there's little new to learn.
+- **Cleanup is automatic.** Connections are tied to Effect scopes, so when the
+  outermost scope closes, every connection is released with it. There's no
+  manual teardown to forget.
+
+The tradeoff is that you need to be comfortable with Effect to use SignalGraph.
+I think the consistency is worth it: one model for errors, resources and 
+configuration, from the schema down to the broker connection.

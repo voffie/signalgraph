@@ -1,0 +1,55 @@
+---
+title: Schema
+description: Define your broker layout using SignalGraph's schema module
+---
+
+SignalGraph has simplified everything down to two core primitives, message & consumer. These are then translated by each adapter
+into their equivalent primitives.
+
+## Message
+A `message` is exactly what the name supplies a message. It defines the name and the structure of
+a specific message.
+
+```ts title="Message Definition"
+import { Schema } from "effect";
+import { message } from "signalgraph";
+
+export const OrderCreated = message({
+  name: "orders.created",
+  schema: Schema.Struct({
+    orderId: Schema.String,
+  }),
+});
+```
+
+Currently a `message` support these fields:
+* `name: string` - The name of the message. Used to separate messages from each other
+* `schema: Effect Schema` - The structure of the message. Any [Effect schema](https://effect.website/docs/v4/api/effect/Schema) is supported.
+
+## Consumer
+A `consumer` is the SignalGraph primitive for creating a subscriber. Each message can have multiple `consumers`
+and `SignalGraph` will be using a fanout strategy to allow each `consumer` to get all messages.
+
+```ts title="Consumer definition"
+import { Schema } from "effect";
+import { message, consumer } from "signalgraph";
+
+export const OrderCreated = message({
+  name: "orders.created",
+  schema: Schema.Struct({
+    orderId: Schema.String,
+  }),
+});
+
+export const Billing = consumer({
+  name: "billing",
+  message: OrderCreated,
+});
+```
+
+Currently a `consumer` support these fields:
+* `name: string` - The name of the consumer. Used to separate consumers from each other
+* `message: Message` - The variable of the `message` it subscribes to. Can also be an inline `message`
+* `prefetch?: number` - The amount of messages the broker should prefetch
+* `retry?: RetryPolicy` - Custom retry policy when a handler fails, read more [here](./retry).
+* `dlq?: boolean` - On/off switch if a DLQ (Dead Letter Queue) or equivalent should be created for the supplied adapter/broker

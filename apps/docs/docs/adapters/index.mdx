@@ -1,0 +1,14 @@
+---
+title: Adapter
+description: What is an adapter?
+---
+
+A SignalGraph adapter is what connects the SignalGraph primitives to an actual broker.
+Each adapter needs to implement the `Broker` Effect layer which can be found [here](https://github.com/voffie/signalgraph/blob/main/packages/signalgraph/src/broker/index.ts).
+
+<Callout type="warning" title="Beware of non-verified adapters">
+All adapters released by SignalGraph lives under the "@signalgraph/adapter-*" scope. Any other adapters outside of that is use at your own risk!
+</Callout>
+
+Currently SignalGraph has these adapters:
+- [`@signalgraph/adapter-rabbitmq`](https://github.com/voffie/signalgraph/tree/main/packages/adapter/rabbitmq) - The official adapter for RabbitMQ

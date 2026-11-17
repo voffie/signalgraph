@@ -1,0 +1,45 @@
+---
+title: RabbitMQ
+---
+
+SignalGraph has an official RabbitMQ adapter which allows users to use SignalGraph's primitives on RabbitMQ.
+
+## Prerequisites
+
+- A RabbitMQ broker instance
+- A generated SignalGraph client
+
+## Installation
+
+<CodeGroup>
+```sh npm
+npm install @signalgraph/adapter-rabbitmq
+```
+
+```sh pnpm
+pnpm add @signalgraph/adapter-rabbitmq
+```
+
+```sh bun
+bun add @signalgraph/adapter-rabbitmq
+```
+
+```sh yarn
+yarn add @signalgraph/adapter-rabbitmq
+```
+</CodeGroup>
+
+## Usage
+
+Each adapter is an Effect layer, so for each application you need to provide it using the exported implementation of the `Broker` interface/layer as described [here](../adapter)
+
+```ts title="RabbitMQ layer usage example"
+Effect.provide(
+  RabbitMQBroker({
+    // options
+  })
+)
+```
+
+Currently the RabbitMQ adapter exposes these options:
+- `url: string` - The URL to your RabbitMQ instance

@@ -105,26 +105,80 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           });
         });
 
+      // Declares every exchange, queue, binding, retry queue and DLQ in the graph before any consumer
+      // starts, so a handler that publishes during startup never hits a missing exchange or queue.
+      // Uses its own channel because a rejected declaration closes the channel it was sent on,
+      // and that must not be the publish channel.
+      const declareTopology = (graph: Runtime.MessageGraph) =>
+        Effect.scoped(
+          Effect.gen(function* () {
+            const channel = yield* Effect.acquireRelease(
+              Effect.tryPromise({
+                try: () => conn.createChannel(),
+                catch: (cause) =>
+                  new Runtime.InitializationError({ cause, message: "Failed to create channel for topology setup" })
+              }),
+              (ch) => Effect.promise(() => ch.close().catch(() => undefined))
+            );
+
+            const declare = (message: string, run: () => Promise<unknown>) =>
+              Effect.tryPromise({
+                try: run,
+                catch: (cause) => new Runtime.InitializationError({ cause, message })
+              });
+
+            for (const [messageName, messageDef] of Object.entries(graph)) {
+              yield* declare(`Failed to create exchange for ${messageName}`, () =>
+                channel.assertExchange(messageName, "fanout", { durable: true })
+              );
+
+              for (const consumer of messageDef.consumers) {
+                yield* declare(`Failed to create queue for ${consumer.name}`, () =>
+                  channel.assertQueue(consumer.name, { durable: true })
+                );
+
+                yield* declare(`Failed to bind queue ${consumer.name} to exchange ${messageName}`, () =>
+                  channel.bindQueue(consumer.name, messageName, "")
+                );
+
+                if (consumer.retry !== undefined) {
+                  for (let attempt = 1; attempt < consumer.retry.maxAttempts; attempt++) {
+                    const queue = `${consumer.name}.retry.${attempt + 1}`;
+
+                    yield* declare(`Failed to create retry queue "${queue}"`, () =>
+                      channel.assertQueue(queue, {
+                        durable: true,
+                        deadLetterExchange: "",
+                        deadLetterRoutingKey: consumer.name,
+                        messageTtl: retryDelay(consumer.retry!, attempt)
+                      })
+                    );
+                  }
+                }
+
+                if (consumer.dlq === true) {
+                  yield* declare(`Failed to create DLQ "${consumer.name}.dlq"`, () =>
+                    channel.assertQueue(`${consumer.name}.dlq`, { durable: true })
+                  );
+                }
+              }
+            }
+          })
+        );
+
       const start = ({ graph, handlers }: { graph: Runtime.MessageGraph; handlers: Broker.HandlerRegistry }) =>
         Effect.gen(function* () {
-          for (const [messageName, messageDef] of Object.entries(graph)) {
-            yield* Effect.tryPromise({
-              try: () =>
-                publishChannel.assertExchange(messageName, "fanout", {
-                  durable: true
-                }),
-              catch: (cause) =>
-                new Runtime.InitializationError({
-                  cause,
-                  message: `Failed to create exchange for ${messageName}`
-                })
-            });
+          yield* declareTopology(graph);
 
+          for (const [messageName, messageDef] of Object.entries(graph)) {
             for (const consumer of messageDef.consumers) {
               const consumerHandlers = handlers.get(consumer.name);
 
               if (!consumerHandlers?.length) {
-                continue;
+                return yield* new Runtime.InitializationError({
+                  cause: undefined,
+                  message: `Consumer "${consumer.name}" has no handler`
+                });
               }
 
               let consumerChannelClosed = false;
@@ -166,65 +220,41 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 });
               }
 
-              yield* Effect.tryPromise({
-                try: () =>
-                  consumerChannel.assertQueue(consumer.name, {
-                    durable: true
-                  }),
-                catch: (cause) =>
-                  new Runtime.InitializationError({
-                    cause,
-                    message: `Failed to create queue for ${consumer.name}`
-                  })
-              });
+              const messages = yield* Queue.unbounded<Delivery>();
 
-              yield* Effect.tryPromise({
-                try: () => consumerChannel.bindQueue(consumer.name, messageName, ""),
-                catch: (cause) =>
-                  new Runtime.InitializationError({
-                    cause,
-                    message: `Failed to bind queue ${consumer.name} to exchange ${messageName}`
-                  })
-              });
+              // The broker can close a channel at any time, and ack/nack then throw synchronously.
+              // The broker requeues unacked messages itself in that case, so swallowing is safe.
+              const settle = (action: () => void) =>
+                Effect.sync(() => {
+                  if (consumerChannelClosed) return;
+                  try {
+                    action();
+                  } catch {
+                    // channel already gone
+                  }
+                });
 
-              if (consumer.retry !== undefined) {
-                for (let attempt = 1; attempt < consumer.retry.maxAttempts; attempt++) {
-                  const delay = retryDelay(consumer.retry, attempt);
+              const ack = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.ack(msg));
+              const requeue = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.nack(msg, false, true));
+              const discard = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.nack(msg, false, false));
 
-                  const queue = `${consumer.name}.retry.${attempt + 1}`;
+              // Retry and DLQ settle the same way: confirmed copy first, ack of the original after.
+              const republish = (routingKey: string, msg: amqp.ConsumeMessage, headers: Record<string, unknown> = {}) =>
+                Effect.gen(function* () {
+                  yield* Effect.sync(() =>
+                    publishChannel.publish("", routingKey, msg.content, {
+                      ...msg.properties,
+                      persistent: true,
+                      headers: { ...msg.properties.headers, ...headers }
+                    })
+                  );
 
                   yield* Effect.tryPromise({
-                    try: () =>
-                      consumerChannel.assertQueue(queue, {
-                        durable: true,
-                        deadLetterExchange: "",
-                        deadLetterRoutingKey: consumer.name,
-                        messageTtl: delay
-                      }),
+                    try: () => publishChannel.waitForConfirms(),
                     catch: (cause) =>
-                      new Runtime.InitializationError({
-                        cause,
-                        message: `Failed to create retry queue "${queue}"`
-                      })
+                      new Runtime.ConnectionError({ cause, message: "Failed to confirm published message" })
                   });
-                }
-              }
-
-              if (consumer.dlq === true) {
-                yield* Effect.tryPromise({
-                  try: () =>
-                    consumerChannel.assertQueue(`${consumer.name}.dlq`, {
-                      durable: true
-                    }),
-                  catch: (cause) =>
-                    new Runtime.InitializationError({
-                      cause,
-                      message: `Failed to create DLQ "${consumer.name}.dlq"`
-                    })
                 });
-              }
-
-              const messages = yield* Queue.unbounded<Delivery>();
 
               const consumerTag = yield* Effect.tryPromise({
                 try: () =>
@@ -235,9 +265,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
                     if (isStopping) {
                       // Arrived after stop(): hand it straight back.
-                      if (!consumerChannelClosed) {
-                        consumerChannel.nack(msg, false, true);
-                      }
+                      Effect.runFork(requeue(msg));
                       return;
                     }
 
@@ -260,9 +288,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 yield* Effect.gen(function* () {
                   if (isStopping) {
                     // Received before stop() but never started: return it instead of handling it.
-                    if (!consumerChannelClosed) {
-                      consumerChannel.nack(msg, false, true);
-                    }
+                    yield* requeue(msg);
                     return;
                   }
 
@@ -304,13 +330,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                       yield* dispatch;
                     }
                   }).pipe(
-                    Effect.matchEffect({
-                      onSuccess: () =>
-                        Effect.sync(() => {
-                          if (!consumerChannelClosed) {
-                            consumerChannel.ack(msg);
-                          }
-                        }),
+                    Effect.matchCauseEffect({
+                      onSuccess: () => ack(msg),
                       onFailure: () =>
                         Effect.gen(function* () {
                           if (consumerChannelClosed) {
@@ -320,70 +341,43 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                           const nextAttempt = metadata.retryAttempt + 1;
 
                           if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
-                            yield* Effect.sync(() =>
-                              publishChannel.publish("", `${consumer.name}.retry.${nextAttempt}`, msg.content, {
-                                ...msg.properties,
-                                persistent: true,
-                                headers: {
-                                  ...msg.properties.headers,
-                                  [RETRY_ATTEMPT_HEADER]: nextAttempt
-                                }
-                              })
-                            );
-
-                            yield* Effect.tryPromise({
-                              try: () => publishChannel.waitForConfirms(),
-                              catch: (confirmCause) =>
-                                new Runtime.ConnectionError({
-                                  cause: confirmCause,
-                                  message: "Failed to confirm published message"
-                                })
+                            yield* republish(`${consumer.name}.retry.${nextAttempt}`, msg, {
+                              [RETRY_ATTEMPT_HEADER]: nextAttempt
                             });
-
-                            if (!consumerChannelClosed) {
-                              consumerChannel.ack(msg);
-                            }
-
+                            yield* ack(msg);
                             return;
                           }
 
                           if (consumer.dlq === true) {
-                            yield* Effect.sync(() =>
-                              publishChannel.publish("", `${consumer.name}.dlq`, msg.content, {
-                                ...msg.properties,
-                                persistent: true
-                              })
-                            );
-
-                            yield* Effect.tryPromise({
-                              try: () => publishChannel.waitForConfirms(),
-                              catch: (confirmCause) =>
-                                new Runtime.ConnectionError({
-                                  cause: confirmCause,
-                                  message: "Failed to confirm published message"
-                                })
-                            });
-
-                            if (!consumerChannelClosed) {
-                              consumerChannel.ack(msg);
-                            }
-
+                            yield* republish(`${consumer.name}.dlq`, msg);
+                            yield* ack(msg);
                             return;
                           }
 
-                          if (!consumerChannelClosed) {
-                            consumerChannel.nack(msg, false, false);
-                          }
-                        })
+                          yield* discard(msg);
+                        }).pipe(
+                          // The retry/DLQ copy could not be confirmed, so keep the original: put it back.
+                          Effect.catchCause((settleCause) =>
+                            Effect.andThen(
+                              Effect.logError(
+                                "Failed to settle failed message; returning it to the queue",
+                                settleCause
+                              ),
+                              requeue(msg)
+                            )
+                          )
+                        )
                     })
                   );
                 }).pipe(Effect.ensuring(Effect.sync(leave)));
               });
 
               const loop = yield* Effect.forkIn(layerScope)(
-                Effect.forever(processMessage).pipe(
-                  Effect.catchCause((cause) =>
-                    isStopping ? Effect.void : Effect.logError("RabbitMQ consumer processing loop stopped", cause)
+                Effect.forever(
+                  processMessage.pipe(
+                    Effect.catchCause((cause) =>
+                      isStopping ? Effect.void : Effect.logError("RabbitMQ message processing failed", cause)
+                    )
                   )
                 )
               );

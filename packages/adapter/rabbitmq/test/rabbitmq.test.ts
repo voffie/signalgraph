@@ -613,6 +613,43 @@ describe("RabbitMQBroker", () => {
         ),
       60000
     );
+
+    it.live(
+      "keeps consuming after a handler throws",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* makeClient;
+          const second = yield* Deferred.make<number>();
+          let firstAttempts = 0;
+
+          yield* client.dlqAnalytics.handle(({ payload }) =>
+            Effect.suspend(() => {
+              if (payload.orderId === 1) {
+                firstAttempts += 1;
+                throw new Error("handler defect"); // a defect, not a typed failure
+              }
+              return Deferred.succeed(second, payload.orderId);
+            })
+          );
+
+          yield* client.start();
+          yield* client.orderCompleted.publish({ orderId: 1 });
+          yield* client.orderCompleted.publish({ orderId: 2 });
+
+          expect(yield* Deferred.await(second)).toBe(2);
+
+          // Message 1 needs its retry (about 100ms) before it reaches the DLQ, so poll.
+          let dlqCount = 0;
+          for (let i = 0; i < 50 && dlqCount !== 1; i++) {
+            dlqCount = yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "dlqAnalytics.dlq"));
+            if (dlqCount !== 1) yield* Effect.sleep("100 millis");
+          }
+
+          expect(dlqCount).toBe(1);
+          expect(firstAttempts).toBe(2);
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
   });
 
   describe("consumer isolation", () => {

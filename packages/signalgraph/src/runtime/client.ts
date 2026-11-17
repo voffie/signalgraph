@@ -156,27 +156,27 @@ export function createClient<T extends object>(graph: MessageGraph) {
 
         yield* waitForSignal;
 
-        yield* Effect.onExit(
-          Effect.gen(function* () {
-            yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
+        const drain = Effect.gen(function* () {
+          yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
 
-            yield* broker.stop;
+          yield* broker.stop.pipe(
+            Effect.catchCause((cause) => Effect.logError("Failed to stop message consumers cleanly", cause))
+          );
 
-            yield* broker.awaitIdle.pipe(
-              Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
-              Effect.catchTag("TimeoutError", () =>
-                Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
-              ),
-              // A second signal skips the rest of the grace period.
-              Effect.race(
-                waitForSignal.pipe(
-                  Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
-                )
-              )
-            );
-          }),
-          () => broker.close
+          yield* broker.awaitIdle.pipe(
+            Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
+            Effect.catchTag("TimeoutError", () =>
+              Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
+            )
+          );
+        });
+
+        // Registered before `stop` starts, so a second signal is caught at any point of the drain.
+        const forced = waitForSignal.pipe(
+          Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
         );
+
+        yield* Effect.onExit(drain.pipe(Effect.race(forced)), () => broker.close);
       });
 
     return client as T;

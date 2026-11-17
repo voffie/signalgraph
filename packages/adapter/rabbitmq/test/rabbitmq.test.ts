@@ -452,6 +452,58 @@ describe("RabbitMQBroker", () => {
         }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
       60000
     );
+
+    it.effect(
+      "stop and close can be called repeatedly, in any order",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          yield* client.analytics.handle(() => Effect.void);
+          yield* client.start();
+
+          yield* broker.close;
+          yield* broker.stop;
+          yield* broker.stop;
+          yield* broker.close;
+          yield* broker.awaitIdle;
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
+
+    it.effect(
+      "deliver still works after stop, including from a draining handler",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* Client;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(({ payload }) =>
+            Effect.gen(function* () {
+              yield* Deferred.succeed(started, undefined);
+              yield* Deferred.await(release);
+              yield* client.orderCreated.publish({ orderId: payload.orderId + 1 });
+            })
+          );
+
+          yield* client.start();
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(started);
+
+          yield* broker.stop;
+          yield* Deferred.succeed(release, undefined);
+          yield* broker.awaitIdle;
+          yield* broker.close;
+
+          // Message 1 was acked. the follow-up (2) was accepted by the broker and stays queued.
+          expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(1);
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
   });
 
   describe("retry", () => {

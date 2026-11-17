@@ -415,6 +415,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       const close = Effect.gen(function* () {
         isStopping = true;
+        cancelConsumers.length = 0; // closing the channels cancels the consumers anyway
 
         // Closing the channels first means the broker requeues every unacked message,
         // and an interrupted handler can no longer ack.

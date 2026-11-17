@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber, Schema } from "effect";
+import { Deferred, Effect, Fiber, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { consumer, message } from "signalgraph";
 import * as Broker from "signalgraph/broker";
@@ -39,6 +39,14 @@ const createTestClient = () =>
       definition: OrderCreated
     }
   });
+
+const HangingStopBroker = Layer.effect(
+  Broker.Broker,
+  Effect.gen(function* () {
+    const base = yield* Broker.Broker;
+    return { ...base, stop: Effect.never };
+  })
+).pipe(Layer.provide(TestBroker));
 
 describe("createClient", () => {
   it.effect("creates message resources", () =>
@@ -369,5 +377,22 @@ describe("createClient", () => {
       expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
       expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
     }).pipe(Effect.provide(TestBroker))
+  );
+
+  it.effect("a second signal forces shutdown even when stop hangs", () =>
+    Effect.gen(function* () {
+      const client = yield* createTestClient();
+      const sigintListeners = process.listenerCount("SIGINT");
+
+      const listening = yield* Effect.forkChild(client.listen());
+      yield* waitUntil(Effect.sync(() => process.listenerCount("SIGINT") > sigintListeners));
+
+      yield* Effect.sync(() => process.emit("SIGINT"));
+      yield* waitUntil(Effect.sync(() => process.listenerCount("SIGINT") > sigintListeners));
+      yield* Effect.sync(() => process.emit("SIGINT"));
+
+      yield* Fiber.join(listening);
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+    }).pipe(Effect.provide(HangingStopBroker))
   );
 });

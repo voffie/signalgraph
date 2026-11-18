@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "@effect/vi
 import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
 import { RabbitMQContainer, type StartedRabbitMQContainer } from "@testcontainers/rabbitmq";
 import * as amqp from "amqplib";
-import { Effect, Deferred, Option, Schema } from "effect";
+import { Effect, Deferred, Option, Schema, Exit } from "effect";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
 
@@ -824,6 +824,28 @@ describe("RabbitMQBroker", () => {
             })
           )
         ),
+      60000
+    );
+  });
+
+  describe("topology", () => {
+    it.effect(
+      "fails a publish that no queue received",
+      () =>
+        Effect.gen(function* () {
+          type Orphan = Runtime.RuntimeClient & {
+            orphanCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
+          };
+
+          const client = yield* Runtime.createClient<Orphan>({
+            "orphan.created": { definition: OrderCreated, consumers: [] }
+          });
+
+          yield* client.start();
+
+          const exit = yield* Effect.exit(client.orphanCreated.publish({ orderId: 1 }));
+          expect(Exit.isFailure(exit)).toBe(true);
+        }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
       60000
     );
   });

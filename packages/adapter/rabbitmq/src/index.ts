@@ -79,29 +79,98 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         )
       );
 
+      // Messages RabbitMQ handed back as unroutable. The `return` event always arrives before the
+      // confirm of the same message, so the confirm callback can check this set.
+      const returned = new Set<string>();
+      const publishKey = (exchange: string, routingKey: string, messageId: unknown) =>
+        `${exchange}|${routingKey}|${String(messageId)}`;
+
+      publishChannel.on("return", (msg) => {
+        returned.add(publishKey(msg.fields.exchange, msg.fields.routingKey, msg.properties.messageId));
+      });
+
+      // Backpressure: publish() returned false, so new publishes wait until the channel drains.
+      let gate: Promise<void> | undefined;
+      let openGate: (() => void) | undefined;
+
+      const closeGate = () => {
+        if (gate !== undefined) return;
+        gate = new Promise<void>((resolve) => {
+          openGate = resolve;
+        });
+      };
+
+      const releaseGate = () => {
+        openGate?.();
+        openGate = undefined;
+        gate = undefined;
+      };
+
+      publishChannel.on("drain", releaseGate);
+      publishChannel.on("close", releaseGate); // never leave publishers waiting on a dead channel
+
+      const publishConfirmed = (exchange: string, routingKey: string, content: Buffer, options: amqp.Options.Publish) =>
+        Effect.gen(function* () {
+          const pending = gate;
+          if (pending !== undefined) {
+            yield* Effect.promise(() => pending);
+          }
+
+          yield* Effect.callback<void, Runtime.ConnectionError>((resume) => {
+            const key = publishKey(exchange, routingKey, options.messageId);
+
+            try {
+              const accepted = publishChannel.publish(
+                exchange,
+                routingKey,
+                content,
+                { ...options, mandatory: true },
+                (err) => {
+                  if (err) {
+                    returned.delete(key);
+                    resume(
+                      Effect.fail(
+                        new Runtime.ConnectionError({ cause: err, message: "Failed to confirm published message" })
+                      )
+                    );
+                    return;
+                  }
+
+                  if (returned.delete(key)) {
+                    resume(
+                      Effect.fail(
+                        new Runtime.ConnectionError({
+                          cause: undefined,
+                          message: `Message was not routed to any queue (exchange "${exchange}", routing key "${routingKey}")`
+                        })
+                      )
+                    );
+                    return;
+                  }
+
+                  resume(Effect.void);
+                }
+              );
+
+              if (!accepted) closeGate();
+            } catch (cause) {
+              resume(Effect.fail(new Runtime.ConnectionError({ cause, message: "Failed to publish message" })));
+            }
+          });
+        });
+
       const deliver = ({ message, data }: { message: string; data: Broker.BrokerMessage }) =>
         Effect.gen(function* () {
           const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(data.payload);
 
-          yield* Effect.sync(() =>
-            publishChannel.publish(message, "", Buffer.from(json, "utf-8"), {
-              messageId: data.metadata.messageId,
-              correlationId: data.metadata.correlationId,
-              persistent: true,
-              headers: {
-                traceContext: data.metadata.traceContext,
-                [RETRY_ATTEMPT_HEADER]: data.metadata.retryAttempt
-              }
-            })
-          );
-
-          yield* Effect.tryPromise({
-            try: () => publishChannel.waitForConfirms(),
-            catch: (cause) =>
-              new Runtime.ConnectionError({
-                cause,
-                message: "Failed to confirm published message"
-              })
+          yield* publishConfirmed(message, "", Buffer.from(json, "utf-8"), {
+            messageId: data.metadata.messageId,
+            correlationId: data.metadata.correlationId,
+            persistent: true,
+            headers: {
+              traceContext: data.metadata.traceContext,
+              [RETRY_ATTEMPT_HEADER]: data.metadata.retryAttempt
+            }
           });
         });
 
@@ -240,20 +309,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
               // Retry and DLQ settle the same way: confirmed copy first, ack of the original after.
               const republish = (routingKey: string, msg: amqp.ConsumeMessage, headers: Record<string, unknown> = {}) =>
-                Effect.gen(function* () {
-                  yield* Effect.sync(() =>
-                    publishChannel.publish("", routingKey, msg.content, {
-                      ...msg.properties,
-                      persistent: true,
-                      headers: { ...msg.properties.headers, ...headers }
-                    })
-                  );
-
-                  yield* Effect.tryPromise({
-                    try: () => publishChannel.waitForConfirms(),
-                    catch: (cause) =>
-                      new Runtime.ConnectionError({ cause, message: "Failed to confirm published message" })
-                  });
+                publishConfirmed("", routingKey, msg.content, {
+                  ...msg.properties,
+                  persistent: true,
+                  headers: { ...msg.properties.headers, ...headers }
                 });
 
               const consumerTag = yield* Effect.tryPromise({
@@ -358,13 +417,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                         }).pipe(
                           // The retry/DLQ copy could not be confirmed, so keep the original: put it back.
                           Effect.catchCause((settleCause) =>
-                            Effect.andThen(
-                              Effect.logError(
-                                "Failed to settle failed message; returning it to the queue",
-                                settleCause
-                              ),
-                              requeue(msg)
-                            )
+                            Effect.logError(
+                              "Failed to settle failed message; returning it to the queue",
+                              settleCause
+                            ).pipe(Effect.andThen(Effect.sleep("1 second")), Effect.andThen(requeue(msg)))
                           )
                         )
                     })

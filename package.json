@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.packages.json && pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
-    "test": "vitest",
+    "test": "pnpm build && vitest",
     "coverage": "vitest --coverage",
     "check": "tsc -b tsconfig.json && pnpm --filter @signalgraph/devtools check",
     "lint": "oxlint -f unix && oxfmt --check .",

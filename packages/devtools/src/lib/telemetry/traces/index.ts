@@ -5,6 +5,7 @@ import { TempoCollector } from "./tempo/TempoCollector.js";
 export const TRACE_VENDORS = [{ value: "tempo", label: "Tempo" }] as const;
 
 export type TraceVendor = (typeof TRACE_VENDORS)[number]["value"];
+
 export type TracesConfig = { url: string };
 
 export interface TraceCollector {

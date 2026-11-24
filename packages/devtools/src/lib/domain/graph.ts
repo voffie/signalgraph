@@ -60,6 +60,7 @@ export function buildGraph(trace: Trace): Graph {
         if (consumerName) {
           spanNodeIds[span.spanId] = consumerName;
         }
+
         break;
 
       default:

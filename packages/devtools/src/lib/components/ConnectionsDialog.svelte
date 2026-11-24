@@ -86,6 +86,7 @@
     if (e.key === "n") {
       e.preventDefault();
       startCreate();
+
       return;
     }
 
@@ -120,8 +121,10 @@
   function goToVendor() {
     if (!formName.trim()) {
       error = "Connection name is required.";
+
       return;
     }
+
     error = null;
     step = "vendor";
   }
@@ -152,18 +155,23 @@
 
   async function save() {
     if (!formVendor) return;
+
     if (!formUrl.trim()) {
       error = "Vendor URL is required.";
+
       return;
     }
 
     saving = true;
     error = null;
+
     try {
       const formData = new FormData();
+
       if (editingCurrentName) {
         formData.set("currentName", editingCurrentName);
       }
+
       formData.set("name", formName.trim());
       formData.set("vendor", formVendor);
       formData.set("url", formUrl.trim());
@@ -173,6 +181,7 @@
 
       if (result.type === "failure") {
         error = result.data?.error ?? "Something went wrong.";
+
         return;
       }
 
@@ -186,8 +195,11 @@
   function focusStep(currentStep: Step) {
     tick().then(() => {
       if (currentStep === "list") listEl?.focus();
+
       if (currentStep === "name") nameInputEl?.focus();
+
       if (currentStep === "vendor") vendorListEl?.focus();
+
       if (currentStep === "url") vendorUrlEl?.focus();
     });
   }

@@ -23,12 +23,15 @@ const project = (
   );
 
   const merged = mergeConfig(shared, cfg);
+
   if (projectExclude !== undefined) {
     merged.test!.exclude = [...projectExclude];
   }
+
   if (projectInclude !== undefined) {
     merged.test!.include = [...projectInclude];
   }
+
   return [merged];
 };
 

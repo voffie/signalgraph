@@ -12,9 +12,11 @@ const findNearestPackageJson = Effect.fn(function* (startDir: string) {
 
   while (true) {
     const candidate = path.join(current, "package.json");
+
     if (yield* fs.exists(candidate)) return candidate;
 
     const parent = path.dirname(current);
+
     if (parent === current) return undefined;
     current = parent;
   }
@@ -31,6 +33,7 @@ const assertEsmProject = Effect.fn(function* (configPath: string) {
   }
 
   const text = yield* fs.readFileString(packageJsonPath);
+
   const pkg = yield* Effect.try({
     try: () => JSON.parse(text) as { type?: string },
     catch: () => new NotEsmProjectError({ configPath, reason: `${packageJsonPath} is not valid JSON` })

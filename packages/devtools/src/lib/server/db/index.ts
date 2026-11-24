@@ -28,5 +28,6 @@ export function getDb(): Database.Database {
   )`);
 
   instance = db;
+
   return db;
 }

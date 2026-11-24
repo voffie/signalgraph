@@ -20,6 +20,7 @@
       .slice(1)
       .map((word) => {
         if (word.includes("_")) word = word.split("_").join(" ");
+
         return capitalize(word);
       })
       .join(" ");

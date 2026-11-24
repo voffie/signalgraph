@@ -27,6 +27,7 @@ export function getGraphLookbackSeconds(): number {
   if (!row) return DEFAULT_GRAPH_LOOKBACK_SECONDS;
 
   const parsed = Number(row.value);
+
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_GRAPH_LOOKBACK_SECONDS;
 }
 

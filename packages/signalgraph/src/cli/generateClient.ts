@@ -71,10 +71,13 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
   ];
 
   let schemaRelativePath = path.relative(outputDir, config.schema);
+
   if (!schemaRelativePath.startsWith(".")) {
     schemaRelativePath = "./" + schemaRelativePath;
   }
+
   const schemaExportNames = [...data.messageExportNames.values(), ...data.consumerExportNames.values()];
+
   const schemaImport =
     schemaExportNames.length > 0
       ? `import {\n${indent(schemaExportNames.join(",\n"))}\n} from "${schemaRelativePath}";`

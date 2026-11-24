@@ -42,6 +42,7 @@ export const actions: Actions = {
     }
 
     const conflict = getDataSourceByName(name);
+
     if (conflict && name !== currentName) {
       return fail(400, {
         action: "save" as const,
@@ -53,6 +54,7 @@ export const actions: Actions = {
       updateDataSource(currentName, { name, vendor, config: { url } });
     } else {
       createDataSource({ name, vendor, config: { url } });
+
       if (!getActiveDataSource()) setActiveDataSource(name);
     }
 
@@ -81,6 +83,7 @@ export const actions: Actions = {
     }
 
     setActiveDataSource(name);
+
     return { action: "setActive" as const, success: true };
   },
 
@@ -96,6 +99,7 @@ export const actions: Actions = {
     }
 
     saveGraphLookbackSeconds(seconds);
+
     return { action: "saveGraphLookback" as const, success: true };
   }
 };

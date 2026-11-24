@@ -66,18 +66,23 @@
 
   $effect(() => {
     const el = svgEl;
+
     if (!el) return;
+
     const handler = (e: WheelEvent) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.1 : 0.9;
       transform = { ...transform, scale: Math.max(0.2, Math.min(3, transform.scale * factor)) };
     };
+
     el.addEventListener("wheel", handler, { passive: false });
+
     return () => el.removeEventListener("wheel", handler);
   });
 
   function handleFitView() {
     const canvas = canvasEl;
+
     if (!canvas || positionedNodes.length === 0) return;
 
     const { width, height } = canvas.getBoundingClientRect();
@@ -146,12 +151,14 @@
       overlay = null;
       e.preventDefault();
       overlay = "command";
+
       return;
     }
 
     if (isModPressed && e.key === ",") {
       e.preventDefault();
       overlay = "settings";
+
       return;
     }
   }

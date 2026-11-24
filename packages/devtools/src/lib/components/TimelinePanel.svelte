@@ -37,6 +37,7 @@
       const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name") ?? span.name;
 
       const suffix = span.name === "signalgraph.consume" ? " (Consume)" : " (Handler)";
+
       return consumerName ? capitalize(consumerName) + suffix : span.name;
     }
 
@@ -52,8 +53,11 @@
 
   function formatTimelineOffset(ms: number): string {
     if (ms === 0) return "0ms";
+
     if (ms < 10) return `${ms.toFixed(1)}ms`;
+
     if (ms < 1000) return `${Math.round(ms)}ms`;
+
     return `${(ms / 1000).toFixed(1)}s`;
   }
 </script>

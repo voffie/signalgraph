@@ -15,6 +15,7 @@ function buildTraceQlQuery(filters: TraceListFilters): string | undefined {
   }
 
   if (!conditions.length) return undefined;
+
   return `{ ${conditions.join(" && ")} }`;
 }
 
@@ -37,6 +38,7 @@ export class TempoCollector implements TraceCollector {
     }
 
     const json = await res.json();
+
     return normalizeTrace(json);
   }
 
@@ -68,6 +70,7 @@ export class TempoCollector implements TraceCollector {
     params.set("end", `${filters.end}`);
 
     const query = buildTraceQlQuery(filters);
+
     if (query) params.set("q", query);
 
     const res = await fetch(`${this.#url}/api/search?${params}`);
@@ -77,6 +80,7 @@ export class TempoCollector implements TraceCollector {
     }
 
     const json = await res.json();
+
     return normalizeSearchResponse(json);
   }
 }

@@ -15,8 +15,10 @@ const waitForExit = (child: ChildProcess) =>
     if (child.exitCode !== null || child.signalCode !== null) {
       return resume(Effect.void);
     }
+
     const onExit = () => resume(Effect.void);
     child.once("exit", onExit);
+
     return Effect.sync(() => void child.off("exit", onExit));
   });
 

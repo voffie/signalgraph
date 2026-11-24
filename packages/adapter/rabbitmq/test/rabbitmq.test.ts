@@ -18,6 +18,7 @@ class TestError extends Schema.TaggedError<TestError>()("TestError", {
 
 async function getExistingQueues(container: StartedRabbitMQContainer): Promise<Array<string>> {
   const port = container.getMappedPort(15672);
+
   const response = await fetch(`http://${container.getHost()}:${port}/api/queues/`, {
     headers: {
       Authorization: `Basic ${Buffer.from("guest:guest").toString("base64")}`
@@ -593,6 +594,7 @@ describe("RabbitMQBroker", () => {
 
               if (metadata.retryAttempt === 2) {
                 yield* Deferred.succeed(finished, undefined);
+
                 return;
               }
 
@@ -706,6 +708,7 @@ describe("RabbitMQBroker", () => {
 
               if (retryingAttempts === 2) {
                 yield* Deferred.succeed(retryingFinished, undefined);
+
                 return;
               }
 
@@ -755,6 +758,7 @@ describe("RabbitMQBroker", () => {
 
               if (retryingAttempts === 2) {
                 yield* Deferred.succeed(retryingFinished, undefined);
+
                 return;
               }
 

@@ -33,6 +33,7 @@
   const SETTINGS = [{ id: "lookback" as const, label: "Graph lookback window" }];
 
   type Step = "settings" | "lookback";
+
   let step = $state<Step>("settings");
   let settingIndex = $state(0);
   let valueIndex = $state(0);
@@ -41,6 +42,7 @@
 
   $effect(() => {
     if (step === "settings") listEl?.focus();
+
     if (step === "lookback") {
       valueIndex = Math.max(
         0,
@@ -94,6 +96,7 @@
   function focusStep(currentStep: Step) {
     tick().then(() => {
       if (currentStep === "settings") listEl?.focus();
+
       if (currentStep === "lookback") valueListEl?.focus();
     });
   }

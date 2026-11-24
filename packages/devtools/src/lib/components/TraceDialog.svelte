@@ -68,6 +68,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (traces === null || traces.length === 0) return;
+
     if (e.key === "ArrowDown" || e.key === "j") {
       e.preventDefault();
       selectedIndex = moveListIndex(selectedIndex, "down", traces.length);

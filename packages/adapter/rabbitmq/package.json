@@ -65,8 +65,10 @@
   },
   "devDependencies": {
     "@testcontainers/rabbitmq": "^12.2.0",
+    "@testcontainers/toxiproxy": "^12.2.0",
     "@types/node": "^26.6.4",
-    "effect": "^4.0.3"
+    "effect": "^4.0.3",
+    "testcontainers": "^12.2.0"
   },
   "peerDependencies": {
     "effect": "^4.0.3"

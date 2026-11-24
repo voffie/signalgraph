@@ -6,8 +6,9 @@ import { Effect, Deferred, Option, Schema, Exit } from "effect";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
 
-import { Client, type OrderCreatedPayload } from "./fixtures/generated.ts";
+import type { OrderCreatedPayload } from "./fixtures/generated.ts";
 import { Analytics, Billing, OrderCreated } from "./fixtures/schema.ts";
+import { makeClient } from "./helpers.ts";
 
 const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
 
@@ -48,22 +49,58 @@ async function getQueueMessageCount(container: StartedRabbitMQContainer, queue: 
   }
 }
 
-const makeClient = Effect.gen(function* () {
-  const client = yield* Client;
-
-  yield* Effect.all(
-    [
-      client.analytics.handle(() => Effect.void),
-      client.billing.handle(() => Effect.void),
-      client.retryingAnalytics.handle(() => Effect.void),
-      client.noRetryAnalytics.handle(() => Effect.void),
-      client.dlqAnalytics.handle(() => Effect.void)
-    ],
-    { discard: true }
-  );
-
-  return client;
+const managementApi = (container: StartedRabbitMQContainer) => ({
+  base: `http://${container.getHost()}:${container.getMappedPort(15672)}/api`,
+  headers: { Authorization: `Basic ${Buffer.from("guest:guest").toString("base64")}` }
 });
+
+async function closeAllConnections(container: StartedRabbitMQContainer): Promise<void> {
+  const { base, headers } = managementApi(container);
+
+  // The management API reports connections a few seconds late, so wait until ours shows up.
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const connections = (await (await fetch(`${base}/connections`, { headers })).json()) as Array<{ name: string }>;
+
+    if (connections.length > 0) {
+      await Promise.all(
+        connections.map(({ name }) =>
+          fetch(`${base}/connections/${encodeURIComponent(name)}`, { method: "DELETE", headers })
+        )
+      );
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error("No RabbitMQ connection showed up in the management API");
+}
+
+async function deleteQueue(container: StartedRabbitMQContainer, queue: string): Promise<void> {
+  const { base, headers } = managementApi(container);
+  const response = await fetch(`${base}/queues/%2F/${encodeURIComponent(queue)}`, { method: "DELETE", headers });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete queue ${queue}: ${response.status} ${response.statusText}`);
+  }
+}
+
+// The management API reports connections a few seconds late, so wait until
+async function getConnectionNames(container: StartedRabbitMQContainer): Promise<Array<string>> {
+  const { base, headers } = managementApi(container);
+
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const connections = (await (await fetch(`${base}/connections`, { headers })).json()) as Array<{ name: string }>;
+
+    if (connections.length > 0) {
+      return connections.map(({ name }) => name).sort();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error("No RabbitMQ connection showed up in the management API");
+}
 
 describe("RabbitMQBroker", () => {
   let rabbitmq: StartedRabbitMQContainer;
@@ -846,6 +883,141 @@ describe("RabbitMQBroker", () => {
           const exit = yield* Effect.exit(client.orphanCreated.publish({ orderId: 1 }));
           expect(Exit.isFailure(exit)).toBe(true);
         }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
+      60000
+    );
+  });
+
+  describe("reliability", () => {
+    const fastReconnect = () =>
+      RabbitMQBroker({ url: rabbitmq.getAmqpUrl(), reconnect: { initialDelay: "100 millis", maxDelay: "1 second" } });
+
+    it.live(
+      "reconnects and rebuilds its consumers after the broker closes the connection",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* makeClient;
+          const received: Array<number> = [];
+          const first = yield* Deferred.make<void>();
+          const second = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(({ payload }) =>
+            Effect.gen(function* () {
+              received.push(payload.orderId);
+              yield* Deferred.succeed(payload.orderId === 1 ? first : second, undefined);
+            })
+          );
+
+          yield* client.start();
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(first);
+
+          yield* Effect.promise(() => closeAllConnections(rabbitmq));
+          yield* Effect.sleep("300 millis");
+
+          yield* client.orderCreated.publish({ orderId: 2 });
+          yield* Deferred.await(second);
+
+          expect(received).toEqual([1, 2]);
+        }).pipe(Effect.provide(fastReconnect())),
+      60000
+    );
+
+    it.live(
+      "interrupts a running handler when the connection is lost and redelivers its message",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* makeClient;
+          const broker = yield* Broker.Broker;
+
+          const started = yield* Deferred.make<void>();
+          const redelivered = yield* Deferred.make<void>();
+          let invocations = 0;
+          let interrupted = false;
+
+          yield* client.analytics.handle(() =>
+            Effect.suspend(() => {
+              invocations += 1;
+
+              if (invocations === 1) {
+                return Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Effect.never),
+                  Effect.ensuring(
+                    Effect.sync(() => {
+                      interrupted = true;
+                    })
+                  )
+                );
+              }
+
+              return Deferred.succeed(redelivered, undefined);
+            })
+          );
+
+          yield* client.start();
+          yield* client.orderCreated.publish({ orderId: 1 });
+          yield* Deferred.await(started);
+
+          yield* Effect.promise(() => closeAllConnections(rabbitmq));
+          yield* Deferred.await(redelivered);
+
+          expect(interrupted).toBe(true);
+          expect(invocations).toBe(2);
+
+          yield* broker.awaitIdle; // would hang if the dead session's in-flight entry had leaked
+        }).pipe(Effect.provide(fastReconnect())),
+      60000
+    );
+
+    it.effect("fails immediately on a malformed URL instead of retrying", () =>
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          Effect.gen(function* () {
+            yield* Broker.Broker;
+          }).pipe(Effect.provide(RabbitMQBroker({ url: "not a url" })))
+        );
+
+        expect(Exit.isFailure(exit)).toBe(true);
+      })
+    );
+
+    it.live(
+      "restarts only the consumer whose queue was deleted",
+      () =>
+        Effect.gen(function* () {
+          const client = yield* makeClient;
+          const analytics: Array<number> = [];
+          const billing: Array<number> = [];
+          const done = yield* Deferred.make<void>();
+
+          yield* client.analytics.handle(({ payload }) =>
+            Effect.gen(function* () {
+              analytics.push(payload.orderId);
+              yield* Deferred.succeed(done, undefined);
+            })
+          );
+          yield* client.billing.handle(({ payload }) =>
+            Effect.sync(() => {
+              billing.push(payload.orderId);
+            })
+          );
+
+          yield* client.start();
+          const before = yield* Effect.promise(() => getConnectionNames(rabbitmq));
+
+          yield* Effect.promise(() => deleteQueue(rabbitmq, "analytics"));
+          // Time for RabbitMQ to cancel the consumer and for it to be rebuilt. Messages published
+          // before then would miss the analytics queue, which does not exist for a moment.
+          yield* Effect.sleep("1500 millis");
+
+          yield* client.orderCreated.publish({ orderId: 2 });
+          yield* Deferred.await(done);
+
+          const after = yield* Effect.promise(() => getConnectionNames(rabbitmq));
+
+          expect(after).toEqual(before); // same connection, so no whole-session rebuild
+          expect(analytics).toEqual([2]);
+          expect(billing).toEqual([2]); // billing was untouched and got the message exactly once
+        }).pipe(Effect.provide(fastReconnect())),
       60000
     );
   });

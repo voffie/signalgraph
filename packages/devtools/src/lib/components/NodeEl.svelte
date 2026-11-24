@@ -42,6 +42,7 @@
   role="button"
   tabindex="0"
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+  onpointerdown={(e) => e.stopPropagation()}
   style={`transition:opacity 0.15s`}>
   {#if hovered && !selected}
     <rect

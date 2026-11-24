@@ -44,7 +44,7 @@
   let panning = $state(false);
   let overlay = $state<"command" | "connections" | "trace" | "settings" | null>(null);
 
-  let panRef: { x: number; y: number; tx: number; ty: number } = { x: 0, y: 0, tx: 0, ty: 0 };
+  let panRef = { x: 0, y: 0, tx: 0, ty: 0 };
   let svgEl: SVGSVGElement | undefined = $state();
   let canvasEl: HTMLElement | undefined = $state();
 
@@ -106,10 +106,11 @@
   }
 
   function onPointerDown(e: PointerEvent) {
-    if ((e.target as Element).closest(".graph-node")) return;
+    if (!svgEl) return;
+
     panning = true;
     panRef = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
-    (e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId);
+    svgEl.setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: PointerEvent) {

@@ -24,13 +24,17 @@ export const load: PageServerLoad = () => {
 export const actions: Actions = {
   save: async ({ request }) => {
     const form = await request.formData();
-    const currentName = (form.get("currentName") as string | null) ?? null;
-    const name = (form.get("name") as string)?.trim();
-    const vendor = form.get("vendor") as string;
-    const url = form.get("url") as string;
+    const currentName = form.get("currentName")?.toString() ?? null;
+    const name = form.get("name")?.toString().trim();
+    const vendor = form.get("vendor")?.toString();
+    const url = form.get("url")?.toString();
 
     if (!name) {
       return fail(400, { action: "save" as const, error: "Connection name is required." });
+    }
+
+    if (!vendor) {
+      return fail(400, { action: "save" as const, error: "Vendor is required." });
     }
 
     if (!isTraceVendor(vendor)) {
@@ -63,7 +67,7 @@ export const actions: Actions = {
 
   delete: async ({ request }) => {
     const form = await request.formData();
-    const name = form.get("name") as string;
+    const name = form.get("name")?.toString();
 
     if (!name) {
       return fail(400, { action: "delete" as const, error: "Missing connection name." });
@@ -76,7 +80,7 @@ export const actions: Actions = {
 
   setActive: async ({ request }) => {
     const form = await request.formData();
-    const name = form.get("name") as string;
+    const name = form.get("name")?.toString();
 
     if (!name) {
       return fail(400, { action: "setActive" as const, error: "Missing connection name." });

@@ -43,10 +43,17 @@ function generateTypeAliases(messages: Iterable<AnyMessage>) {
 function generateMessageGraph(data: SchemaData) {
   return [...data.messages.values()].map((message) => {
     const exportName = data.messageExportNames.get(message.name);
+
     const consumerNames = [...data.consumers.values()]
-      .filter((consumer) => consumer.message.name === message.name)
-      .map((consumer) => data.consumerExportNames.get(consumer.name))
+      .flatMap((consumer) => {
+        if (consumer.message.name !== message.name) return [];
+
+        const exportName = data.consumerExportNames.get(consumer.name);
+
+        return exportName === undefined ? [] : [exportName];
+      })
       .join(", ");
+
     return `"${message.name}": {
   definition: ${exportName},
   consumers: [${consumerNames}]

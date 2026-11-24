@@ -38,7 +38,7 @@ export function epath(src: PositionedGraphNode, tgt: PositionedGraphNode): strin
   return `M${sx} ${sy} C${sx + dx} ${sy} ${tx - dx} ${ty} ${tx} ${ty}`;
 }
 
-export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode): { x: number; y: number } {
+export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode) {
   const sx = src.x + NODE_WIDTH;
   const sy = src.y + NODE_HEIGHT / 2;
 

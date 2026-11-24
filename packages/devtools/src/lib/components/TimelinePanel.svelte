@@ -44,7 +44,7 @@
     return span.name;
   }
 
-  function getSpanPosition(span: TraceSpan): { left: number; width: number } {
+  function getSpanPosition(span: TraceSpan) {
     const left = Math.min(Math.max(((span.startTime - traceStart) / traceDuration) * 100, 0), 100);
     const naturalWidth = ((span.endTime - span.startTime) / traceDuration) * 100;
 

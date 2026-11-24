@@ -22,6 +22,7 @@ export function makeInFlight(): InFlight {
     if (active.size > 0) return;
     const ready = waiters;
     waiters = [];
+
     for (const waiter of ready) Deferred.doneUnsafe(waiter, Effect.void);
   };
 
@@ -29,7 +30,9 @@ export function makeInFlight(): InFlight {
     const release = () => {
       if (active.delete(release)) notifyIfIdle();
     };
+
     active.add(release);
+
     return release;
   };
 
@@ -44,6 +47,7 @@ export function makeInFlight(): InFlight {
           Effect.suspend(() => {
             if (active.size === 0) return Effect.void;
             waiters.push(waiter);
+
             return Deferred.await(waiter);
           })
         )

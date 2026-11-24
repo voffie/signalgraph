@@ -8,6 +8,7 @@ import { Network, type StartedNetwork } from "testcontainers";
 import { makeClient } from "./helpers.ts";
 
 type Proxy = Awaited<ReturnType<StartedToxiProxyContainer["createProxy"]>>;
+
 type BrokerOptions = Omit<Parameters<typeof RabbitMQBroker>[0], "url">;
 
 describe("RabbitMQBroker over an unreliable network", () => {
@@ -146,6 +147,7 @@ describe("RabbitMQBroker over an unreliable network", () => {
         for (let i = 0; i < 100 && !interrupted; i++) {
           yield* Effect.sleep("100 millis");
         }
+
         expect(interrupted).toBe(true);
 
         yield* Effect.promise(removeBlackhole);

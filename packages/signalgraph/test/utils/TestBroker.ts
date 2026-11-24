@@ -23,6 +23,7 @@ export const TestBroker = Layer.effect(
 
           return Effect.gen(function* () {
             const consumers = graph?.[message]?.consumers ?? [];
+
             for (const consumer of consumers) {
               for (const handler of handlers?.get(consumer.name) ?? []) {
                 yield* handler(data);

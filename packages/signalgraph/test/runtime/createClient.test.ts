@@ -47,6 +47,7 @@ const createHandledClient = () =>
     const client = yield* createTestClient();
     yield* client.analytics.handle(() => Effect.void);
     yield* client.billing.handle(() => Effect.void);
+
     return client;
   });
 
@@ -54,6 +55,7 @@ const HangingStopBroker = Layer.effect(
   Broker.Broker,
   Effect.gen(function* () {
     const base = yield* Broker.Broker;
+
     return { ...base, stop: Effect.never };
   })
 ).pipe(Layer.provide(TestBroker));
@@ -180,6 +182,7 @@ describe("createClient", () => {
       yield* Deferred.await(started);
 
       let idle = false;
+
       const idleFiber = yield* Effect.forkChild(
         broker.awaitIdle.pipe(
           Effect.tap(() =>
@@ -189,6 +192,7 @@ describe("createClient", () => {
           )
         )
       );
+
       yield* Effect.yieldNow;
       expect(idle).toBe(false);
 
@@ -307,6 +311,7 @@ describe("createClient", () => {
       );
 
       let idle = false;
+
       const idleFiber = yield* Effect.forkChild(
         broker.awaitIdle.pipe(
           Effect.tap(() =>
@@ -316,6 +321,7 @@ describe("createClient", () => {
           )
         )
       );
+
       yield* Effect.yieldNow;
       expect(idle).toBe(false); // handler still running after listen() returned
 

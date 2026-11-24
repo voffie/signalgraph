@@ -68,6 +68,7 @@ async function closeAllConnections(container: StartedRabbitMQContainer): Promise
           fetch(`${base}/connections/${encodeURIComponent(name)}`, { method: "DELETE", headers })
         )
       );
+
       return;
     }
 
@@ -255,6 +256,7 @@ describe("RabbitMQBroker", () => {
             orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
             analytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
           };
+
           type ServiceB = Runtime.RuntimeClient & {
             orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
             billing: Runtime.RuntimeConsumer<OrderCreatedPayload>;
@@ -474,6 +476,7 @@ describe("RabbitMQBroker", () => {
           for (const orderId of [1, 2, 3]) {
             yield* client.orderCreated.publish({ orderId });
           }
+
           yield* Deferred.await(started);
 
           yield* broker.stop;
@@ -667,6 +670,7 @@ describe("RabbitMQBroker", () => {
                 firstAttempts += 1;
                 throw new Error("handler defect"); // a defect, not a typed failure
               }
+
               return Deferred.succeed(second, payload.orderId);
             })
           );
@@ -679,8 +683,10 @@ describe("RabbitMQBroker", () => {
 
           // Message 1 needs its retry (about 100ms) before it reaches the DLQ, so poll.
           let dlqCount = 0;
+
           for (let i = 0; i < 50 && dlqCount !== 1; i++) {
             dlqCount = yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "dlqAnalytics.dlq"));
+
             if (dlqCount !== 1) yield* Effect.sleep("100 millis");
           }
 

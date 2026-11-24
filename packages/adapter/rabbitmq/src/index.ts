@@ -163,6 +163,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         if (!session.alive) return;
 
         session.alive = false;
+
         if (current === session) current = undefined;
 
         Queue.offerUnsafe(events, { kind: "lost", session, reason: session.errorReason ?? reason });
@@ -174,6 +175,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
       // is being rebuilt. Polling keeps this free of waiters that could be stranded.
       const currentPublisher = Effect.suspend(() => {
         const publisher = current?.publisher;
+
         return publisher !== undefined ? Effect.succeed(publisher) : Effect.fail(notConnected());
       }).pipe(
         Effect.retry(Schedule.spaced("100 millis")),
@@ -289,6 +291,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           // Messages RabbitMQ handed back as unroutable. The `return` event arrives before the
           // confirm of the same message, so the confirm callback can check this set.
           const returned = new Set<string>();
+
           const publishKey = (exchange: string, routingKey: string, messageId: unknown) =>
             `${exchange}|${routingKey}|${String(messageId)}`;
 
@@ -305,6 +308,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const publish: PublishFn = (exchange, routingKey, content, publishOptions) =>
             Effect.gen(function* () {
               const gate = drained;
+
               if (gate !== undefined) {
                 yield* Deferred.await(gate);
               }
@@ -326,6 +330,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                             new Runtime.ConnectionError({ cause: err, message: "Failed to confirm published message" })
                           )
                         );
+
                         return;
                       }
 
@@ -338,6 +343,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                             })
                           )
                         );
+
                         return;
                       }
 
@@ -373,6 +379,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
             if (!session.established) {
               failSession(session, reason);
+
               return;
             }
 
@@ -473,6 +480,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             }
 
             state = "closed";
+
             return consumerChannel.close();
           };
 
@@ -482,6 +490,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
             if (!session.established) {
               failSession(session, reason);
+
               return;
             }
 
@@ -502,6 +511,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const closeOnError = Effect.onError(() => Effect.tryPromise(() => closeChannel()).pipe(Effect.ignore));
 
           const prefetch = consumer.prefetch;
+
           if (prefetch !== undefined) {
             yield* Effect.tryPromise({
               try: () => consumerChannel.prefetch(prefetch),
@@ -551,6 +561,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                     state = "failed";
                     fail("consumer was cancelled by the broker");
                   }
+
                   return;
                 }
 
@@ -563,11 +574,13 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 if (isStopping) {
                   // Arrived after stop(): hand it straight back.
                   settleNow(() => consumerChannel.nack(msg, false, true));
+
                   return;
                 }
 
                 // Counted on receipt, so buffered messages are covered by awaitIdle too.
                 const leaveEntry = inFlight.enter();
+
                 const leave = () => {
                   pending.delete(leave);
                   leaveEntry();
@@ -590,6 +603,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               if (isStopping) {
                 // Received before stop() but never started: return it instead of handling it.
                 yield* requeue(msg);
+
                 return;
               }
 
@@ -644,12 +658,14 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                           [RETRY_ATTEMPT_HEADER]: nextAttempt
                         });
                         yield* ack(msg);
+
                         return;
                       }
 
                       if (consumer.dlq === true) {
                         yield* republish(`${consumer.name}.dlq`, msg);
                         yield* ack(msg);
+
                         return;
                       }
 
@@ -685,6 +701,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               }
 
               cancelled = true;
+
               return consumerChannel.cancel(consumerTag.consumerTag);
             },
             close: closeChannel,
@@ -817,6 +834,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
           const old = session.consumers.get(name);
           session.consumers.delete(name);
+
           if (old !== undefined) yield* discardConsumer(old);
 
           // Only this consumer's own exchange, queues and bindings are declared again.
@@ -886,6 +904,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           if (session === undefined) return Effect.void;
 
           session.alive = false;
+
           return closeConnection(session.conn);
         })
       );
@@ -911,6 +930,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
           // During an outage the session that comes back populates itself from startArgs.
           const session = current;
+
           if (session !== undefined) yield* populate(session);
         });
 

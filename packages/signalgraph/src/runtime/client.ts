@@ -1,7 +1,7 @@
 import { Duration, Effect, Layer, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
-import type { Consumer } from "../Consumer.ts";
+import type { AnyConsumer } from "../Consumer.ts";
 import type { Integration } from "../integration/index.ts";
 import { toPropertyName } from "../internal/naming.ts";
 import type { AnyMessage } from "../Message.ts";
@@ -25,7 +25,7 @@ export interface RuntimeConsumer<P> {
 
 type MessageNode = {
   definition: AnyMessage;
-  consumers: ReadonlyArray<Consumer<string, AnyMessage>>;
+  consumers: ReadonlyArray<AnyConsumer>;
 };
 
 export type MessageGraph = Record<string, MessageNode>;
@@ -144,8 +144,8 @@ export function createClient<T extends object>(graph: MessageGraph) {
       Effect.gen(function* () {
         const broker = yield* Broker.Broker;
 
-        yield* Validation.validateRuntime(graph);
         yield* Validation.validateConsumers(graph);
+        yield* Validation.validateHandlers(graph, handlers);
 
         yield* broker.start({
           graph,
@@ -157,11 +157,11 @@ export function createClient<T extends object>(graph: MessageGraph) {
       Effect.gen(function* () {
         const broker = yield* Broker.Broker;
         const gracePeriod = options?.gracePeriod ?? "30 seconds";
-      
+
         for (const integration of options?.integrations ?? []) {
           yield* Layer.build(integration);
         }
-      
+
         yield* (client as RuntimeClient).start();
 
         yield* waitForSignal;

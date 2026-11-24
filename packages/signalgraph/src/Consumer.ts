@@ -39,3 +39,5 @@ export const consumer = <const Name extends string, TMessage extends Message.Any
   ...(options.prefetch !== undefined && { prefetch: options.prefetch }),
   ...(options.retry !== undefined && { retry: options.retry })
 });
+
+export type AnyConsumer = Consumer<string, Message.AnyMessage>;

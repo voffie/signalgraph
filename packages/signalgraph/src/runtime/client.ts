@@ -1,7 +1,7 @@
 import { Duration, Effect, Layer, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
-import type { Consumer } from "../Consumer.ts";
+import type { AnyConsumer } from "../Consumer.ts";
 import type { Integration } from "../integration/index.ts";
 import { toPropertyName } from "../internal/naming.ts";
 import type { AnyMessage } from "../Message.ts";
@@ -25,7 +25,7 @@ export interface RuntimeConsumer<P> {
 
 type MessageNode = {
   definition: AnyMessage;
-  consumers: ReadonlyArray<Consumer<string, AnyMessage>>;
+  consumers: ReadonlyArray<AnyConsumer>;
 };
 
 export type MessageGraph = Record<string, MessageNode>;

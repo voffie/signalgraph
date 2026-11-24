@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path, SchemaRepresentation } from "effect";
+import { Codegen, Effect, FileSystem, Path, SchemaRepresentation } from "effect";
 
 import type { Config } from "../config/index.ts";
 import type { Consumer } from "../Consumer.ts";
@@ -14,10 +14,12 @@ const indent = (text: string, spaces = 2) =>
 
 function generateSchemaType(schema: MessageSchema) {
   const document = SchemaRepresentation.toRepresentation(schema.ast);
-  const multi = SchemaRepresentation.toMultiDocument(document);
-  const code = SchemaRepresentation.toCodeDocument(multi);
 
-  return code.codes[0].Type;
+  const mod = new Codegen.Module([]);
+
+  mod.addSchemas({ Message: document.representation }, { references: document.references });
+
+  return mod.print();
 }
 
 function generateMessageEntries(messages: Iterable<AnyMessage>) {

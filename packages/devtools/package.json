@@ -66,7 +66,7 @@
     "@types/better-sqlite3": "^9.6.0",
     "bits-ui": "^2.19.0",
     "clsx": "^2.1.1",
-    "effect": "^4.0.3",
+    "effect": "^4.1.5",
     "mode-watcher": "^1.1.0",
     "shadcn-svelte": "^1.7.0",
     "svelte": "^5.57.1",
@@ -80,6 +80,6 @@
     "vite": "^8.3.0"
   },
   "peerDependencies": {
-    "effect": "^4.0.3"
+    "effect": "^4.1.5"
   }
 }

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@signalgraph/adapter-rabbitmq": "workspace:^",
-    "effect": "^4.0.3",
+    "effect": "^4.1.5",
     "signalgraph": "workspace:^"
   }
 }

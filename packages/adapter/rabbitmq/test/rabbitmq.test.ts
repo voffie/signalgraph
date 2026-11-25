@@ -109,7 +109,7 @@ describe("RabbitMQBroker", () => {
 
   beforeAll(async () => {
     rabbitmq = await new RabbitMQContainer("rabbitmq:4.1-management").withExposedPorts(15672).start();
-  });
+  }, 120000);
 
   afterEach(async () => {
     const queues = await getExistingQueues(rabbitmq);

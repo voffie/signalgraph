@@ -61,9 +61,9 @@ describe("RabbitMQBroker over an unreliable network", () => {
   });
 
   afterAll(async () => {
-    await toxiproxy.stop();
-    await rabbitmq.stop();
-    await network.stop();
+    await toxiproxy?.stop();
+    await rabbitmq?.stop();
+    await network?.stop();
   });
 
   it.live(
@@ -144,8 +144,10 @@ describe("RabbitMQBroker over an unreliable network", () => {
         yield* Effect.promise(addBlackhole);
 
         // No close event ever fires. With a 1 second heartbeat the client gives up after about 2-3 seconds.
-        for (let i = 0; i < 100 && !interrupted; i++) {
+        for (let i = 0; i < 100; i++) {
           yield* Effect.sleep("100 millis");
+
+          if (interrupted) break;
         }
 
         expect(interrupted).toBe(true);

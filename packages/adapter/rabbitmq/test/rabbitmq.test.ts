@@ -60,12 +60,12 @@ async function closeAllConnections(container: StartedRabbitMQContainer): Promise
 
   // The management API reports connections a few seconds late, so wait until ours shows up.
   for (let attempt = 0; attempt < 30; attempt++) {
-    const connections = (await (await fetch(`${base}/connections`, { headers })).json()) as Array<{ name: string }>;
+    const connections = await (await fetch(`${base}/connections`, { headers })).json();
 
-    if (connections.length > 0) {
+    if (Array.isArray(connections) && connections.length > 0) {
       await Promise.all(
-        connections.map(({ name }) =>
-          fetch(`${base}/connections/${encodeURIComponent(name)}`, { method: "DELETE", headers })
+        connections.map((connection) =>
+          fetch(`${base}/connections/${encodeURIComponent(String(connection.name))}`, { method: "DELETE", headers })
         )
       );
 
@@ -92,10 +92,10 @@ async function getConnectionNames(container: StartedRabbitMQContainer): Promise<
   const { base, headers } = managementApi(container);
 
   for (let attempt = 0; attempt < 30; attempt++) {
-    const connections = (await (await fetch(`${base}/connections`, { headers })).json()) as Array<{ name: string }>;
+    const connections = await (await fetch(`${base}/connections`, { headers })).json();
 
-    if (connections.length > 0) {
-      return connections.map(({ name }) => name).sort();
+    if (Array.isArray(connections) && connections.length > 0) {
+      return connections.map((connection) => String(connection.name)).sort();
     }
 
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -133,10 +133,39 @@ describe("RabbitMQBroker", () => {
   });
 
   afterAll(async () => {
-    await rabbitmq.stop();
+    await rabbitmq?.stop();
   });
 
   describe("publish", () => {
+    it.live("delivers messages from external publishers without SignalGraph metadata", () =>
+      Effect.gen(function* () {
+        const client = yield* makeClient;
+        const received = yield* Deferred.make<Runtime.MessageMetadata>();
+
+        yield* client.analytics.handle(({ metadata }) => Deferred.succeed(received, metadata));
+        yield* client.start();
+
+        yield* Effect.promise(async () => {
+          const connection = await amqp.connect(rabbitmq.getAmqpUrl());
+
+          try {
+            const channel = await connection.createConfirmChannel();
+            channel.publish("order.created", "", Buffer.from(JSON.stringify({ orderId: 1 })), {
+              headers: { [RETRY_ATTEMPT_HEADER]: "invalid", traceContext: { traceId: "invalid" } }
+            });
+            await channel.waitForConfirms();
+          } finally {
+            await connection.close();
+          }
+        });
+
+        const metadata = yield* Deferred.await(received);
+
+        expect(metadata.retryAttempt).toBe(1);
+        expect(Option.isNone(metadata.traceContext)).toBe(true);
+      }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() })))
+    );
+
     it.effect(
       "delivers a published message",
       () =>
@@ -251,24 +280,25 @@ describe("RabbitMQBroker", () => {
       "each queue gets one non-competing consumer for multiple clients",
       () =>
         Effect.gen(function* () {
-          // Two "services" that share the order.created message but own different consumers.
-          type ServiceA = Runtime.RuntimeClient & {
-            orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
-            analytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-          };
+          const clientA = yield* Runtime.createClient(
+            {
+              "order.created": { definition: OrderCreated, consumers: [Analytics] }
+            },
+            ({ message, consumer }) => ({
+              orderCreated: message("order.created", OrderCreated),
+              analytics: consumer(Analytics)
+            })
+          );
 
-          type ServiceB = Runtime.RuntimeClient & {
-            orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
-            billing: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-          };
-
-          const clientA = yield* Runtime.createClient<ServiceA>({
-            "order.created": { definition: OrderCreated, consumers: [Analytics] }
-          });
-
-          const clientB = yield* Runtime.createClient<ServiceB>({
-            "order.created": { definition: OrderCreated, consumers: [Billing] }
-          });
+          const clientB = yield* Runtime.createClient(
+            {
+              "order.created": { definition: OrderCreated, consumers: [Billing] }
+            },
+            ({ message, consumer }) => ({
+              orderCreated: message("order.created", OrderCreated),
+              billing: consumer(Billing)
+            })
+          );
 
           const receivedA: Array<number> = [];
           const receivedB: Array<number> = [];
@@ -880,13 +910,12 @@ describe("RabbitMQBroker", () => {
       "fails a publish that no queue received",
       () =>
         Effect.gen(function* () {
-          type Orphan = Runtime.RuntimeClient & {
-            orphanCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
-          };
-
-          const client = yield* Runtime.createClient<Orphan>({
-            "orphan.created": { definition: OrderCreated, consumers: [] }
-          });
+          const client = yield* Runtime.createClient(
+            {
+              "orphan.created": { definition: OrderCreated, consumers: [] }
+            },
+            ({ message }) => ({ orphanCreated: message("orphan.created", OrderCreated) })
+          );
 
           yield* client.start();
 

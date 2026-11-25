@@ -17,16 +17,6 @@ export type OrderCreatedPayload = { readonly orderId: number };
 
 export type OrderCompletedPayload = { readonly orderId: number };
 
-export type Client = Runtime.RuntimeClient & {
-  orderCreated: Runtime.RuntimeMessage<OrderCreatedPayload>;
-  orderCompleted: Runtime.RuntimeMessage<OrderCompletedPayload>;
-  analytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-  billing: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-  retryingAnalytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-  noRetryAnalytics: Runtime.RuntimeConsumer<OrderCreatedPayload>;
-  dlqAnalytics: Runtime.RuntimeConsumer<OrderCompletedPayload>;
-};
-
 const messageGraph = {
   "order.created": {
     definition: OrderCreated,
@@ -38,4 +28,12 @@ const messageGraph = {
   }
 } satisfies Runtime.MessageGraph;
 
-export const Client = Runtime.createClient<Client>(messageGraph);
+export const Client = Runtime.createClient(messageGraph, ({ message, consumer }) => ({
+  orderCreated: message("order.created", OrderCreated),
+  orderCompleted: message("order.completed", OrderCompleted),
+  analytics: consumer(Analytics),
+  billing: consumer(Billing),
+  retryingAnalytics: consumer(RetryingAnalytics),
+  noRetryAnalytics: consumer(NoRetryAnalytics),
+  dlqAnalytics: consumer(DlqAnalytics)
+}));

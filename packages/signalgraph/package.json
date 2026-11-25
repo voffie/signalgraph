@@ -28,7 +28,6 @@
     "signalgraph": "./bin/signalgraph"
   },
   "files": [
-    "src/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
@@ -38,29 +37,19 @@
   "type": "module",
   "sideEffects": [],
   "exports": {
-    "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./config": "./src/config/index.ts",
     "./runtime": "./src/runtime/index.ts",
     "./broker": "./src/broker/index.ts",
-    "./integration": "./src/integration/index.ts",
-    "./*": "./src/*.ts",
-    "./internal/*": null,
-    "./index": null,
-    "./*/index": null
+    "./integration": "./src/integration/index.ts"
   },
   "publishConfig": {
     "exports": {
-      "./package.json": "./package.json",
       ".": "./dist/index.js",
-      "./*": "./dist/*.js",
       "./config": "./dist/config/index.js",
       "./runtime": "./dist/runtime/index.js",
       "./broker": "./dist/broker/index.js",
-      "./integration": "./dist/integration/index.js",
-      "./internal/*": null,
-      "./index": null,
-      "./*/index": null
+      "./integration": "./dist/integration/index.js"
     },
     "access": "public",
     "provenance": true

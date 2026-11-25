@@ -4,10 +4,11 @@
   "description": "RabbitMQ broker adapter for SignalGraph",
   "keywords": [
     "adapter",
+    "amqp",
     "effect",
+    "event-driven",
     "message-broker",
     "rabbitmq",
-    "testing",
     "typescript"
   ],
   "homepage": "https://github.com/voffie/signalgraph#readme",
@@ -25,7 +26,6 @@
     "directory": "packages/adapter/rabbitmq"
   },
   "files": [
-    "src/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
@@ -34,21 +34,11 @@
   "type": "module",
   "sideEffects": [],
   "exports": {
-    "./package.json": "./package.json",
-    ".": "./src/index.ts",
-    "./*": "./src/*.ts",
-    "./internal/*": null,
-    "./index": null,
-    "./*/index": null
+    ".": "./src/index.ts"
   },
   "publishConfig": {
     "exports": {
-      "./package.json": "./package.json",
-      ".": "./dist/index.js",
-      "./*": "./dist/*.js",
-      "./internal/*": null,
-      "./index": null,
-      "./*/index": null
+      ".": "./dist/index.js"
     },
     "access": "public",
     "provenance": true

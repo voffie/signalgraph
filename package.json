@@ -3,9 +3,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.packages.json && pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
-    "test": "pnpm build && vitest",
-    "coverage": "vitest --coverage",
+    "test": "pnpm --filter signalgraph check && pnpm test:run",
+    "test:run": "vitest run",
+    "coverage": "pnpm --filter signalgraph check && vitest run --coverage",
     "check": "tsc -b tsconfig.json && pnpm --filter @signalgraph/devtools check",
+    "check:examples": "pnpm -r --filter './examples/*' generate && pnpm exec tsc -p examples/adapter-rabbitmq --noEmit false --emitDeclarationOnly && pnpm exec tsc -p examples/otel --noEmit false --emitDeclarationOnly",
     "lint": "oxlint -f unix && oxfmt --check .",
     "lint-fix": "oxlint --fix && oxfmt .",
     "changeset-version": "changeset version",

@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { deserialize } from "$app/forms";
   import { refreshAll } from "$app/navigation";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import CheckIcon from "@lucide/svelte/icons/check";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import { Option, Schema } from "effect";
   import { tick } from "svelte";
 
   import { Button } from "#lib/components/ui/button/index.js";
@@ -26,6 +28,8 @@
   } = $props();
 
   type Step = "list" | "name" | "vendor" | "url";
+
+  const decodeSaveFailure = Schema.decodeUnknownOption(Schema.Struct({ error: Schema.String }));
 
   let step = $state<Step>("list");
   let selectedIndex = $state(0);
@@ -177,16 +181,27 @@
       formData.set("url", formUrl.trim());
 
       const res = await fetch("/settings?/save", { method: "POST", body: formData });
-      const result = await res.json();
+      const result = deserialize(await res.text());
 
       if (result.type === "failure") {
-        error = result.data?.error ?? "Something went wrong.";
+        error = Option.getOrElse(
+          Option.map(decodeSaveFailure(result.data), (failure) => failure.error),
+          () => "Cannot save the connection. Check the settings and try again."
+        );
+
+        return;
+      }
+
+      if (result.type === "error") {
+        error = "Cannot save the connection. Refresh the list before trying again.";
 
         return;
       }
 
       await refreshAll();
       step = "list";
+    } catch {
+      error = "Could not confirm whether the connection was saved. Refresh the list before trying again.";
     } finally {
       saving = false;
     }

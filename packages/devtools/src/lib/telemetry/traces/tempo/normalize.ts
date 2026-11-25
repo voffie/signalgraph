@@ -63,16 +63,17 @@ function normalizeSpan(span: TempoSpan): TraceSpan {
     name: span.name,
     startTime: normalizeTimestamp(span.startTimeUnixNano),
     endTime: normalizeTimestamp(span.endTimeUnixNano),
-    attributes: span.attributes.map(normalizeAttribute)
+    attributes: (span.attributes ?? []).map(normalizeAttribute)
   };
 }
 
-export function normalizeTrace(response: TempoResponse): Trace {
+/** Converts an OTLP trace into SignalGraph's graph inputs, rejecting mixed trace IDs. */
+export function normalizeTrace(response: typeof TempoResponse.Type): Trace {
   const spans: Array<TraceSpan> = [];
   const resourceAttributes: Array<Attribute> = [];
 
   for (const resourceSpan of response.trace.resourceSpans) {
-    resourceAttributes.push(...resourceSpan.resource.attributes.map(normalizeAttribute));
+    resourceAttributes.push(...(resourceSpan.resource?.attributes ?? []).map(normalizeAttribute));
 
     for (const scopeSpan of resourceSpan.scopeSpans) {
       for (const span of scopeSpan.spans) {
@@ -98,8 +99,9 @@ export function normalizeTrace(response: TempoResponse): Trace {
   };
 }
 
-export function normalizeSearchResponse(response: TempoSearchResponse): Array<TraceSummary> {
-  return response.traces.map((result) => ({
+/** Converts Tempo search results to SignalGraph summaries with millisecond timestamps. */
+export function normalizeSearchResponse(response: typeof TempoSearchResponse.Type): Array<TraceSummary> {
+  return (response.traces ?? []).map((result) => ({
     traceId: result.traceID,
     rootService: result.rootServiceName,
     rootOperation: result.rootTraceName,

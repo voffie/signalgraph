@@ -1,10 +1,11 @@
+import { Effect, Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TempoCollector } from "#lib/telemetry/traces/tempo/TempoCollector.js";
 
 const fetchMock = vi.fn();
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse<T>(body: T, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -70,9 +71,9 @@ describe("TempoCollector", () => {
 
     const collector = new TempoCollector("http://localhost:3200");
 
-    await expect(collector.getTrace("missing-trace")).resolves.toBeNull();
+    await expect(Effect.runPromise(collector.getTrace("missing-trace"))).resolves.toEqual(Option.none());
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3200/api/v2/traces/missing-trace");
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3200/api/v2/traces/missing-trace", expect.anything());
   });
 
   it("returns null when the latest-trace search finds no traces", async () => {
@@ -80,11 +81,11 @@ describe("TempoCollector", () => {
 
     const collector = new TempoCollector("http://localhost:3200");
 
-    await expect(collector.getLatestTrace(15 * 60)).resolves.toBeNull();
+    await expect(Effect.runPromise(collector.getLatestTrace(15 * 60))).resolves.toEqual(Option.none());
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    const searchUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    const searchUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
 
     expect(searchUrl.pathname).toBe("/api/search");
     expect(searchUrl.searchParams.get("q")).toBe("{} with (most_recent=true)");
@@ -106,13 +107,17 @@ describe("TempoCollector", () => {
 
     const collector = new TempoCollector("http://localhost:3200");
 
-    const trace = await collector.getLatestTrace(15 * 60);
+    const trace = Option.getOrThrow(await Effect.runPromise(collector.getLatestTrace(15 * 60)));
 
-    expect(trace?.traceId).toBe("74726163652d31");
-    expect(trace?.spans).toHaveLength(1);
+    expect(trace.traceId).toBe("74726163652d31");
+    expect(trace.spans).toHaveLength(1);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:3200/api/v2/traces/latest-trace-id");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3200/api/v2/traces/latest-trace-id",
+      expect.anything()
+    );
   });
 
   it("normalizes listed trace summaries and sends service filters to Tempo", async () => {
@@ -133,11 +138,13 @@ describe("TempoCollector", () => {
     const collector = new TempoCollector("http://localhost:3200");
 
     await expect(
-      collector.listTraces({
-        start: 100,
-        end: 200,
-        service: ["orders"]
-      })
+      Effect.runPromise(
+        collector.listTraces({
+          start: 100,
+          end: 200,
+          service: ['orders "worker"', "payments\\worker"]
+        })
+      )
     ).resolves.toEqual([
       {
         traceId: "trace-1",
@@ -148,23 +155,31 @@ describe("TempoCollector", () => {
       }
     ]);
 
-    const searchUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    const searchUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
 
     expect(searchUrl.searchParams.get("start")).toBe("100");
     expect(searchUrl.searchParams.get("end")).toBe("200");
-    expect(searchUrl.searchParams.get("q")).toBe('{ resource.service.name = "orders" }');
+    expect(searchUrl.searchParams.get("q")).toBe(
+      '{ (resource.service.name = "orders \\"worker\\"" || resource.service.name = "payments\\\\worker") }'
+    );
   });
 
-  it("throws when Tempo rejects a trace-list search", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({}, 500));
+  it.each([
+    [jsonResponse({}, 500), "Unavailable"],
+    [jsonResponse({}, 403), "RejectedRequest"],
+    [jsonResponse({ traces: [{ traceID: "missing-summary-fields" }] }), "InvalidResponse"]
+  ])("classifies trace-list failures as %s", async (response, reason) => {
+    fetchMock.mockResolvedValueOnce(response);
 
     const collector = new TempoCollector("http://localhost:3200");
 
     await expect(
-      collector.listTraces({
-        start: 100,
-        end: 200
-      })
-    ).rejects.toThrow("Tempo search failed: 500");
+      Effect.runPromise(
+        collector.listTraces({
+          start: 100,
+          end: 200
+        })
+      )
+    ).rejects.toMatchObject({ operation: "listTraces", reason });
   });
 });

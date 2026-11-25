@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { refreshAll } from "$app/navigation";
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -7,10 +8,12 @@
   import MaximizeIcon from "@lucide/svelte/icons/maximize";
   import MinusIcon from "@lucide/svelte/icons/minus";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import SearchXIcon from "@lucide/svelte/icons/search-x";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import WaypointsIcon from "@lucide/svelte/icons/waypoints";
   import { tick } from "svelte";
+  import { toast } from "svelte-sonner";
 
   import CommandMenu from "#lib/components/CommandMenu.svelte";
   import ConnectionsDialog from "#lib/components/ConnectionsDialog.svelte";
@@ -43,6 +46,7 @@
   let transform = $state({ x: 20, y: 55, scale: 0.76 });
   let panning = $state(false);
   let overlay = $state<"command" | "connections" | "trace" | "settings" | null>(null);
+  let refreshingTrace = $state(false);
 
   let panRef = { x: 0, y: 0, tx: 0, ty: 0 };
   let svgEl: SVGSVGElement | undefined = $state();
@@ -145,6 +149,20 @@
     }
   }
 
+  async function refreshTrace() {
+    if (refreshingTrace) return;
+
+    refreshingTrace = true;
+
+    try {
+      await refreshAll();
+    } catch {
+      toast.error("Could not refresh the trace. Check your connection to devtools and try again.");
+    } finally {
+      refreshingTrace = false;
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     const isModPressed = e.metaKey || e.ctrlKey;
 
@@ -187,6 +205,12 @@
     </div>
 
     <div class="flex items-center gap-1">
+      {#if data.hasActiveDataSource}
+        <Button variant="ghost" size="sm" disabled={refreshingTrace} onclick={refreshTrace}>
+          <RefreshCwIcon class={cn("size-3.5", refreshingTrace && "motion-safe:animate-spin")} aria-hidden="true" />
+          {refreshingTrace ? "Refreshing…" : data.error ? "Retry trace" : "Refresh trace"}
+        </Button>
+      {/if}
       <button
         onclick={() => (overlay = "command")}
         class="text-muted-foreground hover:text-foreground flex items-center gap-2 px-2 py-1.5 text-xs transition-colors">

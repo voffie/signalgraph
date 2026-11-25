@@ -1,13 +1,18 @@
 import type { Graph, GraphNode } from "./types";
 
+/** Graph node width in pixels, shared by layout and rendering. */
 export const NODE_WIDTH = 172;
+
+/** Graph node height in pixels, shared by layout and rendering. */
 export const NODE_HEIGHT = 76;
 
+/** A graph node with top-left canvas coordinates. */
 export interface PositionedGraphNode extends GraphNode {
   x: number;
   y: number;
 }
 
+/** Layers nodes by dependency depth, placing unresolved cycles on a fallback layer. */
 export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
   const remainingIncoming = new Map(graph.nodes.map((node) => [node.id, 0]));

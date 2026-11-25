@@ -1,3 +1,4 @@
+/** Moves selection within the list, clamping stale indices after the list changes. */
 export function moveListIndex(index: number, direction: "up" | "down", length: number): number {
   if (length <= 0) {
     return 0;

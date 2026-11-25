@@ -4,6 +4,7 @@
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import { Option, Schema } from "effect";
   import { tick } from "svelte";
 
   import { Button } from "#lib/components/ui/button/index.js";
@@ -29,6 +30,22 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
 
+  const decodeErrorResponse = Schema.decodeUnknownOption(
+    Schema.Struct({ message: Schema.String, requestId: Schema.OptionFromOptionalKey(Schema.String) })
+  );
+
+  const TraceSummarySchema = Schema.Struct({
+    traceId: Schema.String,
+    rootService: Schema.String,
+    rootOperation: Schema.String,
+    durationMs: Schema.Number,
+    startTime: Schema.Number
+  });
+
+  const TraceResponseSchema = Schema.Struct({ traces: Schema.Array(TraceSummarySchema) });
+  const decodeTraceResponse = Schema.decodeUnknownOption(TraceResponseSchema);
+  const traceLoadError = "Cannot read the trace list. Refresh the list and try again.";
+
   async function loadTraces() {
     loading = true;
     error = null;
@@ -39,17 +56,34 @@
       const response = await fetch("/api/traces");
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message ?? "Unable to load traces.");
+        const body = await response.json().catch(() => null);
+        const parsed = decodeErrorResponse(body);
+        error = Option.match(parsed, {
+          onNone: () => traceLoadError,
+          onSome: ({ message, requestId }) =>
+            Option.match(requestId, {
+              onNone: () => message,
+              onSome: (id) => `${message} Request ID: ${id}.`
+            })
+        });
+
+        return;
       }
 
-      const body = (await response.json()) as { traces: Array<TraceSummary> };
-      traces = body.traces;
+      const parsed = decodeTraceResponse(await response.json());
+
+      if (Option.isNone(parsed)) {
+        error = traceLoadError;
+
+        return;
+      }
+
+      traces = Array.from(parsed.value.traces);
 
       await tick();
       listEl?.focus();
-    } catch (cause) {
-      error = cause instanceof Error ? cause.message : "Unable to load traces.";
+    } catch {
+      error = traceLoadError;
     } finally {
       loading = false;
     }

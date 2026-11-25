@@ -1,6 +1,7 @@
 import { getAttribute } from "./attributes.js";
 import type { Graph, GraphEdge, GraphNode, Trace } from "./types.js";
 
+/** Connects SignalGraph publish and handler spans into a message-flow graph. */
 export function buildGraph(trace: Trace): Graph {
   const nodes = new Map<string, GraphNode>();
   const edges = new Map<string, GraphEdge>();

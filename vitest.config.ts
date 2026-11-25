@@ -2,40 +2,7 @@ import * as path from "node:path";
 
 import { defineConfig, mergeConfig, type ViteUserConfig } from "vitest/config";
 
-const project = (
-  name: string,
-  directory: string,
-  include: boolean = true,
-  config: ViteUserConfig = {},
-  projectExclude?: ReadonlyArray<string>,
-  projectInclude?: ReadonlyArray<string>
-) => {
-  if (!include) {
-    return [];
-  }
-
-  const cfg = mergeConfig(
-    {
-      root: directory,
-      test: { name }
-    },
-    config
-  );
-
-  const merged = mergeConfig(shared, cfg);
-
-  if (projectExclude !== undefined) {
-    merged.test!.exclude = [...projectExclude];
-  }
-
-  if (projectInclude !== undefined) {
-    merged.test!.include = [...projectInclude];
-  }
-
-  return [merged];
-};
-
-export const exclude = ["**/.*/**", "**/node_modules/**", "**/dist/**", "**/*.config.*", "**/vitest.*"];
+const exclude = ["**/.*/**", "**/node_modules/**", "**/dist/**", "**/*.config.*", "**/vitest.*"];
 
 const shared: ViteUserConfig = {
   server: {
@@ -48,10 +15,9 @@ const shared: ViteUserConfig = {
   },
   test: {
     exclude,
-    passWithNoTests: true,
     setupFiles: [path.join(import.meta.dirname, "vitest.setup.ts")],
     sequence: {
-      concurrent: true
+      concurrent: false
     },
     include: ["test/**/*.test.ts"],
     coverage: {
@@ -63,32 +29,15 @@ const shared: ViteUserConfig = {
   }
 };
 
+const project = (name: string, root: string, include = ["test/**/*.test.ts"]) =>
+  mergeConfig(shared, { root, test: { name, include } });
+
 export default defineConfig({
   test: {
-    passWithNoTests: true,
     projects: [
-      ...project("signalgraph", "packages/signalgraph", true, {
-        test: {
-          sequence: {
-            concurrent: false
-          }
-        }
-      }),
-      ...project("@signalgraph/devtools", "packages/devtools", true, {
-        test: {
-          include: ["src/lib/test/**/*.test.ts"],
-          sequence: {
-            concurrent: false
-          }
-        }
-      }),
-      ...project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq", true, {
-        test: {
-          sequence: {
-            concurrent: false
-          }
-        }
-      })
+      project("signalgraph", "packages/signalgraph"),
+      project("@signalgraph/devtools", "packages/devtools", ["src/lib/test/**/*.test.ts"]),
+      project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq")
     ]
   }
 });

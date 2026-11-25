@@ -6,13 +6,7 @@
       "path": "tsconfig.packages.json"
     }
   ],
-  "include": [
-    "**/vitest.*.ts",
-    "./packages/*/test/**/*.ts",
-    "./packages/*/test/**/*.json",
-    "./packages/**/test/**/*.ts",
-    "./packages/**/test/**/*.json"
-  ],
+  "include": ["**/vitest.*.ts", "./packages/**/test/**/*.ts", "./packages/**/test/**/*.json"],
   "exclude": ["**/node_modules/**", "**/dist/**", "packages/devtools/**"],
   "compilerOptions": {
     "rootDir": ".",
@@ -20,12 +14,6 @@
     "erasableSyntaxOnly": false,
     "resolveJsonModule": true,
     "types": ["node"],
-    "paths": {
-      "signalgraph": ["./packages/signalgraph/src/index.ts"],
-      "signalgraph/*": ["./packages/signalgraph/src/*.ts"],
-      "@signalgraph/adapter-rabbitmq": ["./packages/adapter/rabbitmq/src/index.ts"],
-      "@signalgraph/adapter-rabbitmq/*": ["./packages/adapter/rabbitmq/src/*.ts"]
-    },
     "plugins": [
       {
         "name": "@effect/language-service",

@@ -1,6 +1,6 @@
 import { withSpanContext } from "@effect/opentelemetry/OtelTracer";
 import * as amqp from "amqplib";
-import { Deferred, Duration, Effect, Fiber, Layer, Predicate, Queue, Result, Schedule, Schema } from "effect";
+import { Deferred, Duration, Effect, Fiber, Layer, Option, Predicate, Queue, Result, Schedule, Schema } from "effect";
 import type { AnyConsumer, RetryPolicy } from "signalgraph";
 import * as Broker from "signalgraph/broker";
 import * as Runtime from "signalgraph/runtime";
@@ -21,6 +21,20 @@ type RabbitMQOptions = {
 };
 
 const RETRY_ATTEMPT_HEADER = "signalgraph-retry-attempt";
+const decodeMessageId = Schema.decodeUnknownOption(Schema.String);
+const decodeRetryAttempt = Schema.decodeUnknownOption(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)));
+
+const decodeTraceContext = Schema.decodeUnknownOption(
+  Schema.Struct({
+    traceId: Schema.String.check(Schema.isPattern(/^(?!0{32}$)[0-9a-f]{32}$/i)),
+    spanId: Schema.String.check(Schema.isPattern(/^(?!0{16}$)[0-9a-f]{16}$/i)),
+    traceFlags: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 255 })),
+    isRemote: Schema.optionalKey(Schema.Boolean)
+  })
+);
+
+const decodePayload = Schema.decodeEffect(Schema.fromJsonString(Schema.Unknown));
+const encodePayload = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 function retryDelay(policy: RetryPolicy, attempt: number) {
   switch (policy.type) {
@@ -39,6 +53,7 @@ function retryDelay(policy: RetryPolicy, attempt: number) {
 }
 
 // Message only: errors can carry connection details, and credentials must never be logged.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Node event emitters supply untrusted error values.
 const errorMessage = (error: unknown) => (Predicate.isError(error) ? error.message : String(error));
 
 type Delivery = { readonly msg: amqp.ConsumeMessage; readonly leave: () => void };
@@ -62,12 +77,12 @@ type Entry = {
 
 type ConsumerHandle = {
   /** Idempotent. Stops new deliveries. Does nothing unless the channel is healthy. */
-  readonly cancel: () => Promise<unknown>;
+  readonly cancel: () => Promise<void>;
   /** Idempotent. Closes the channel, so the broker requeues every unacked message. */
   readonly close: () => Promise<void>;
   /** Releases the in-flight entries of this consumer only. */
   readonly release: () => void;
-  readonly loop: Fiber.Fiber<unknown, unknown>;
+  readonly loop: Fiber.Fiber<never>;
 };
 
 /** Everything tied to one connection. Replaced as a whole when the connection dies. */
@@ -92,6 +107,21 @@ type SessionEvent =
 
 const closeConnection = (conn: Connection) => Effect.tryPromise(() => conn.close()).pipe(Effect.ignore);
 
+const parseTimeout = (field: string, input: Duration.Input) =>
+  Effect.gen(function* () {
+    const duration = Duration.fromInput(input);
+
+    if (Option.isSome(duration) && Duration.isFinite(duration.value) && Duration.toMillis(duration.value) > 0) {
+      return duration.value;
+    }
+
+    return yield* new Runtime.InitializationError({
+      cause: undefined,
+      message: `Cannot configure RabbitMQ. Set ${field} to a positive finite duration.`
+    });
+  });
+
+/** Connects to RabbitMQ and provides scoped publishing, consumption, and reconnection. */
 export function RabbitMQBroker(options: RabbitMQOptions) {
   return Layer.effect(
     Broker.Broker,
@@ -128,23 +158,28 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
       const connectionUrl = parsedUrl.toString();
       const host = parsedUrl.host; // hostname and port, no credentials
 
-      const maxDelay = Duration.fromInputUnsafe(options.reconnect?.maxDelay ?? "30 seconds");
-      const publishWait = Duration.fromInputUnsafe(options.publishWaitTimeout ?? "30 seconds");
+      const maxDelay = yield* parseTimeout("reconnect.maxDelay", options.reconnect?.maxDelay ?? "30 seconds");
+      const initialDelay = yield* parseTimeout("reconnect.initialDelay", options.reconnect?.initialDelay ?? "1 second");
+      const publishWait = yield* parseTimeout("publishWaitTimeout", options.publishWaitTimeout ?? "30 seconds");
+      const connectTimeout = yield* parseTimeout("connectTimeout", options.connectTimeout ?? "10 seconds");
+      const factor = options.reconnect?.factor ?? 2;
+
+      if (!Number.isFinite(factor) || factor < 1) {
+        return yield* new Runtime.InitializationError({
+          cause: undefined,
+          message: "Cannot configure RabbitMQ. Set reconnect.factor to a finite number of at least 1."
+        });
+      }
 
       // Used for the first connection, reconnects, consumer restarts and publish channel rebuilds.
-      const reconnectSchedule = Schedule.exponential(
-        options.reconnect?.initialDelay ?? "1 second",
-        options.reconnect?.factor ?? 2
-      ).pipe(
+      const reconnectSchedule = Schedule.exponential(initialDelay, factor).pipe(
         Schedule.modifyDelay((meta) => Effect.succeed(Duration.min(meta.output, maxDelay))),
         Schedule.jittered
       );
 
-      const connectTimeout = Duration.fromInputUnsafe(options.connectTimeout ?? "10 seconds");
-
       // ---- State ----
 
-      const inFlight = Broker.makeInFlight();
+      const inFlight = Broker.trackBrokerDeliveries();
       const events = yield* Queue.unbounded<SessionEvent>();
       let isStopping = false;
       let current: Session | undefined;
@@ -188,14 +223,23 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       const deliver = ({ message, data }: { message: string; data: Broker.BrokerMessage }) =>
         Effect.gen(function* () {
-          const json = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(data.payload);
+          const json = yield* encodePayload(data.payload).pipe(
+            Effect.catchTag("SchemaError", (cause) =>
+              Effect.fail(
+                new Runtime.InvalidPayloadError({
+                  cause,
+                  message: `Cannot publish "${message}" to RabbitMQ. Use a message schema that encodes its payload as JSON.`
+                })
+              )
+            )
+          );
 
           yield* publishConfirmed(message, "", Buffer.from(json, "utf-8"), {
             messageId: data.metadata.messageId,
             correlationId: data.metadata.correlationId,
             persistent: true,
             headers: {
-              traceContext: data.metadata.traceContext,
+              ...(Option.isSome(data.metadata.traceContext) && { traceContext: data.metadata.traceContext.value }),
               [RETRY_ATTEMPT_HEADER]: data.metadata.retryAttempt
             }
           });
@@ -227,7 +271,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             // and an unhandled 'error' event can crash the process.
             channel.on("error", () => undefined);
 
-            const declare = (message: string, run: () => Promise<unknown>) =>
+            const declare = <A>(message: string, run: () => Promise<A>) =>
               Effect.tryPromise({
                 try: run,
                 catch: (cause) =>
@@ -248,8 +292,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   channel.bindQueue(consumer.name, messageName, "")
                 );
 
-                if (consumer.retry !== undefined) {
-                  for (let attempt = 1; attempt < consumer.retry.maxAttempts; attempt++) {
+                const retry = consumer.retry;
+
+                if (retry !== undefined) {
+                  for (let attempt = 1; attempt < retry.maxAttempts; attempt++) {
                     const queue = `${consumer.name}.retry.${attempt + 1}`;
 
                     yield* declare(`Failed to create retry queue "${queue}"`, () =>
@@ -257,7 +303,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                         durable: true,
                         deadLetterExchange: "",
                         deadLetterRoutingKey: consumer.name,
-                        messageTtl: retryDelay(consumer.retry!, attempt)
+                        messageTtl: retryDelay(retry, attempt)
                       })
                     );
                   }
@@ -292,8 +338,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           // confirm of the same message, so the confirm callback can check this set.
           const returned = new Set<string>();
 
-          const publishKey = (exchange: string, routingKey: string, messageId: unknown) =>
-            `${exchange}|${routingKey}|${String(messageId)}`;
+          const publishKey = (exchange: string, routingKey: string, messageId: Option.Option<string>) =>
+            JSON.stringify([exchange, routingKey, Option.getOrNull(messageId)]);
 
           // Backpressure: publish() returned false, so new publishes wait until the channel drains.
           let drained: Deferred.Deferred<void> | undefined;
@@ -314,7 +360,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               }
 
               yield* Effect.callback<void, Runtime.ConnectionError>((resume) => {
-                const key = publishKey(exchange, routingKey, publishOptions.messageId);
+                const key = publishKey(exchange, routingKey, Option.fromUndefinedOr(publishOptions.messageId));
 
                 try {
                   const accepted = channel.publish(
@@ -362,7 +408,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           let errorReason: string | undefined;
 
           channel.on("return", (msg) => {
-            returned.add(publishKey(msg.fields.exchange, msg.fields.routingKey, msg.properties.messageId));
+            returned.add(
+              publishKey(msg.fields.exchange, msg.fields.routingKey, decodeMessageId(msg.properties.messageId))
+            );
           });
           channel.on("drain", releaseGate);
           channel.on("error", (err) => {
@@ -508,7 +556,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           });
 
           // Whatever fails below must not leave this channel open.
-          const closeOnError = Effect.onError(() => Effect.tryPromise(() => closeChannel()).pipe(Effect.ignore));
+          const closeOnError = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+            Effect.onError(effect, () => Effect.tryPromise(() => closeChannel()).pipe(Effect.ignore));
 
           const prefetch = consumer.prefetch;
 
@@ -545,7 +594,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const discard = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.nack(msg, false, false));
 
           // Retry and DLQ settle the same way: confirmed copy first, ack of the original after.
-          const republish = (routingKey: string, msg: amqp.ConsumeMessage, headers: Record<string, unknown> = {}) =>
+          const republish = (routingKey: string, msg: amqp.ConsumeMessage, headers: amqp.MessagePropertyHeaders = {}) =>
             publishConfirmed("", routingKey, msg.content, {
               ...msg.properties,
               persistent: true,
@@ -607,17 +656,20 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                 return;
               }
 
-              const metadata = Runtime.createConsumeMetadata({
-                messageId: msg.properties.messageId ?? "",
-                correlationId: msg.properties.correlationId ?? "",
-                retryAttempt: msg.properties.headers?.[RETRY_ATTEMPT_HEADER],
-                traceContext: msg.properties.headers?.traceContext
-              });
+              const traceContext = decodeTraceContext(msg.properties.headers?.traceContext);
+
+              const metadata: Runtime.MessageMetadata = {
+                messageId: Option.getOrElse(decodeMessageId(msg.properties.messageId), () => ""),
+                correlationId: Option.getOrElse(decodeMessageId(msg.properties.correlationId), () => ""),
+                retryAttempt: Option.getOrElse(
+                  decodeRetryAttempt(msg.properties.headers?.[RETRY_ATTEMPT_HEADER]),
+                  () => 1
+                ),
+                traceContext
+              };
 
               yield* Effect.gen(function* () {
-                const payload = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))(
-                  msg.content.toString("utf-8")
-                );
+                const payload = yield* decodePayload(msg.content.toString("utf-8"));
 
                 const dispatch = Effect.gen(function* () {
                   for (const handler of consumerHandlers) {
@@ -632,13 +684,14 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                       "signalgraph.message.name": messageName,
                       "signalgraph.consumer.name": consumer.name,
                       "signalgraph.message.id": metadata.messageId,
-                      "signalgraph.correlation.id": metadata.correlationId
+                      "signalgraph.correlation.id": metadata.correlationId,
+                      "signalgraph.retry.attempt": metadata.retryAttempt
                     }
                   })
                 );
 
-                if (metadata.traceContext) {
-                  yield* withSpanContext(dispatch, metadata.traceContext);
+                if (Option.isSome(metadata.traceContext)) {
+                  yield* withSpanContext(dispatch, metadata.traceContext.value);
                 } else {
                   yield* dispatch;
                 }
@@ -653,11 +706,22 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
                       const nextAttempt = metadata.retryAttempt + 1;
 
+                      const delivery = {
+                        message: messageName,
+                        consumer: consumer.name,
+                        messageId: metadata.messageId,
+                        correlationId: metadata.correlationId,
+                        retryAttempt: metadata.retryAttempt
+                      };
+
                       if (consumer.retry !== undefined && nextAttempt <= consumer.retry.maxAttempts) {
                         yield* republish(`${consumer.name}.retry.${nextAttempt}`, msg, {
                           [RETRY_ATTEMPT_HEADER]: nextAttempt
                         });
                         yield* ack(msg);
+                        yield* Effect.logDebug("RabbitMQ confirmed a retry copy").pipe(
+                          Effect.annotateLogs({ ...delivery, nextAttempt })
+                        );
 
                         return;
                       }
@@ -665,15 +729,28 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                       if (consumer.dlq === true) {
                         yield* republish(`${consumer.name}.dlq`, msg);
                         yield* ack(msg);
+                        yield* Effect.logWarning("RabbitMQ confirmed a dead-letter copy after processing failed").pipe(
+                          Effect.annotateLogs(delivery)
+                        );
 
                         return;
                       }
 
                       yield* discard(msg);
+                      yield* Effect.logWarning(
+                        "RabbitMQ delivery processing failed with no retry or dead-letter route"
+                      ).pipe(Effect.annotateLogs(delivery));
                     }).pipe(
                       // The retry/DLQ copy could not be confirmed, so keep the original: put it back.
-                      Effect.catchCause((settleCause) =>
-                        Effect.logError("Failed to settle failed message; returning it to the queue", settleCause).pipe(
+                      Effect.catchTag("ConnectionError", () =>
+                        Effect.logError(
+                          "RabbitMQ could not confirm the retry or dead-letter copy. Attempting to requeue the original."
+                        ).pipe(
+                          Effect.annotateLogs({
+                            consumer: consumer.name,
+                            messageId: metadata.messageId,
+                            retryAttempt: metadata.retryAttempt
+                          }),
                           Effect.andThen(Effect.sleep("1 second")),
                           Effect.andThen(requeue(msg))
                         )
@@ -702,7 +779,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
               cancelled = true;
 
-              return consumerChannel.cancel(consumerTag.consumerTag);
+              return consumerChannel.cancel(consumerTag.consumerTag).then(() => undefined);
             },
             close: closeChannel,
             release: () => {
@@ -747,6 +824,13 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               session.consumers.set(consumer.name, yield* startConsumer({ session, entry }));
             }
           }
+
+          yield* Effect.logInfo("RabbitMQ topology declared and consumers registered").pipe(
+            Effect.annotateLogs({
+              messages: Object.keys(args.graph).length,
+              activeConsumers: session.consumers.size
+            })
+          );
         });
 
       // Closes a consumer's channel first, so the broker requeues its unacked messages and an
@@ -879,7 +963,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           );
         });
 
-      const handleEvent = (event: SessionEvent): Effect.Effect<void, unknown> => {
+      const handleEvent = (event: SessionEvent) => {
         switch (event.kind) {
           case "lost":
             return handleLost(event);

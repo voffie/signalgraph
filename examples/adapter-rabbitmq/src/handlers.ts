@@ -13,12 +13,7 @@ const program = Effect.gen(function* () {
     })
   );
 
-  yield* client.shipping.handle(({ payload }) =>
-    Effect.gen(function* () {
-      yield* Console.log("Shipping received: ", payload);
-      yield* client.orderCreated.publish({ orderId: payload.orderId + 1 });
-    })
-  );
+  yield* client.shipping.handle(({ payload }) => Console.log("Shipping received: ", payload));
 
   yield* client.listen();
 });

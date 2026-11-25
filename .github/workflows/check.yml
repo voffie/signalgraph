@@ -35,19 +35,8 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm check
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - uses: ./.github/actions/setup
-      - run: pnpm build
-
   test:
-    name: Test
+    name: Build and Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -55,16 +44,18 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/setup
-      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm check:examples
+      - run: pnpm test:run
 
   check:
     name: Check
-    needs: [static, types, build, test]
+    needs: [static, types, test]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
       - name: Verify all jobs passed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        if: needs.static.result != 'success' || needs.types.result != 'success' || needs.test.result != 'success'
         run: exit 1

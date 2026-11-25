@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "apps/docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/docs-check.yml"
       - ".github/actions/setup/**"
 

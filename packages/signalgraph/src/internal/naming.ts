@@ -20,6 +20,7 @@ function ensureValidIdentifier(text: string) {
   return text;
 }
 
+/** Converts a message or consumer name to its generated client property. */
 export function toPropertyName(text: string) {
   const parts = splitIdentifier(text);
 
@@ -30,6 +31,7 @@ export function toPropertyName(text: string) {
   return ensureValidIdentifier(identifier);
 }
 
+/** Converts a message name to the prefix of its exported payload type. */
 export function toTypeName(text: string) {
   const identifier = splitIdentifier(text).map(capitalize).join("");
 

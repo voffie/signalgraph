@@ -1,7 +1,14 @@
-import { Data, type Duration } from "effect";
+import { Data, Schema, type Duration } from "effect";
 
-import type * as Message from "./Message.ts";
+import * as Message from "./Message.ts";
 
+/** The consumer fields needed to link an imported declaration to its message during generation. */
+export const ConsumerDeclaration = Schema.TaggedStruct("Consumer", {
+  name: Schema.NonEmptyString,
+  message: Message.MessageDeclaration
+});
+
+/** Controls redelivery timing after a consumer handler fails. */
 export type RetryPolicy =
   | {
       readonly type: "fixed";
@@ -16,6 +23,7 @@ export type RetryPolicy =
       readonly maxAttempts: number;
     };
 
+/** Associates a named handler with a message definition and delivery policy. */
 export class Consumer<Name extends string, TMessage extends Message.AnyMessage> extends Data.TaggedClass("Consumer")<{
   readonly name: Name;
   readonly message: TMessage;
@@ -24,6 +32,7 @@ export class Consumer<Name extends string, TMessage extends Message.AnyMessage> 
   readonly dlq?: boolean;
 }> {}
 
+/** Declares a consumer for a message definition. */
 export const consumer = <const Name extends string, TMessage extends Message.AnyMessage>(options: {
   readonly name: Name;
   readonly message: TMessage;
@@ -39,4 +48,5 @@ export const consumer = <const Name extends string, TMessage extends Message.Any
     ...(options.retry !== undefined && { retry: options.retry })
   });
 
+/** Represents a consumer declaration when its name or message is not statically known. */
 export type AnyConsumer = Consumer<string, Message.AnyMessage>;

@@ -1,26 +1,29 @@
-import { Duration, Effect, Layer, Schema } from "effect";
+import { Duration, Effect, Layer, Option, Schema } from "effect";
 
 import * as Broker from "../broker/index.ts";
-import type { AnyConsumer } from "../Consumer.ts";
+import type { AnyConsumer, Consumer } from "../Consumer.ts";
 import type { Integration } from "../integration/index.ts";
 import { toPropertyName } from "../internal/naming.ts";
-import type { AnyMessage } from "../Message.ts";
-import { InvalidPayloadError } from "./errors.ts";
+import type { AnyMessage, Message } from "../Message.ts";
+import { InvalidPayloadError, ValidationError, type ConnectionError, type InitializationError } from "./errors.ts";
 import * as Metadata from "./metadata.ts";
 import { CurrentMessageMetadata } from "./references.ts";
 import * as Validation from "./validation.ts";
 
+/** Publishes a payload validated by the message definition that created this resource. */
 export interface RuntimeMessage<P> {
-  publish(payload: P): Effect.Effect<void>;
+  /** Encodes and delivers the payload to the configured broker. */
+  publish(payload: P): Effect.Effect<void, ConnectionError | InvalidPayloadError>;
 }
 
-type UserHandler<P> = (ctx: {
+type UserHandler<P, E> = (ctx: {
   readonly payload: P;
   readonly metadata: Metadata.MessageMetadata;
-}) => Effect.Effect<void, unknown>;
+}) => Effect.Effect<void, E>;
 
+/** Registers a handler for a decoded message payload. */
 export interface RuntimeConsumer<P> {
-  handle(handler: UserHandler<P>): Effect.Effect<void>;
+  handle<E>(handler: UserHandler<P, E>): Effect.Effect<void>;
 }
 
 type MessageNode = {
@@ -28,20 +31,29 @@ type MessageNode = {
   consumers: ReadonlyArray<AnyConsumer>;
 };
 
-export type MessageGraph = Record<string, MessageNode>;
+/** Describes the message and consumer topology supplied to a runtime client. */
+export type MessageGraph = Readonly<Record<string, MessageNode>>;
 
-interface ListenOptions {
+/** Configures process-signal handling for a running client. */
+export interface ListenOptions {
+  /** Layers scoped to the lifetime of the listener. Defaults to an empty list. */
   readonly integrations?: ReadonlyArray<Integration>;
+  /** Maximum time to drain on the first shutdown signal. Defaults to 30 seconds. */
   readonly gracePeriod?: Duration.Input;
 }
 
+/** Common lifecycle operations available on every generated SignalGraph client. */
 export type RuntimeClient = {
-  start(): Effect.Effect<void>;
-  listen(options?: ListenOptions): Effect.Effect<void>;
+  start(): Effect.Effect<void, ConnectionError | InitializationError | ValidationError>;
+  listen(options?: ListenOptions): Effect.Effect<void, ConnectionError | InitializationError | ValidationError>;
 };
 
-// Resolves on the next SIGINT or SIGTERM and removes its own listeners
-// (also on interruption), so it can be used once per shutdown stage.
+type ClientResources = {
+  readonly message: <P, E>(name: string, definition: Message<string, Schema.Codec<P, E>>) => RuntimeMessage<P>;
+  readonly consumer: <P, E>(definition: Consumer<string, Message<string, Schema.Codec<P, E>>>) => RuntimeConsumer<P>;
+};
+
+/** Resolves once for the next shutdown signal and always removes its process listeners. */
 const waitForSignal = Effect.callback<void>((resume) => {
   const onSignal = () => {
     process.removeListener("SIGINT", onSignal);
@@ -58,20 +70,110 @@ const waitForSignal = Effect.callback<void>((resume) => {
   });
 });
 
-export function createClient<T extends object>(graph: MessageGraph) {
-  return Effect.sync(() => {
-    const client: Record<string, unknown> = {};
+/**
+ * Builds a client with the configured broker. Resource payload types are inferred from the schemas.
+ * Generated modules bind each resource to its topology entry.
+ */
+export function createClient<Resources>(graph: MessageGraph, bind: (resources: ClientResources) => Resources) {
+  return Effect.gen(function* () {
+    yield* Validation.validateConsumers(graph);
+
+    const names = new Set(["start", "listen"]);
+
+    for (const [messageName, { definition, consumers }] of Object.entries(graph)) {
+      if (consumers.some((consumer) => consumer.message !== definition)) {
+        return yield* new ValidationError({
+          message: `Cannot create client for "${messageName}". Attach only consumers of the graph entry's message definition.`,
+          area: "graph"
+        });
+      }
+
+      for (const name of [messageName, ...consumers.map((consumer) => consumer.name)]) {
+        const property = toPropertyName(name);
+
+        if (names.has(property)) {
+          return yield* new ValidationError({
+            message: `Cannot create client because "${name}" maps to the reserved or duplicate property "${property}". Rename the message or consumer.`,
+            area: "graph"
+          });
+        }
+
+        names.add(property);
+      }
+    }
+
+    const broker = yield* Broker.Broker;
     const handlers: Broker.HandlerRegistry = new Map();
 
-    for (const [exportIdentifier, exportData] of Object.entries(graph)) {
-      client[toPropertyName(exportIdentifier)] = {
-        publish(payload: unknown) {
-          return Effect.gen(function* () {
-            const broker = yield* Broker.Broker;
+    const client: RuntimeClient = {
+      start: () =>
+        Effect.gen(function* () {
+          yield* Validation.validateHandlers(graph, handlers);
 
-            const encoded = yield* Schema.encodeUnknownEffect(exportData.definition.schema)(payload);
+          yield* broker.start({
+            graph,
+            handlers
+          });
+        }),
+      listen: (options?: ListenOptions) =>
+        Effect.gen(function* () {
+          const gracePeriod = Duration.fromInput(options?.gracePeriod ?? "30 seconds");
 
-            const metadata: Metadata.MessageMetadata = yield* Metadata.createPublishMetadata();
+          if (Option.isNone(gracePeriod)) {
+            return yield* new ValidationError({
+              area: "listen",
+              message: "Cannot listen with an invalid grace period. Set gracePeriod to a valid duration."
+            });
+          }
+
+          for (const integration of options?.integrations ?? []) {
+            yield* Layer.build(integration);
+          }
+
+          yield* client.start();
+          yield* waitForSignal;
+
+          const drain = Effect.gen(function* () {
+            yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
+
+            yield* broker.stop.pipe(
+              Effect.catchCause((cause) => Effect.logError("Failed to stop message consumers cleanly", cause))
+            );
+
+            yield* broker.awaitIdle.pipe(
+              Effect.timeout(gracePeriod.value),
+              Effect.catchTag("TimeoutError", () =>
+                Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
+              )
+            );
+          });
+
+          const forced = waitForSignal.pipe(
+            Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
+          );
+
+          yield* Effect.onExit(drain.pipe(Effect.race(forced)), () => broker.close);
+        }).pipe(Effect.scoped)
+    };
+
+    const bindMessage = <P, E>(name: string, definition: Message<string, Schema.Codec<P, E>>): RuntimeMessage<P> => {
+      const encode = Schema.encodeEffect(definition.schema);
+
+      return {
+        publish: (payload: P) =>
+          Effect.gen(function* () {
+            const encoded = yield* encode(payload).pipe(
+              Effect.catchTag("SchemaError", (cause) =>
+                Effect.fail(
+                  new InvalidPayloadError({
+                    cause,
+                    message: `Cannot publish "${name}". Correct the payload to match its message schema.`
+                  })
+                )
+              )
+            );
+
+            const metadata = yield* Metadata.createPublishMetadata();
 
             yield* Effect.annotateCurrentSpan({
               "signalgraph.message.id": metadata.messageId,
@@ -79,116 +181,62 @@ export function createClient<T extends object>(graph: MessageGraph) {
             });
 
             yield* broker.deliver({
-              message: exportIdentifier,
-              data: {
-                payload: encoded,
-                metadata
-              }
+              message: name,
+              data: { payload: encoded, metadata }
             });
           }).pipe(
             Effect.withSpan("signalgraph.publish", {
-              attributes: {
-                "signalgraph.message.name": exportIdentifier
-              }
+              attributes: { "signalgraph.message.name": name }
             })
-          );
-        }
+          )
       };
+    };
 
-      for (const consumer of exportData.consumers) {
-        client[consumer.name] = {
-          handle(handler: UserHandler<unknown>) {
-            return Effect.sync(() => {
-              const list = handlers.get(consumer.name) ?? [];
+    const bindConsumer = <P, E>(
+      consumer: Consumer<string, Message<string, Schema.Codec<P, E>>>
+    ): RuntimeConsumer<P> => {
+      const decode = Schema.decodeUnknownEffect(consumer.message.schema);
 
-              list.push((message) =>
-                Effect.gen(function* () {
-                  const decoded = yield* Schema.decodeUnknownEffect(exportData.definition.schema)(message.payload).pipe(
-                    Effect.mapError(
-                      (cause) =>
-                        new InvalidPayloadError({
-                          message: "Incoming payload does not match defined message schema",
-                          cause
-                        })
+      return {
+        handle: (handler) =>
+          Effect.sync(() => {
+            const list = handlers.get(consumer.name) ?? [];
+
+            list.push((message) =>
+              Effect.gen(function* () {
+                const decoded = yield* decode(message.payload).pipe(
+                  Effect.catchTag("SchemaError", (cause) =>
+                    Effect.fail(
+                      new InvalidPayloadError({
+                        message: `Cannot handle "${consumer.message.name}" in "${consumer.name}". Check that the publisher uses a compatible message schema.`,
+                        cause
+                      })
                     )
-                  );
+                  )
+                );
 
-                  return yield* Effect.provideService(
-                    handler({
-                      payload: decoded,
-                      metadata: message.metadata
-                    }),
-                    CurrentMessageMetadata,
-                    message.metadata
-                  ).pipe(
-                    Effect.withSpan("signalgraph.handler", {
-                      attributes: {
-                        "signalgraph.consumer.name": consumer.name,
-                        "signalgraph.message.name": consumer.message.name,
-                        "signalgraph.message.id": message.metadata.messageId,
-                        "signalgraph.correlation.id": message.metadata.correlationId
-                      }
-                    })
-                  );
-                })
-              );
+                return yield* Effect.provideService(
+                  handler({ payload: decoded, metadata: message.metadata }),
+                  CurrentMessageMetadata,
+                  Option.some(message.metadata)
+                ).pipe(
+                  Effect.withSpan("signalgraph.handler", {
+                    attributes: {
+                      "signalgraph.consumer.name": consumer.name,
+                      "signalgraph.message.name": consumer.message.name,
+                      "signalgraph.message.id": message.metadata.messageId,
+                      "signalgraph.correlation.id": message.metadata.correlationId
+                    }
+                  })
+                );
+              })
+            );
 
-              handlers.set(consumer.name, list);
-            });
-          }
-        };
-      }
-    }
+            handlers.set(consumer.name, list);
+          })
+      };
+    };
 
-    client.start = () =>
-      Effect.gen(function* () {
-        const broker = yield* Broker.Broker;
-
-        yield* Validation.validateConsumers(graph);
-        yield* Validation.validateHandlers(graph, handlers);
-
-        yield* broker.start({
-          graph,
-          handlers
-        });
-      });
-
-    client.listen = (options?: ListenOptions) =>
-      Effect.gen(function* () {
-        const broker = yield* Broker.Broker;
-        const gracePeriod = options?.gracePeriod ?? "30 seconds";
-
-        for (const integration of options?.integrations ?? []) {
-          yield* Layer.build(integration);
-        }
-
-        yield* (client as RuntimeClient).start();
-
-        yield* waitForSignal;
-
-        const drain = Effect.gen(function* () {
-          yield* Effect.logInfo("Shutdown signal received; stopping message consumers");
-
-          yield* broker.stop.pipe(
-            Effect.catchCause((cause) => Effect.logError("Failed to stop message consumers cleanly", cause))
-          );
-
-          yield* broker.awaitIdle.pipe(
-            Effect.timeout(Duration.fromInputUnsafe(gracePeriod)),
-            Effect.catchTag("TimeoutError", () =>
-              Effect.logWarning("Shutdown grace period elapsed; closing consumers with active handlers")
-            )
-          );
-        });
-
-        // Registered before `stop` starts, so a second signal is caught at any point of the drain.
-        const forced = waitForSignal.pipe(
-          Effect.andThen(Effect.logWarning("Second shutdown signal received; forcing shutdown"))
-        );
-
-        yield* Effect.onExit(drain.pipe(Effect.race(forced)), () => broker.close);
-      }).pipe(Effect.scoped);
-
-    return client as T;
+    return { ...bind({ message: bindMessage, consumer: bindConsumer }), ...client };
   });
 }

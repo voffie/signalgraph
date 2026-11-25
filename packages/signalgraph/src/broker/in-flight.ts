@@ -1,4 +1,4 @@
-import { Deferred, Effect } from "effect";
+import { Effect } from "effect";
 
 /**
  * Counts messages that have been accepted from the broker but not yet settled
@@ -14,16 +14,18 @@ export interface InFlight {
   readonly count: () => number;
 }
 
-export function makeInFlight(): InFlight {
+/** Creates one delivery settlement tracker for a broker instance. */
+export function trackBrokerDeliveries(): InFlight {
   const active = new Set<() => void>();
-  let waiters: Array<Deferred.Deferred<void>> = [];
+  const waiters = new Set<() => void>();
 
   const notifyIfIdle = () => {
     if (active.size > 0) return;
-    const ready = waiters;
-    waiters = [];
 
-    for (const waiter of ready) Deferred.doneUnsafe(waiter, Effect.void);
+    const ready = [...waiters];
+    waiters.clear();
+
+    for (const waiter of ready) waiter();
   };
 
   const enter = () => {
@@ -40,18 +42,14 @@ export function makeInFlight(): InFlight {
     for (const release of [...active]) release();
   };
 
-  const awaitIdle = Effect.suspend(() =>
-    active.size === 0
-      ? Effect.void
-      : Effect.flatMap(Deferred.make<void>(), (waiter) =>
-          Effect.suspend(() => {
-            if (active.size === 0) return Effect.void;
-            waiters.push(waiter);
+  const awaitIdle = Effect.callback<void>((resume) => {
+    if (active.size === 0) return resume(Effect.void);
 
-            return Deferred.await(waiter);
-          })
-        )
-  );
+    const notify = () => resume(Effect.void);
+    waiters.add(notify);
+
+    return Effect.sync(() => void waiters.delete(notify));
+  });
 
   return { enter, releaseAll, awaitIdle, count: () => active.size };
 }

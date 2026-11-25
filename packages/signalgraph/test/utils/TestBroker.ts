@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import * as Broker from "signalgraph/broker";
-import type * as Runtime from "signalgraph/runtime";
+import * as Runtime from "signalgraph/runtime";
 
 export const TestBroker = Layer.effect(
   Broker.Broker,
@@ -8,7 +8,7 @@ export const TestBroker = Layer.effect(
     let graph: Runtime.MessageGraph | undefined;
     let handlers: Broker.HandlerRegistry | undefined;
     let stopping = false;
-    const inFlight = Broker.makeInFlight();
+    const inFlight = Broker.trackBrokerDeliveries();
 
     return {
       deliver: ({ message, data }) =>
@@ -29,7 +29,16 @@ export const TestBroker = Layer.effect(
                 yield* handler(data);
               }
             }
-          }).pipe(Effect.ensuring(Effect.sync(leave)));
+          }).pipe(
+            Effect.mapError(
+              (cause) =>
+                new Runtime.InvalidPayloadError({
+                  cause,
+                  message: `In-memory delivery of "${message}" failed. Check its registered handler.`
+                })
+            ),
+            Effect.ensuring(Effect.sync(leave))
+          );
         }),
 
       start: ({ graph: nextGraph, handlers: nextHandlers }) =>

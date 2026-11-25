@@ -3,7 +3,7 @@ import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { consumer, message } from "signalgraph";
 import * as Broker from "signalgraph/broker";
-import { type RuntimeConsumer, type RuntimeMessage, type RuntimeClient, createClient } from "signalgraph/runtime";
+import { createClient } from "signalgraph/runtime";
 
 import { TestBroker } from "../utils/TestBroker.ts";
 
@@ -27,18 +27,19 @@ const billing = consumer({
 type Order = typeof OrderCreated.schema.Type;
 
 const createTestClient = () =>
-  createClient<
-    RuntimeClient & {
-      ordersCreated: RuntimeMessage<Order>;
-      billing: RuntimeConsumer<Order>;
-      analytics: RuntimeConsumer<Order>;
-    }
-  >({
-    ordersCreated: {
-      consumers: [analytics, billing],
-      definition: OrderCreated
-    }
-  });
+  createClient(
+    {
+      "orders.created": {
+        consumers: [analytics, billing],
+        definition: OrderCreated
+      }
+    },
+    ({ message, consumer }) => ({
+      ordersCreated: message("orders.created", OrderCreated),
+      billing: consumer(billing),
+      analytics: consumer(analytics)
+    })
+  );
 
 // start() requires a handler for every consumer. Handlers are appended, so a test's own
 // handlers run after these no-ops.
@@ -61,19 +62,27 @@ const HangingStopBroker = Layer.effect(
 ).pipe(Layer.provide(TestBroker));
 
 describe("createClient", () => {
-  it.effect("creates message resources", () =>
+  it.effect("rejects invalid retry topology during construction before binding resources", () =>
     Effect.gen(function* () {
-      const client = yield* createTestClient();
-      expect(client.ordersCreated).toBeDefined();
-    }).pipe(Effect.provide(TestBroker))
-  );
+      const invalidConsumer = consumer({
+        name: "invalid",
+        message: OrderCreated,
+        retry: { type: "fixed", delay: "1 second", maxAttempts: 0 }
+      });
 
-  it.effect("creates consumer resources", () =>
-    Effect.gen(function* () {
-      const client = yield* createTestClient();
-      expect(client.billing).toBeDefined();
-      expect(client.analytics).toBeDefined();
-    }).pipe(Effect.provide(TestBroker))
+      const error = yield* Effect.flip(
+        createClient(
+          {
+            "orders.created": { definition: OrderCreated, consumers: [invalidConsumer] }
+          },
+          () => {
+            throw new Error("Resources must remain unbound when the topology is invalid.");
+          }
+        ).pipe(Effect.provide(TestBroker))
+      );
+
+      expect(error.message).toContain("retry.maxAttempts");
+    })
   );
 
   it.effect("publish reaches consumer", () =>

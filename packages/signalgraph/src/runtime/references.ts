@@ -1,10 +1,11 @@
-import { Context } from "effect";
+import { Context, Option } from "effect";
 
 import type { MessageMetadata } from "./metadata.ts";
 
-export const CurrentMessageMetadata = Context.Reference<MessageMetadata | undefined>(
+/** Carries inbound correlation through effects started by the current handler. */
+export const CurrentMessageMetadata = Context.Reference<Option.Option<MessageMetadata>>(
   "@signalgraph/runtime/CurrentMessageMetadata",
   {
-    defaultValue: () => undefined
+    defaultValue: Option.none
   }
 );

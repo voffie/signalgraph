@@ -1,29 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
   "plugins": ["typescript", "import", "oxc", "node"],
+  "jsPlugins": [
+    { "name": "anti-slop", "specifier": "./tools/oxlint/anti-slop/index.ts" },
+    { "name": "anti-slop-effect", "specifier": "./tools/oxlint/anti-slop/effect/index.ts" }
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
     "perf": "error"
   },
   "rules": {
-    // Effect custom rules
-    "effect/no-bigint-literals": "error",
-    "effect/no-import-from-barrel-package": [
-      "error",
-      {
-        "checkPatterns": [
-          "^signalgraph$",
-          "^signalgraph/(.+/)?[a-z][a-z0-9]*$",
-          "^@signalgraph/[^/]+$",
-          "^@signalgraph/[^/]+/(.+/)?[a-z][a-z0-9]*$"
-        ],
-        "checkRelativeIndexImports": true
-      }
-    ],
-    "effect/no-js-extension-imports": "error",
-    "effect/no-opaque-instance-fields": "error",
-    "effect/no-unused-internal": "error",
     // Tune native rules
     // Import rules
     "typescript/consistent-type-imports": [
@@ -36,12 +23,18 @@
     "import/no-duplicates": "error",
     "import/no-self-import": "error",
     "import/no-empty-named-blocks": "error",
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css"]
+      }
+    ],
     // TypeScript cleanup
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-useless-empty-export": "error",
     // Code quality
-    "eslint/no-console": "error",
+    "eslint/no-console": "warn",
     "eslint/no-var": "error",
     "eslint/no-useless-constructor": "error",
     "unicorn/no-abusive-eslint-disable": "error",
@@ -90,7 +83,33 @@
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_"
       }
-    ]
+    ],
+    // Anti-slop base
+    "oxc/no-accumulating-spread": "error",
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-runtime-typeof": "error",
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/require-readable-spacing": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error",
+    // Anti-slop Effect
+    "anti-slop-effect/no-manual-effect-error-tag": "error",
+    "anti-slop-effect/no-manual-tag-comparison": "error",
+    "anti-slop-effect/no-manual-tagged-construction": "error",
+    "anti-slop-effect/no-service-constructor-imports": "error",
+    "anti-slop-effect/prefer-effect-match": "error"
   },
   "ignorePatterns": [
     "**/dist",
@@ -103,15 +122,15 @@
     "!.github/**/*",
     "!.gitignore",
     "!.oxlintrc.json",
-    "!oxfmtrc.json"
+    "!oxfmtrc.json",
+    "packages/devtools/src/lib/components/ui/**/*",
+    "tools/oxlint/anti-slop/**"
   ],
   "overrides": [
     {
       "files": ["**/{test}"],
       "rules": {
-        "effect/no-bigint-literals": "off",
-        "eslint/no-console": "off",
-        "effect/no-import-from-barrel-package": "off"
+        "eslint/no-console": "off"
       }
     }
   ]

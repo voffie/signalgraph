@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { Command } from "effect/cli";
 
 import pkg from "../../package.json" with { type: "json" };
-import { generate } from "../commands/generate.ts";
+import { generate } from "./generate.ts";
 
 const root = Command.make("signalgraph", {}).pipe(Command.withSubcommands([generate]));
 
@@ -11,4 +11,5 @@ const cli = Command.runWith(root, {
   version: pkg.version
 });
 
+/** Runs the SignalGraph CLI with Node filesystem and process services. */
 export const program = cli(process.argv.slice(2)).pipe(Effect.scoped, Effect.provide(NodeServices.layer));

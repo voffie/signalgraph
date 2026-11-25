@@ -1,6 +1,6 @@
 {
   "name": "signalgraph",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Type-safe event-driven architecture for TypeScript built on Effect",
   "keywords": [
     "cli",
@@ -28,7 +28,6 @@
     "signalgraph": "./bin/signalgraph"
   },
   "files": [
-    "src/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
@@ -38,29 +37,19 @@
   "type": "module",
   "sideEffects": [],
   "exports": {
-    "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./config": "./src/config/index.ts",
     "./runtime": "./src/runtime/index.ts",
     "./broker": "./src/broker/index.ts",
-    "./integration": "./src/integration/index.ts",
-    "./*": "./src/*.ts",
-    "./internal/*": null,
-    "./index": null,
-    "./*/index": null
+    "./integration": "./src/integration/index.ts"
   },
   "publishConfig": {
     "exports": {
-      "./package.json": "./package.json",
       ".": "./dist/index.js",
-      "./*": "./dist/*.js",
       "./config": "./dist/config/index.js",
       "./runtime": "./dist/runtime/index.js",
       "./broker": "./dist/broker/index.js",
-      "./integration": "./dist/integration/index.js",
-      "./internal/*": null,
-      "./index": null,
-      "./*/index": null
+      "./integration": "./dist/integration/index.js"
     },
     "access": "public",
     "provenance": true
@@ -71,15 +60,16 @@
     "check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@effect/opentelemetry": "^4.0.3",
-    "@effect/platform-node": "^4.0.3",
+    "@effect/opentelemetry": "4.1.5",
+    "@effect/platform-node": "4.1.5",
     "@opentelemetry/api": "^1.9.1",
     "tsx": "^4.23.15"
   },
   "devDependencies": {
-    "effect": "^4.0.3"
+    "@types/node": "^26.6.4",
+    "effect": "^4.1.5"
   },
   "peerDependencies": {
-    "effect": "^4.0.3"
+    "effect": "^4.1.5"
   }
 }

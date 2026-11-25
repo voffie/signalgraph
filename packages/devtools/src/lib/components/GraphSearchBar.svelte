@@ -5,8 +5,8 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import * as Select from "#lib/components/ui/select/index.js";
-  import type { SearchField } from "#lib/types.ts";
-  import { cn } from "#lib/utils.ts";
+  import type { SearchField } from "#lib/types.js";
+  import { cn } from "#lib/utils.js";
 
   let {
     search,
@@ -34,10 +34,16 @@
   function searchFieldLabel(value: SearchField): string {
     return SEARCH_FIELDS.find((f) => f.value === value)?.label ?? value;
   }
+
+  function selectSearchField(value: string) {
+    const selected = SEARCH_FIELDS.find((field) => field.value === value);
+
+    if (selected !== undefined) onSearchFieldChange(selected.value);
+  }
 </script>
 
 <div class="flex h-7 w-72 items-stretch overflow-hidden rounded-lg border border-white/10 bg-white/4">
-  <Select.Root type="single" bind:value={searchField} onValueChange={(v) => onSearchFieldChange(v as SearchField)}>
+  <Select.Root type="single" value={searchField} onValueChange={selectSearchField}>
     <Select.Trigger
       class="max-w-20 min-w-16 shrink-0 rounded-none border-0 border-r border-white/10 bg-white/6 px-2 font-mono text-[10px]">
       {searchFieldLabel(searchField)}

@@ -1,17 +1,19 @@
 <script lang="ts">
+  import { deserialize } from "$app/forms";
   import { refreshAll } from "$app/navigation";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import CheckIcon from "@lucide/svelte/icons/check";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import { Option, Schema } from "effect";
   import { tick } from "svelte";
 
   import { Button } from "#lib/components/ui/button/index.js";
   import * as Dialog from "#lib/components/ui/dialog/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
-  import type { DataSourceProfile } from "#lib/server/db/dataSource.ts";
-  import { TRACE_VENDORS, type TraceVendor } from "#lib/telemetry/traces/index.ts";
-  import { cn } from "#lib/utils.ts";
+  import type { DataSourceProfile } from "#lib/server/db/dataSource.js";
+  import { TRACE_VENDORS, type TraceVendor } from "#lib/telemetry/traces/index.js";
+  import { cn } from "#lib/utils.js";
 
   import { moveListIndex } from "../listNavigation";
 
@@ -26,6 +28,8 @@
   } = $props();
 
   type Step = "list" | "name" | "vendor" | "url";
+
+  const decodeSaveFailure = Schema.decodeUnknownOption(Schema.Struct({ error: Schema.String }));
 
   let step = $state<Step>("list");
   let selectedIndex = $state(0);
@@ -86,6 +90,7 @@
     if (e.key === "n") {
       e.preventDefault();
       startCreate();
+
       return;
     }
 
@@ -120,8 +125,10 @@
   function goToVendor() {
     if (!formName.trim()) {
       error = "Connection name is required.";
+
       return;
     }
+
     error = null;
     step = "vendor";
   }
@@ -152,32 +159,49 @@
 
   async function save() {
     if (!formVendor) return;
+
     if (!formUrl.trim()) {
       error = "Vendor URL is required.";
+
       return;
     }
 
     saving = true;
     error = null;
+
     try {
       const formData = new FormData();
+
       if (editingCurrentName) {
         formData.set("currentName", editingCurrentName);
       }
+
       formData.set("name", formName.trim());
       formData.set("vendor", formVendor);
       formData.set("url", formUrl.trim());
 
       const res = await fetch("/settings?/save", { method: "POST", body: formData });
-      const result = await res.json();
+      const result = deserialize(await res.text());
 
       if (result.type === "failure") {
-        error = result.data?.error ?? "Something went wrong.";
+        error = Option.getOrElse(
+          Option.map(decodeSaveFailure(result.data), (failure) => failure.error),
+          () => "Cannot save the connection. Check the settings and try again."
+        );
+
+        return;
+      }
+
+      if (result.type === "error") {
+        error = "Cannot save the connection. Refresh the list before trying again.";
+
         return;
       }
 
       await refreshAll();
       step = "list";
+    } catch {
+      error = "Could not confirm whether the connection was saved. Refresh the list before trying again.";
     } finally {
       saving = false;
     }
@@ -186,8 +210,11 @@
   function focusStep(currentStep: Step) {
     tick().then(() => {
       if (currentStep === "list") listEl?.focus();
+
       if (currentStep === "name") nameInputEl?.focus();
+
       if (currentStep === "vendor") vendorListEl?.focus();
+
       if (currentStep === "url") vendorUrlEl?.focus();
     });
   }

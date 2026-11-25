@@ -6,7 +6,9 @@ export const variables = defineEnvVars({
     description: "Absolute path to the devtools SQLite file, set by the launcher",
     schema: (value) => {
       if (value) return value;
+
       if (building) return "";
+
       if (import.meta.env.DEV) return ".dev/devtools.db";
       throw new Error("DATABASE_PATH must be set");
     }

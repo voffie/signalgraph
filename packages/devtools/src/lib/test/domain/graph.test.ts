@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGraph } from "#lib/domain/graph.ts";
-import type { Trace, TraceSpan } from "#lib/domain/types.ts";
+import { buildGraph } from "#lib/domain/graph.js";
+import type { Trace, TraceSpan } from "#lib/domain/types.js";
 
 function span(name: string, spanId: string, attributes: Record<string, string>, parentSpanId?: string): TraceSpan {
   return {

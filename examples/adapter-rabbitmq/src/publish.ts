@@ -14,8 +14,8 @@ Effect.runPromise(
   program.pipe(
     Effect.provide(
       RabbitMQBroker({
-        url: "amqp://localhost",
-      }),
-    ),
-  ),
+        url: "amqp://localhost"
+      })
+    )
+  )
 );

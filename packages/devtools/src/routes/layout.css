@@ -38,7 +38,7 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #15152a;
   --sidebar-accent-foreground: #e2e2ee;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #7c6fe0;
 }
 
@@ -73,7 +73,7 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #15152a;
   --sidebar-accent-foreground: #e2e2ee;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #7c6fe0;
 }
 

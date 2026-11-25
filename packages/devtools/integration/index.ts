@@ -15,11 +15,14 @@ const waitForExit = (child: ChildProcess) =>
     if (child.exitCode !== null || child.signalCode !== null) {
       return resume(Effect.void);
     }
+
     const onExit = () => resume(Effect.void);
     child.once("exit", onExit);
+
     return Effect.sync(() => void child.off("exit", onExit));
   });
 
+/** Runs the bundled devtools server for the lifetime of its integration layer. */
 export const Devtools = (options: DevtoolsOptions = {}): Layer.Layer<never> => {
   const { port = 4300, host = "127.0.0.1", databasePath = "./.signalgraph/devtools.db" } = options;
 
@@ -37,10 +40,16 @@ export const Devtools = (options: DevtoolsOptions = {}): Layer.Layer<never> => {
         stdio: "inherit"
       });
 
-      child.on("error", (err) => console.error("[devtools] failed to start:", err));
+      child.on("error", () => {
+        Effect.runSync(Effect.logError("Could not start the devtools server. Check the local server configuration."));
+      });
       child.on("exit", (code) => {
         if (code !== null && code !== 0) {
-          console.error(`[devtools] server exited unexpectedly with code ${code}`);
+          Effect.runSync(
+            Effect.logError("The devtools server exited unexpectedly. Check the server startup output.").pipe(
+              Effect.annotateLogs({ exitCode: code })
+            )
+          );
         }
       });
 

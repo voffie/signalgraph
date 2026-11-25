@@ -1,15 +1,18 @@
+import { Option, Schema } from "effect";
+
 import { getDb } from "./index";
 
 const DEFAULT_GRAPH_LOOKBACK_SECONDS = 24 * 60 * 60;
 
 const GRAPH_LOOKBACK_KEY = "graph_lookback_seconds";
 
-function getValue(key: string): { value: string } | null {
-  const row = getDb().prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as {
-    value: string;
-  } | null;
+const SettingRowSchema = Schema.Struct({ value: Schema.String });
+const decodeSetting = Schema.decodeUnknownSync(SettingRowSchema);
 
-  return row;
+function getValue(key: string): Option.Option<string> {
+  const row = getDb().prepare("SELECT value FROM app_settings WHERE key = ?").get(key);
+
+  return Option.map(Option.fromUndefinedOr(row), (value) => decodeSetting(value).value);
 }
 
 function setValue(key: string, value: string) {
@@ -21,15 +24,18 @@ function setValue(key: string, value: string) {
     .run(key, value);
 }
 
+/** Reads the saved trace search window, falling back to the default for invalid or missing values. */
 export function getGraphLookbackSeconds(): number {
-  const row = getValue(GRAPH_LOOKBACK_KEY);
+  const stored = getValue(GRAPH_LOOKBACK_KEY);
 
-  if (!row) return DEFAULT_GRAPH_LOOKBACK_SECONDS;
+  if (Option.isNone(stored)) return DEFAULT_GRAPH_LOOKBACK_SECONDS;
 
-  const parsed = Number(row.value);
+  const parsed = Number(stored.value);
+
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_GRAPH_LOOKBACK_SECONDS;
 }
 
+/** Stores a validated trace search window in seconds. */
 export function saveGraphLookbackSeconds(seconds: number) {
   setValue(GRAPH_LOOKBACK_KEY, String(seconds));
 }

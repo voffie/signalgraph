@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { refreshAll } from "$app/navigation";
   import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -7,10 +8,12 @@
   import MaximizeIcon from "@lucide/svelte/icons/maximize";
   import MinusIcon from "@lucide/svelte/icons/minus";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import SearchXIcon from "@lucide/svelte/icons/search-x";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import WaypointsIcon from "@lucide/svelte/icons/waypoints";
   import { tick } from "svelte";
+  import { toast } from "svelte-sonner";
 
   import CommandMenu from "#lib/components/CommandMenu.svelte";
   import ConnectionsDialog from "#lib/components/ConnectionsDialog.svelte";
@@ -43,8 +46,9 @@
   let transform = $state({ x: 20, y: 55, scale: 0.76 });
   let panning = $state(false);
   let overlay = $state<"command" | "connections" | "trace" | "settings" | null>(null);
+  let refreshingTrace = $state(false);
 
-  let panRef: { x: number; y: number; tx: number; ty: number } = { x: 0, y: 0, tx: 0, ty: 0 };
+  let panRef = { x: 0, y: 0, tx: 0, ty: 0 };
   let svgEl: SVGSVGElement | undefined = $state();
   let canvasEl: HTMLElement | undefined = $state();
 
@@ -66,18 +70,23 @@
 
   $effect(() => {
     const el = svgEl;
+
     if (!el) return;
+
     const handler = (e: WheelEvent) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.1 : 0.9;
       transform = { ...transform, scale: Math.max(0.2, Math.min(3, transform.scale * factor)) };
     };
+
     el.addEventListener("wheel", handler, { passive: false });
+
     return () => el.removeEventListener("wheel", handler);
   });
 
   function handleFitView() {
     const canvas = canvasEl;
+
     if (!canvas || positionedNodes.length === 0) return;
 
     const { width, height } = canvas.getBoundingClientRect();
@@ -101,10 +110,11 @@
   }
 
   function onPointerDown(e: PointerEvent) {
-    if ((e.target as Element).closest(".graph-node")) return;
+    if (!svgEl) return;
+
     panning = true;
     panRef = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
-    (e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId);
+    svgEl.setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: PointerEvent) {
@@ -139,6 +149,20 @@
     }
   }
 
+  async function refreshTrace() {
+    if (refreshingTrace) return;
+
+    refreshingTrace = true;
+
+    try {
+      await refreshAll();
+    } catch {
+      toast.error("Could not refresh the trace. Check your connection to devtools and try again.");
+    } finally {
+      refreshingTrace = false;
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     const isModPressed = e.metaKey || e.ctrlKey;
 
@@ -146,12 +170,14 @@
       overlay = null;
       e.preventDefault();
       overlay = "command";
+
       return;
     }
 
     if (isModPressed && e.key === ",") {
       e.preventDefault();
       overlay = "settings";
+
       return;
     }
   }
@@ -179,6 +205,12 @@
     </div>
 
     <div class="flex items-center gap-1">
+      {#if data.hasActiveDataSource}
+        <Button variant="ghost" size="sm" disabled={refreshingTrace} onclick={refreshTrace}>
+          <RefreshCwIcon class={cn("size-3.5", refreshingTrace && "motion-safe:animate-spin")} aria-hidden="true" />
+          {refreshingTrace ? "Refreshing…" : data.error ? "Retry trace" : "Refresh trace"}
+        </Button>
+      {/if}
       <button
         onclick={() => (overlay = "command")}
         class="text-muted-foreground hover:text-foreground flex items-center gap-2 px-2 py-1.5 text-xs transition-colors">

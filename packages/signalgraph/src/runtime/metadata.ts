@@ -1,14 +1,15 @@
 import { currentOtelSpan } from "@effect/opentelemetry/OtelTracer";
 import type { SpanContext } from "@opentelemetry/api";
-import { Effect, Random } from "effect";
+import { Effect, Option, Random } from "effect";
 
 import { CurrentMessageMetadata } from "./references.ts";
 
+/** Identifies a delivery and links it to the original message flow. */
 export interface MessageMetadata {
   readonly messageId: string;
   readonly correlationId: string;
   readonly retryAttempt: number;
-  readonly traceContext?: SpanContext;
+  readonly traceContext: Option.Option<SpanContext>;
 }
 
 function generateMessageId() {
@@ -22,35 +23,28 @@ function generateMessageId() {
   });
 }
 
-export function createPublishMetadata() {
+/** Creates metadata for an outgoing message, inheriting correlation from the current delivery. */
+export function createPublishMetadata(): Effect.Effect<MessageMetadata> {
   return Effect.gen(function* () {
     const parent = yield* CurrentMessageMetadata;
-    const span = yield* currentOtelSpan;
+
+    const traceContext = yield* currentOtelSpan.pipe(
+      Effect.map((span) => Option.some(span.spanContext())),
+      Effect.catchTag("NoSuchElementError", () => Effect.succeed(Option.none()))
+    );
 
     const messageId = yield* generateMessageId();
-    const correlationId = parent?.correlationId ?? messageId;
+
+    const correlationId = Option.getOrElse(
+      Option.map(parent, (metadata) => metadata.correlationId),
+      () => messageId
+    );
 
     return {
       messageId,
       correlationId,
       retryAttempt: 1,
-      traceContext: span.spanContext()
+      traceContext
     };
   });
-}
-
-export function createConsumeMetadata(args: {
-  messageId: string;
-  correlationId: string;
-  retryAttempt: number;
-  traceContext?: SpanContext;
-}): MessageMetadata {
-  return {
-    messageId: args.messageId,
-    correlationId: args.correlationId,
-    retryAttempt: args.retryAttempt,
-    ...(args.traceContext && {
-      traceContext: args.traceContext
-    })
-  };
 }

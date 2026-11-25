@@ -1,62 +1,44 @@
 ---
 title: Retry
-description: Enable custom retry policies
+description: Configure fixed or exponential retry for a consumer.
 ---
 
-SignalGraph currently supports two different retry policies. These are `fixed` & `expontential`
+Retry policies apply to a consumer's failed delivery. `maxAttempts` includes the initial delivery, so `maxAttempts: 3` allows two retries. Without a retry policy, a failure moves straight to the configured dead-letter or discard behavior. With RabbitMQ, connection loss can also cause unacknowledged deliveries to be redelivered independently of this policy.
 
-## Fixed
-```ts title="Fixed retry definition"
-export const RetryingAnalytics = consumer({
-  name: "retryingAnalytics",
+## Fixed delay
+
+```ts
+import { consumer } from "signalgraph";
+
+export const Billing = consumer({
+  name: "billing",
+  message: OrderCreated,
+  retry: { type: "fixed", delay: "1 second", maxAttempts: 3 }
+});
+```
+
+Both retries use the same delay.
+
+## Exponential delay
+
+```ts
+import { consumer } from "signalgraph";
+
+export const Billing = consumer({
+  name: "billing",
   message: OrderCreated,
   retry: {
-    type: "fixed",
-    delay: Duration.millis(100),
-    maxAttempts: 2
+    type: "exponential",
+    initialDelay: "1 second",
+    factor: 2,
+    maxDelay: "5 seconds",
+    maxAttempts: 5
   }
 });
 ```
 
-**Fields**
-```ts
-{
-  type: "fixed";
-  delay: Duration.Input;
-  maxAttempts: number;
-}
-```
+The four retries wait 1, 2, 4, and 5 seconds. The factor defaults to `2` and `maxDelay` is optional. Use finite durations, a finite factor of at least `1`, and a positive integer for `maxAttempts`.
 
-* `type` - The retry policy type
-* `delay` - The duration between attempts
-* `maxAttempts` - The max amount of attempts before dropping the message or sending it to DLQ if enabled
+## After the last attempt
 
-## Exponential
-```ts title="Exponential retry definition"
-export const RetryingAnalytics = consumer({
-  name: "retryingAnalytics",
-  message: OrderCreated,
-  retry: {
-    type: "fixed",
-    delay: Duration.millis(100),
-    maxAttempts: 2
-  }
-});
-```
-
-**Fields**
-```ts
-{
-  type: "exponential";
-  initialDelay: Duration.Input;
-  maxAttempts: number;
-  factor?: number;
-  maxDelay?: Duration.Input;
-};
-```
-
-* `type` - The retry policy type
-* `initialDelay` - The duration before the initial retry attempt
-* `maxAttempts` - The max amount of attempts before dropping the message or sending it to DLQ if enabled
-* `factor` - The number the last retry delay will be multiplied by. Defaults to 2 if not provided
-* `maxDelay` - The max duration a delay can reach. If not provided the delay will continue to multiply until `maxAttempts` have been satisfied
+With RabbitMQ, failed deliveries go to `<consumer-name>.dlq` by default. Set `dlq: false` to discard them after the final attempt. Check the reason and reconcile any side effects before replaying a dead-lettered message. Design handlers to tolerate duplicate deliveries, including when replaying.

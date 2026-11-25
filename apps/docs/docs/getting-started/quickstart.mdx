@@ -1,22 +1,19 @@
 ---
 title: Quickstart
-description: Build a small fanout-based broker layout
+description: Generate a SignalGraph client, start a RabbitMQ consumer, and publish your first message.
 ---
 
-This example creates three queues with an initial fanout. The full example can be found [here](https://github.com/voffie/signalgraph/tree/main/examples/otel).
+This example declares an `orders.created` message and a Billing consumer. The publisher and consumer run as separate processes and import the same generated client.
 
-**Example project structure**
-<FileTree>
-- root
-  - src/
-    - schema/
-      - schema.ts
-    - handlers.ts
-    - publish.ts
-  - signalgraph.config.ts
-</FileTree>
+Start with [installation](/getting-started/installation/) and a running RabbitMQ instance. For a local demo, run this command in a separate terminal and leave it running:
 
-## 1. Define the broker's schema
+```sh
+docker run --rm --name signalgraph-rabbitmq -p 127.0.0.1:5672:5672 -e RABBITMQ_DEFAULT_USER=signalgraph -e RABBITMQ_DEFAULT_PASS=signalgraph rabbitmq:4-management
+```
+
+The URL in the examples below uses those demo credentials. Use your own broker URL if you already have RabbitMQ.
+
+## 1. Declare the message and consumer
 
 ```ts title="src/schema/schema.ts"
 import { Schema } from "effect";
@@ -24,115 +21,71 @@ import { consumer, message } from "signalgraph";
 
 export const OrderCreated = message({
   name: "orders.created",
-  schema: Schema.Struct({
-    orderId: Schema.String,
-  }),
-});
-
-export const BillingCompleted = message({
-  name: "billing.completed",
-  schema: Schema.Struct({
-    orderId: Schema.String,
-  }),
+  schema: Schema.Struct({ orderId: Schema.String })
 });
 
 export const Billing = consumer({
   name: "billing",
-  message: OrderCreated,
-});
-
-export const Analytics = consumer({
-  name: "analytics",
-  message: OrderCreated,
-});
-
-export const Email = consumer({
-  name: "email",
-  message: BillingCompleted,
+  message: OrderCreated
 });
 ```
 
-## 2. Connect schema in config and decide output directory for generated client
+## 2. Generate the client
 
 ```ts title="signalgraph.config.ts"
 import { defineConfig } from "signalgraph/config";
 
 export default defineConfig({
   schema: "./src/schema/schema.ts",
-  out: "./generated",
+  out: "./generated"
 });
 ```
 
-## 3. Generate SignalGraph client
+From the project directory, run `npx signalgraph generate` or `pnpm exec signalgraph generate`. The CLI writes `generated/index.ts`. Regenerate it after changing the schema, or use [watch mode](/cli/generate/).
 
-```bash
-signalgraph generate
-```
-
-## 4. Connect broker using it's adapter package
+## 3. Run the consumer
 
 ```ts title="src/handlers.ts"
 import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
-import { Console, Effect, Layer } from "effect";
-
+import { Console, Effect } from "effect";
 import { Client } from "../generated/index.ts";
 
 const program = Effect.gen(function* () {
   const client = yield* Client;
-
   yield* client.billing.handle(({ payload }) =>
-    Effect.gen(function* () {
-      yield* Console.log("Billing received: ", payload);
-      yield* client.billingCompleted.publish(payload);
-    })
+    Console.log("Billing received order", payload.orderId)
   );
-
-  yield* client.analytics.handle(({ payload }) => Console.log("Analytics received: ", payload));
-
-  yield* client.email.handle(({ payload }) => Console.log("Email received: ", payload));
-
   yield* client.listen();
 });
 
-Effect.runPromise(
+await Effect.runPromise(
   program.pipe(
-    Effect.provide(
-      RabbitMQBroker({
-        url: "amqp://localhost"
-      }),
-    )
+    Effect.provide(RabbitMQBroker({ url: "amqp://signalgraph:signalgraph@localhost" }))
   )
 );
 ```
 
-## 5. Send initial message (optional)
+Run `npx tsx src/handlers.ts`. Wait for the log confirming that RabbitMQ topology was declared and consumers registered before starting the publisher.
 
-You can send the initial message directly inside the broker, but this is an example of how using the generated client
+## 4. Publish a message
 
 ```ts title="src/publish.ts"
 import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
-import { Effect, Layer } from "effect";
-
+import { Effect } from "effect";
 import { Client } from "../generated/index.ts";
 
-// Run `handlers.ts` first - it declares the exchanges/queues this depends on.
 const program = Effect.gen(function* () {
   const client = yield* Client;
-
-  yield* client.ordersCreated.publish({
-    orderId: "123",
-  });
+  yield* client.ordersCreated.publish({ orderId: "order-123" });
 });
 
-Effect.runPromise(
+await Effect.runPromise(
   program.pipe(
-    Effect.provide(
-      RabbitMQBroker({
-        url: "amqp://localhost",
-      }),
-    ),
-  ),
+    Effect.provide(RabbitMQBroker({ url: "amqp://signalgraph:signalgraph@localhost" }))
+  )
 );
-
-await new Promise((r) => setTimeout(r, 500));
 ```
+
+In a second terminal, run `npx tsx src/publish.ts`. The consumer should print `Billing received order order-123`. Press Ctrl+C in the consumer terminal to stop it and drain in-flight work. If you started the demo container, stop it from its terminal too.
+
+For a flow where one handler publishes a follow-up message and you can inspect the resulting trace, see [Devtools](/integrations/devtools/).

@@ -20,6 +20,7 @@ const server = createServer((req, res) => {
 server.listen(port, host);
 
 let closing = false;
+
 const shutdown = () => {
   if (closing) return;
   closing = true;
@@ -29,4 +30,5 @@ const shutdown = () => {
 };
 
 process.on("SIGTERM", shutdown);
+
 process.on("SIGINT", shutdown);

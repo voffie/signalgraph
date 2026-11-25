@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getAttribute } from "#lib/domain/attributes.ts";
-  import type { TraceSpan } from "#lib/domain/types.ts";
-  import { capitalize, cn, fmtMs } from "#lib/utils.ts";
+  import { getAttribute } from "#lib/domain/attributes.js";
+  import type { TraceSpan } from "#lib/domain/types.js";
+  import { capitalize, cn, fmtMs } from "#lib/utils.js";
 
   let {
     spans,
@@ -37,13 +37,14 @@
       const consumerName = getAttribute(span.attributes, "signalgraph.consumer.name") ?? span.name;
 
       const suffix = span.name === "signalgraph.consume" ? " (Consume)" : " (Handler)";
+
       return consumerName ? capitalize(consumerName) + suffix : span.name;
     }
 
     return span.name;
   }
 
-  function getSpanPosition(span: TraceSpan): { left: number; width: number } {
+  function getSpanPosition(span: TraceSpan) {
     const left = Math.min(Math.max(((span.startTime - traceStart) / traceDuration) * 100, 0), 100);
     const naturalWidth = ((span.endTime - span.startTime) / traceDuration) * 100;
 
@@ -52,8 +53,11 @@
 
   function formatTimelineOffset(ms: number): string {
     if (ms === 0) return "0ms";
+
     if (ms < 10) return `${ms.toFixed(1)}ms`;
+
     if (ms < 1000) return `${Math.round(ms)}ms`;
+
     return `${(ms / 1000).toFixed(1)}s`;
   }
 </script>

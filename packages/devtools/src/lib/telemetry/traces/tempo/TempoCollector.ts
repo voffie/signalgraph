@@ -1,23 +1,59 @@
+import { Effect, Option, Schema } from "effect";
+
 import type { Trace, TraceListFilters, TraceSummary } from "#lib/domain/types.js";
 
-import type { TraceCollector } from "../index";
-import { normalizeSearchResponse, normalizeTrace } from "./normalize";
+import type { TraceCollector } from "../index.js";
+import { TraceSourceError } from "../TraceSourceError.js";
+import { normalizeSearchResponse, normalizeTrace } from "./normalize.js";
+import { TempoLatestResponse, TempoResponse, TempoSearchResponse } from "./types.js";
 
-function buildTraceQlQuery(filters: TraceListFilters): string | undefined {
-  const conditions: Array<string> = [];
+const decodeTrace = Schema.decodeSync(Schema.fromJsonString(TempoResponse));
+const decodeLatest = Schema.decodeSync(Schema.fromJsonString(TempoLatestResponse));
+const decodeSearch = Schema.decodeSync(Schema.fromJsonString(TempoSearchResponse));
 
-  if (filters.service?.length) {
-    const clause = filters.service
-      .map((s) => `resource.service.name = "${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
-      .join(" || ");
+function buildTraceQlQuery(filters: TraceListFilters): Option.Option<string> {
+  const services = filters.service ?? [];
 
-    conditions.push(filters.service.length > 1 ? `(${clause})` : clause);
-  }
+  if (services.length === 0) return Option.none();
 
-  if (!conditions.length) return undefined;
-  return `{ ${conditions.join(" && ")} }`;
+  const clause = services.map((service) => `resource.service.name = ${JSON.stringify(service)}`).join(" || ");
+
+  return Option.some(`{ ${services.length > 1 ? `(${clause})` : clause} }`);
 }
 
+const request = (url: string, operation: TraceSourceError["operation"]) =>
+  Effect.tryPromise({
+    try: (signal) => fetch(url, { signal }),
+    catch: (cause) =>
+      new TraceSourceError({
+        cause,
+        operation,
+        reason: "Unavailable",
+        message: "Cannot reach the trace source. Check the connection and try again."
+      })
+  });
+
+const rejected = (operation: TraceSourceError["operation"], status: number) =>
+  new TraceSourceError({
+    cause: status,
+    operation,
+    reason: status >= 500 || status === 429 ? "Unavailable" : "RejectedRequest",
+    message: "The active trace source rejected the request. Check the connection settings."
+  });
+
+const readResponse = <A>(response: Response, operation: TraceSourceError["operation"], read: (text: string) => A) =>
+  Effect.tryPromise({
+    try: async () => read(await response.text()),
+    catch: (cause) =>
+      new TraceSourceError({
+        cause,
+        operation,
+        reason: "InvalidResponse",
+        message: "Cannot read traces from the active connection. Check that it points to a compatible trace source."
+      })
+  });
+
+/** Fetches and validates trace data from a Tempo data source. */
 export class TempoCollector implements TraceCollector {
   readonly #url: string;
 
@@ -25,58 +61,63 @@ export class TempoCollector implements TraceCollector {
     this.#url = url;
   }
 
-  async getTrace(traceId: string): Promise<Trace | null> {
-    const res = await fetch(`${this.#url}/api/v2/traces/${traceId}`);
-
-    if (res.status === 404) {
-      return null;
-    }
-
-    if (!res.ok) {
-      throw new Error(`Tempo returned ${res.status} for trace ${traceId}`);
-    }
-
-    const json = await res.json();
-    return normalizeTrace(json);
+  /** Looks up one trace. A missing trace resolves to None. */
+  getTrace(traceId: string): Effect.Effect<Option.Option<Trace>, TraceSourceError> {
+    return this.#readTrace(traceId, "getTrace");
   }
 
-  async getLatestTrace(lookbackSeconds: number): Promise<Trace | null> {
-    const now = Math.floor(Date.now() / 1000);
+  #readTrace(traceId: string, operation: "getTrace" | "getLatestTrace") {
+    const url = `${this.#url}/api/v2/traces/${encodeURIComponent(traceId)}`;
 
-    const params = new URLSearchParams();
-    params.set("q", "{} with (most_recent=true)");
-    params.set("limit", "1");
-    params.set("start", `${now - lookbackSeconds}`);
-    params.set("end", `${now}`);
+    return Effect.gen(function* () {
+      const res = yield* request(url, operation);
 
-    const searchRes = await fetch(`${this.#url}/api/search?${params}`);
+      if (res.status === 404) return Option.none<Trace>();
 
-    if (!searchRes.ok) {
-      throw new Error(`Tempo search returned ${searchRes.status}`);
-    }
+      if (!res.ok) return yield* rejected(operation, res.status);
 
-    const searchJson = await searchRes.json();
-    const traceId = searchJson.traces?.[0]?.traceID;
+      const trace = yield* readResponse(res, operation, (text) => normalizeTrace(decodeTrace(text)));
 
-    return traceId ? this.getTrace(traceId) : null;
+      return Option.some(trace);
+    });
   }
 
-  async listTraces(filters: TraceListFilters): Promise<Array<TraceSummary>> {
-    const params = new URLSearchParams();
+  /** Searches the lookback window and fetches the most recent matching trace. */
+  getLatestTrace(lookbackSeconds: number): Effect.Effect<Option.Option<Trace>, TraceSourceError> {
+    return Effect.gen({ self: this }, function* () {
+      const now = Math.floor(Date.now() / 1000);
 
-    params.set("start", `${filters.start}`);
-    params.set("end", `${filters.end}`);
+      const params = new URLSearchParams({
+        q: "{} with (most_recent=true)",
+        limit: "1",
+        start: String(now - lookbackSeconds),
+        end: String(now)
+      });
 
-    const query = buildTraceQlQuery(filters);
-    if (query) params.set("q", query);
+      const response = yield* request(`${this.#url}/api/search?${params}`, "getLatestTrace");
 
-    const res = await fetch(`${this.#url}/api/search?${params}`);
+      if (!response.ok) return yield* rejected("getLatestTrace", response.status);
 
-    if (!res.ok) {
-      throw new Error(`Tempo search failed: ${res.status} ${res.statusText}`);
-    }
+      const search = yield* readResponse(response, "getLatestTrace", (text) => decodeLatest(text));
+      const latest = search.traces?.[0];
 
-    const json = await res.json();
-    return normalizeSearchResponse(json);
+      return latest === undefined ? Option.none() : yield* this.#readTrace(latest.traceID, "getLatestTrace");
+    });
+  }
+
+  /** Lists trace summaries with optional filtering by service name. */
+  listTraces(filters: TraceListFilters): Effect.Effect<Array<TraceSummary>, TraceSourceError> {
+    return Effect.gen({ self: this }, function* () {
+      const params = new URLSearchParams({ start: String(filters.start), end: String(filters.end) });
+      const query = buildTraceQlQuery(filters);
+
+      if (Option.isSome(query)) params.set("q", query.value);
+
+      const response = yield* request(`${this.#url}/api/search?${params}`, "listTraces");
+
+      if (!response.ok) return yield* rejected("listTraces", response.status);
+
+      return yield* readResponse(response, "listTraces", (text) => normalizeSearchResponse(decodeSearch(text)));
+    });
   }
 }

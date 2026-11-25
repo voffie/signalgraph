@@ -7,7 +7,7 @@
     // Use incremental builds with project references.
     "incremental": true,
     "composite": true,
-    // Target modern JavaScript (ES2022+) whilst staying closely compatible wit hthe Node.js module system.
+    // Target modern JavaScript (ES2022+) whilst staying closely compatible with the Node.js module system.
     "target": "ES2022",
     "module": "NodeNext",
     "moduleDetection": "force", // Treat every non-declaration file as a module
@@ -33,10 +33,7 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "namespaceImportPackages": [
-          "effect",
-          "@effect/*"
-        ],
+        "namespaceImportPackages": ["effect", "@effect/*", "signalgraph", "@signalgraph/*"],
         "diagnosticSeverity": {
           "globalErrorInEffectFailure": "off",
           "unstableApiUsage": "off",
@@ -44,12 +41,10 @@
         },
         "includeSuggestionsInTsc": false,
         "ignoreEffectWarningsInTscExitCode": true,
-        "ignoreEffectErrorsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": false,
         "overrides": [
           {
-            "exclude": [
-              "**/index.ts",
-            ],
+            "exclude": ["**/index.ts", "**/test/**/*"],
             "options": {
               "diagnosticSeverity": {
                 "apiStabilityLeak": "error"

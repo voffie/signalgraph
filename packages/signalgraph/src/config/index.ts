@@ -1,18 +1,6 @@
-import { Schema } from "effect";
+import type { Config } from "./schema.ts";
 
-import { InvalidConfigError } from "../cli/CliErrors.ts";
+export type { Config } from "./schema.ts";
 
-const ConfigSchema = Schema.Struct({
-  schema: Schema.String,
-  out: Schema.String
-});
-
-export type Config = typeof ConfigSchema.Type;
-
-export function defineConfig(config: unknown): Config {
-  try {
-    return Schema.decodeUnknownSync(ConfigSchema)(config);
-  } catch (cause) {
-    throw new InvalidConfigError({ cause });
-  }
-}
+/** Defines a statically checked SignalGraph configuration for the CLI to load. */
+export const defineConfig = (config: Config): Config => config;

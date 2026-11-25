@@ -1,10 +1,14 @@
 ---
 title: CLI
-description: What is SignalGraph's CLI
+description: Run the SignalGraph CLI from your project.
 ---
 
-SignalGraph ships a CLI along with the core package. The CLI allows SignalGraph to do a few things like generating the custom client.
-Each command needs to run as a package.json script.
+The `signalgraph` executable ships with the core package. Run it from your ESM project with `npx signalgraph` or `pnpm exec signalgraph`. A package script can also call `signalgraph` directly.
 
-The CLI is built using Effect's CLI module and outside the commands it ships, the CLI has these commands:
-- `generate` - Generates the custom SignalGraph client based on the schema and output options inside the config
+```sh
+npx signalgraph generate
+npx signalgraph --help
+npx signalgraph --version
+```
+
+See [generate](/cli/generate/) for watch mode, output, and troubleshooting.

@@ -1,42 +1,22 @@
-# sv
+# @signalgraph/devtools
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Devtools turns OpenTelemetry publish, consume, and handler spans into a message flow, including messages published by handlers. Grafana Tempo is the first supported trace backend.
 
-## Creating a project
+![Message graph and timeline showing orders.created reaching Analytics and Billing, then Billing publishing billing.completed for Email](https://raw.githubusercontent.com/voffie/signalgraph/main/apps/docs/docs/integrations/images/trace_overview.png)
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+## Installation
 
 ```sh
-# recreate this project
-pnpm dlx sv@0.17.0 create --template minimal --types ts --add tailwindcss="plugins:none" --install pnpm devtools
+npm install effect signalgraph @signalgraph/devtools
 ```
 
-## Developing
+Configure an OpenTelemetry exporter to send traces to Tempo. Add `Devtools()` to `client.listen({ integrations: [Devtools()] })`, then open `http://127.0.0.1:4300` and select a Tempo connection in settings. Use Tempo's query HTTP URL (typically port `3200` for local development) for the connection. The OTLP ingestion endpoint is configured in the exporter.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+The UI listens on loopback by default and stores settings in `./.signalgraph/devtools.db`. Keep it on a trusted interface. It displays application trace data.
 
-```sh
-npm run dev
+Use **Refresh trace** to fetch again from the active connection. With a trace selected, this reloads that trace. On the default view, it fetches the latest trace. After a provider error, use **Retry trace**.
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+## Links
 
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- [Devtools guide](https://signalgraph-docs.voffie.workers.dev/integrations/devtools/): Setup and trace inspection
+- [Issues](https://github.com/voffie/signalgraph/issues): Report bugs and share feature requests

@@ -6,45 +6,14 @@
       "path": "tsconfig.packages.json"
     }
   ],
-  "include": [
-    "**/vitest.*.ts",
-    "./packages/*/test/**/*.ts",
-    "./packages/*/test/**/*.json",
-    "./packages/**/test/**/*.ts",
-    "./packages/**/test/**/*.json"
-  ],
-  "exclude": [
-    "**/node_modules/**",
-    "**/dist/**"
-  ],
+  "include": ["**/vitest.*.ts", "./packages/**/test/**/*.ts", "./packages/**/test/**/*.json"],
+  "exclude": ["**/node_modules/**", "**/dist/**", "packages/devtools/**"],
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
     "erasableSyntaxOnly": false,
     "resolveJsonModule": true,
-    "types": [
-      "node"
-    ],
-    "paths": {
-      "signalgraph": [
-        "./packages/signalgraph/src/index.ts"
-      ],
-      "signalgraph/*": [
-        "./packages/signalgraph/src/*.ts"
-      ],
-      "@signalgraph/adapter-rabbitmq": [
-        "./packages/adapter/rabbitmq/src/index.ts"
-      ],
-      "@signalgraph/adapter-rabbitmq/*": [
-        "./packages/adapter/rabbitmq/src/*.ts"
-      ],
-      "@signalgraph/devtools": [
-        "./packages/devtools/src/index.ts"
-      ],
-      "@signalgraph/devtools/*": [
-        "./packages/devtools/src/*.ts"
-      ]
-    },
+    "types": ["node"],
     "plugins": [
       {
         "name": "@effect/language-service",
@@ -59,5 +28,5 @@
         }
       }
     ]
-  },
+  }
 }

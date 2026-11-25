@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "#lib/domain/layout.ts";
+  import { NODE_HEIGHT, NODE_WIDTH, type PositionedGraphNode } from "#lib/domain/layout.js";
 
   let {
     node,
@@ -42,6 +42,7 @@
   role="button"
   tabindex="0"
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+  onpointerdown={(e) => e.stopPropagation()}
   style={`transition:opacity 0.15s`}>
   {#if hovered && !selected}
     <rect

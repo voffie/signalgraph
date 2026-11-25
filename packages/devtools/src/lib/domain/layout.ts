@@ -1,13 +1,18 @@
 import type { Graph, GraphNode } from "./types";
 
+/** Graph node width in pixels, shared by layout and rendering. */
 export const NODE_WIDTH = 172;
+
+/** Graph node height in pixels, shared by layout and rendering. */
 export const NODE_HEIGHT = 76;
 
+/** A graph node with top-left canvas coordinates. */
 export interface PositionedGraphNode extends GraphNode {
   x: number;
   y: number;
 }
 
+/** Layers nodes by dependency depth, placing unresolved cycles on a fallback layer. */
 export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
   const remainingIncoming = new Map(graph.nodes.map((node) => [node.id, 0]));
@@ -23,9 +28,7 @@ export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
   }
 
   const levels = new Map<string, number>();
-  const queue = graph.nodes
-    .filter((node) => remainingIncoming.get(node.id) === 0)
-    .map((node) => node.id);
+  const queue = graph.nodes.filter((node) => remainingIncoming.get(node.id) === 0).map((node) => node.id);
 
   for (const nodeId of queue) {
     levels.set(nodeId, 0);
@@ -72,7 +75,7 @@ export function positionGraphNodes(graph: Graph): Array<PositionedGraphNode> {
       positions.set(node.id, {
         ...node,
         x: 48 + level * (NODE_WIDTH + 96),
-        y: 48 + row * (NODE_HEIGHT + 44),
+        y: 48 + row * (NODE_HEIGHT + 44)
       });
     }
   }

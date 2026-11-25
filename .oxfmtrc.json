@@ -11,7 +11,9 @@
     "!.github",
     "!.github/**/*",
     "!.gitignore",
-    "!.oxlintrc.json"
+    "!.oxlintrc.json",
+    "apps/docs",
+    "packages/devtools/src/lib/components/ui/**/*"
   ],
   "sortImports": true,
   "sortTailwindcss": true,

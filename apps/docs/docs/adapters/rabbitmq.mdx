@@ -1,45 +1,49 @@
 ---
 title: RabbitMQ
+description: Configure RabbitMQ transport, publisher confirms, retry, and graceful shutdown.
 ---
 
-SignalGraph has an official RabbitMQ adapter which allows users to use SignalGraph's primitives on RabbitMQ.
+Install the adapter alongside [SignalGraph and Effect](/getting-started/installation/):
 
-## Prerequisites
-
-- A RabbitMQ broker instance
-- A generated SignalGraph client
-
-## Installation
-
-<CodeGroup>
-```sh npm
+```sh
 npm install @signalgraph/adapter-rabbitmq
 ```
 
-```sh pnpm
-pnpm add @signalgraph/adapter-rabbitmq
+Provide the adapter to the Effect that constructs and runs the generated client:
+
+```ts
+import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
+import { Effect } from "effect";
+
+await Effect.runPromise(
+  program.pipe(Effect.provide(RabbitMQBroker({ url: "amqp://localhost" })))
+);
 ```
 
-```sh bun
-bun add @signalgraph/adapter-rabbitmq
-```
+## Connection options
 
-```sh yarn
-yarn add @signalgraph/adapter-rabbitmq
-```
-</CodeGroup>
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `url` | Required | RabbitMQ connection URL using `amqp://` or `amqps://`. |
+| `heartbeat` | URL setting or 15 seconds | Overrides the heartbeat interval with a whole number of seconds, at least 1. |
+| `connectTimeout` | 10 seconds | Time allowed for one connection attempt. |
+| `publishWaitTimeout` | 30 seconds | How long a publish waits for a usable publish channel while the adapter recovers. |
+| `reconnect.initialDelay` | 1 second | Starting delay for connection and channel recovery. |
+| `reconnect.maxDelay` | 30 seconds | Caps the reconnect backoff before jitter. |
+| `reconnect.factor` | 2 | Multiplier for exponential reconnect backoff. |
 
-## Usage
+Duration options accept Effect `Duration.Input` values. The adapter retries connection failures at startup and rebuilds connections and channels when they are lost. Correct invalid configuration before retrying startup.
 
-Each adapter is an Effect layer, so for each application you need to provide it using the exported implementation of the `Broker` interface/layer as described [here](../adapter)
+## Topology and delivery
 
-```ts title="RabbitMQ layer usage example"
-Effect.provide(
-  RabbitMQBroker({
-    // options
-  })
-)
-```
+Each message maps to a durable fanout exchange. Each consumer maps to a durable queue bound to that exchange. Start the consumer application first so it can declare the topology before a separate publisher sends messages. Existing broker resources must have compatible settings.
 
-Currently the RabbitMQ adapter exposes these options:
-- `url: string` - The URL to your RabbitMQ instance
+`publish` waits for a publisher confirmation and fails when RabbitMQ returns an unroutable message. If the connection fails before a confirmation arrives, the publish outcome may be uncertain. Reconcile the intended operation before publishing it again.
+
+A delivery is acknowledged after its handlers succeed, or after RabbitMQ confirms the retry or dead-letter copy. If a connection or channel closes with unacknowledged work, RabbitMQ can redeliver it. Make handler side effects idempotent. See [Retry](/schema/retry/) for delay and dead-letter settings.
+
+## Shutdown and diagnostics
+
+Use `client.listen()` in consumer processes. The first shutdown signal stops intake and gives active work time to finish. A second signal forces shutdown. See [Client lifecycle](/client/#start-and-shut-down) for the grace period.
+
+Effect logs show topology startup, connection recovery, and terminal delivery failures. Set `References.MinimumLogLevel` from `effect` to `"Debug"` for retry handoff logs. [Devtools](/integrations/devtools/) can correlate publishes and handlers through OpenTelemetry.

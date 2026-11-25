@@ -1,55 +1,56 @@
 ---
 title: Devtools
-description: SignalGraph's own web devtools
+description: Inspect SignalGraph publishes, handlers, and follow-up messages with OpenTelemetry.
 ---
 
-SignalGraph maintains a package called `@signalgraph/devtools` which enables to view the lifecycle of a message.
-It uses the traces emitted from the application & the SignalGraph core package to build the entire lifecycle from the initial publish,
-to what message it ends up as or which handler consumes it last. It launches the web server as a separate process on startup and kills/releases it on shutdown.
+Devtools turns OpenTelemetry spans into a message-flow graph. It shows which handlers ran, which messages they published next, and how those spans line up in the timeline. Grafana Tempo is the first supported trace backend.
 
-## Prerequisites
+![Message graph and timeline showing orders.created reaching Analytics and Billing, then Billing publishing billing.completed for Email](./images/trace_overview.png)
 
-- A MQ broker instance
-- A generated SignalGraph client
-- A trace backend instance
+## Run the example
 
-## Installation
+The [OpenTelemetry example](https://github.com/voffie/signalgraph/tree/main/examples/otel) includes RabbitMQ, Tempo, a publisher, and a consumer that publishes a follow-up message.
 
-<CodeGroup>
-```sh npm
+From the repository root, run `pnpm install` and `pnpm build`. Then run these commands from `examples/otel`:
+
+```sh
+pnpm generate
+docker compose up -d
+pnpm consume
+```
+
+Open `http://127.0.0.1:4300`. Choose **Add connection**, name it, select **Tempo**, and enter `http://localhost:3200` as the URL. If the connection is already saved, use **Search → Switch connection** to select it.
+
+When the consumer is ready, run `pnpm send` from a second terminal in the same example directory. Wait for spans to arrive, then click **Refresh trace**. The example should show `orders.created` reaching Billing and Analytics, with Billing publishing `billing.completed` for Email.
+
+When you're done, stop the consumer with Ctrl+C and run `docker compose down` from the example directory.
+
+## Inspect a trace
+
+- Click a graph node or a timeline span to inspect attributes and message IDs.
+- Open **Search → Switch trace** to select a specific trace. **Refresh trace** reloads that trace. On the default page, it fetches the latest trace.
+- If loading fails, check that the active Tempo connection is available and choose **Retry trace**. If the list is empty, check the lookback window in Settings and verify that both processes are exporting spans.
+
+![Billing handler selected in the graph, with the inspector showing the orders.created message name, message ID, and correlation ID](./images/inspector_detail.png)
+
+## Add devtools to an application
+
+```sh
 npm install @signalgraph/devtools
 ```
 
-```sh pnpm
-pnpm add @signalgraph/devtools
+```ts
+import { Devtools } from "@signalgraph/devtools";
+
+yield* client.listen({ integrations: [Devtools()] });
 ```
 
-```sh bun
-bun add @signalgraph/devtools
-```
+Configure an OTLP exporter in the publisher and consumer processes. Devtools queries Tempo's HTTP API, usually on port `3200` for a local setup. The example sends spans to the separate OTLP HTTP ingestion endpoint, `http://localhost:4318/v1/traces`. Devtools does not collect spans itself.
 
-```sh yarn
-yarn add @signalgraph/devtools
-```
-</CodeGroup>
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `host` | `127.0.0.1` | Address the devtools server binds to. |
+| `port` | `4300` | Port for the devtools UI. |
+| `databasePath` | `./.signalgraph/devtools.db` | SQLite file for saved connections and settings, relative to the process's working directory unless absolute. |
 
-## Usage
-
-To enable the Devtools integration you pass it as an index of the integration array option on the listen method:
-```ts title="Devtools usage example"
-yield* client.listen({
-  integrations: [
-    Devtools({
-      // options
-    })
-  ]
-});
-```
-
-The options that the Devtools integration exposes are:
-- `port?: number` - The port to host the devtools web server. Defaults to 4300.
-- `host?: string` - The host where the web server will be hosted. Defaults to 127.0.0.1.
-- `databasePath?: string` - The path relative to the root where it will generate the sqlite db it uses to store connection information & user preferences.
-
-Currently the Devtools integration supports these trace backends:
-- Tempo
+Keep the UI on a trusted interface. It displays trace data and saved connection details. The server runs in a separate process and shuts down when the listener scope closes.

@@ -1,9 +1,12 @@
+import { Effect, Option } from "effect";
+
 import { getActiveTraceCollector } from "#lib/server/datasources/registry.js";
 import { getGraphLookbackSeconds } from "#lib/server/db/appSettings.js";
 import { listDataSources } from "#lib/server/db/dataSource.js";
 
 import type { PageServerLoad } from "./$types";
 
+/** Loads the requested trace or the most recent trace from the active connection. */
 export const load: PageServerLoad = async ({ url }) => {
   const dataSources = listDataSources();
   const hasAnyDataSource = dataSources.length > 0;
@@ -12,7 +15,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
   const collector = getActiveTraceCollector();
 
-  if (!collector) {
+  if (Option.isNone(collector)) {
     return {
       trace: null,
       error: null,
@@ -23,27 +26,15 @@ export const load: PageServerLoad = async ({ url }) => {
     };
   }
 
-  try {
-    const traceId = url.searchParams.get("trace");
+  const traceId = url.searchParams.get("trace");
+  const readTrace = traceId ? collector.value.getTrace(traceId) : collector.value.getLatestTrace(graphLookbackSeconds);
 
-    const trace = traceId ? await collector.getTrace(traceId) : await collector.getLatestTrace(graphLookbackSeconds);
+  const result = await Effect.runPromise(
+    readTrace.pipe(
+      Effect.map((trace) => ({ trace: Option.getOrNull(trace), error: null })),
+      Effect.catchTag("TraceSourceError", (error) => Effect.succeed({ trace: null, error: error.message }))
+    )
+  );
 
-    return {
-      trace,
-      error: null,
-      hasAnyDataSource,
-      hasActiveDataSource,
-      dataSources,
-      graphLookbackSeconds
-    };
-  } catch (error) {
-    return {
-      trace: null,
-      error: error instanceof Error ? error.message : "Unable to load trace",
-      hasAnyDataSource,
-      hasActiveDataSource,
-      dataSources,
-      graphLookbackSeconds
-    };
-  }
+  return { ...result, hasAnyDataSource, hasActiveDataSource, dataSources, graphLookbackSeconds };
 };

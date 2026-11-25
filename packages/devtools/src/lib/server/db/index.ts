@@ -6,6 +6,7 @@ import Database from "better-sqlite3";
 
 let instance: Database.Database | undefined;
 
+/** Opens the configured SQLite database on first use and initializes its tables. */
 export function getDb(): Database.Database {
   if (instance) return instance;
 
@@ -28,5 +29,6 @@ export function getDb(): Database.Database {
   )`);
 
   instance = db;
+
   return db;
 }

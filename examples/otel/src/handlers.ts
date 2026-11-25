@@ -1,11 +1,9 @@
-import { NodeSdk } from "@effect/opentelemetry";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { RabbitMQBroker } from "@signalgraph/adapter-rabbitmq";
 import { Devtools } from "@signalgraph/devtools";
 import { Console, Effect, Layer } from "effect";
 
 import { Client } from "../generated/index.ts";
+import { traceExportLayer } from "./telemetry.ts";
 
 const program = Effect.gen(function* () {
   const client = yield* Client;
@@ -24,15 +22,6 @@ const program = Effect.gen(function* () {
   yield* client.listen({ integrations: [Devtools({ port: 4300, host: "127.0.0.1", databasePath: "/tmp/dt.db" })] });
 });
 
-const telemetryExporter = new OTLPTraceExporter({
-  url: "http://localhost:4318/v1/traces"
-});
-
-const nodeSdkLive = NodeSdk.layer(() => ({
-  resource: { serviceName: "example" },
-  spanProcessor: new SimpleSpanProcessor(telemetryExporter)
-}));
-
 Effect.runPromise(
   program.pipe(
     Effect.provide(
@@ -40,7 +29,7 @@ Effect.runPromise(
         RabbitMQBroker({
           url: "amqp://localhost"
         }),
-        nodeSdkLive
+        traceExportLayer("signalgraph-consumer")
       )
     )
   )

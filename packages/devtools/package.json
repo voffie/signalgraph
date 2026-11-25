@@ -1,13 +1,35 @@
 {
   "name": "@signalgraph/devtools",
   "version": "0.0.1",
+  "description": "Visualize SignalGraph message flows using OpenTelemetry traces",
+  "keywords": [
+    "effect",
+    "observability",
+    "opentelemetry",
+    "signalgraph",
+    "tracing"
+  ],
+  "homepage": "https://github.com/voffie/signalgraph#readme",
+  "bugs": {
+    "url": "https://github.com/voffie/signalgraph/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Viktor Söderborg",
+    "url": "https://github.com/voffie"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voffie/signalgraph.git",
+    "directory": "packages/devtools"
+  },
   "files": [
     "dist",
-    "build"
+    "build",
+    "!build/**/*.map"
   ],
   "type": "module",
   "imports": {
-    "#lib": "./src/lib/index.js",
     "#lib/*": "./src/lib/*"
   },
   "exports": {
@@ -15,6 +37,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "dev": "vite dev",
@@ -24,7 +50,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "check:integration": "tsc -p tsconfig.integration.json --noEmit",
-    "test": "vitest run"
+    "test": "pnpm -w exec vitest run --project @signalgraph/devtools"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3"
@@ -40,7 +66,7 @@
     "@types/better-sqlite3": "^9.6.0",
     "bits-ui": "^2.19.0",
     "clsx": "^2.1.1",
-    "effect": "^4.0.3",
+    "effect": "^4.1.5",
     "mode-watcher": "^1.1.0",
     "shadcn-svelte": "^1.7.0",
     "svelte": "^5.57.1",
@@ -54,6 +80,6 @@
     "vite": "^8.3.0"
   },
   "peerDependencies": {
-    "effect": "^4.0.3"
+    "effect": "^4.1.5"
   }
 }

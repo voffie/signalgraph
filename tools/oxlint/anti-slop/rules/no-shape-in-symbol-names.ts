@@ -20,12 +20,12 @@ export const noForbiddenTermInSymbolNamesRule = defineRule({
     type: "problem",
     docs: {
       description:
-        'Disallow the case-insensitive substring "shape" in JavaScript, TypeScript, private, and JSX symbol names.',
+        'Disallow the case-insensitive substring "shape" in JavaScript, TypeScript, private, and JSX symbol names.'
     },
     messages: {
       forbiddenSymbolName:
-        'Rename symbol "{{name}}" for its domain role; "shape" describes structure rather than ownership.',
-    },
+        'Rename symbol "{{name}}" for its domain role; "shape" describes structure rather than ownership.'
+    }
   },
   createOnce(context) {
     const reportForbiddenSymbolName = (node: ESTree.Node & { name: string }) => {
@@ -33,14 +33,14 @@ export const noForbiddenTermInSymbolNamesRule = defineRule({
       context.report({
         node,
         messageId: "forbiddenSymbolName",
-        data: { name: node.name },
+        data: { name: node.name }
       });
     };
 
     return {
       Identifier: reportForbiddenSymbolName,
       PrivateIdentifier: reportForbiddenSymbolName,
-      JSXIdentifier: reportForbiddenSymbolName,
+      JSXIdentifier: reportForbiddenSymbolName
     };
-  },
+  }
 });

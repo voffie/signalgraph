@@ -4,7 +4,7 @@ import type { ESTree } from "@oxlint/plugins";
 import {
   containsUnknownType,
   functionParameterBindingName,
-  functionParameterTypeAnnotation,
+  functionParameterTypeAnnotation
 } from "../shared/function-parameters.ts";
 type ParameterOwner =
   | ESTree.ArrowFunctionExpression
@@ -30,12 +30,12 @@ export const noUnknownParametersRule = defineRule({
     type: "problem",
     docs: {
       description:
-        "Disallow explicitly unknown function parameters except `cause` and type-predicate subjects; decode unknown input at its I/O boundary instead.",
+        "Disallow explicitly unknown function parameters except `cause` and type-predicate subjects; decode unknown input at its I/O boundary instead."
     },
     messages: {
       unknownParameter:
-        "Parameter `{{parameter}}` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.",
-    },
+        "Parameter `{{parameter}}` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function."
+    }
   },
   createOnce(context) {
     const checkParameters = (node: ParameterOwner) => {
@@ -48,7 +48,7 @@ export const noUnknownParametersRule = defineRule({
         context.report({
           node: annotation.typeAnnotation,
           messageId: "unknownParameter",
-          data: { parameter: name },
+          data: { parameter: name }
         });
       }
     };
@@ -63,7 +63,7 @@ export const noUnknownParametersRule = defineRule({
       TSDeclareFunction: checkParameters,
       TSEmptyBodyFunctionExpression: checkParameters,
       TSFunctionType: checkParameters,
-      TSMethodSignature: checkParameters,
+      TSMethodSignature: checkParameters
     };
-  },
+  }
 });

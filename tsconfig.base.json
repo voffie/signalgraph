@@ -33,12 +33,7 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "namespaceImportPackages": [
-          "effect",
-          "@effect/*",
-          "signalgraph",
-          "@signalgraph/*"
-        ],
+        "namespaceImportPackages": ["effect", "@effect/*", "signalgraph", "@signalgraph/*"],
         "diagnosticSeverity": {
           "globalErrorInEffectFailure": "off",
           "unstableApiUsage": "off",
@@ -49,10 +44,7 @@
         "ignoreEffectErrorsInTscExitCode": false,
         "overrides": [
           {
-            "exclude": [
-              "**/index.ts",
-              "**/test/**/*"
-            ],
+            "exclude": ["**/index.ts", "**/test/**/*"],
             "options": {
               "diagnosticSeverity": {
                 "apiStabilityLeak": "error"

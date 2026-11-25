@@ -1,5 +1,4 @@
 import { defineRule } from "@oxlint/plugins";
-
 import type { ESTree, SourceCode } from "@oxlint/plugins";
 
 type TypeAssertion = ESTree.TSAsExpression | ESTree.TSTypeAssertion;
@@ -11,7 +10,7 @@ const commentOwnerKinds = new Set([
   "PropertyDefinition",
   "ReturnStatement",
   "ThrowStatement",
-  "VariableDeclaration",
+  "VariableDeclaration"
 ]);
 
 function isConstAssertion(node: TypeAssertion): boolean {
@@ -29,39 +28,28 @@ function configuredSafetyMarkers(option: unknown): readonly string[] {
   const configured = option.markers;
   if (!Array.isArray(configured)) return DEFAULT_SAFETY_MARKERS;
   const markers = configured.flatMap((marker) =>
-    typeof marker === "string" && marker.trim().length > 0 ? [marker.trim()] : [],
+    typeof marker === "string" && marker.trim().length > 0 ? [marker.trim()] : []
   );
   return markers.length > 0 ? markers : DEFAULT_SAFETY_MARKERS;
 }
 
 function markerPattern(markers: readonly string[]): RegExp {
-  const alternation = markers
-    .map((marker) => marker.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`))
-    .join("|");
-  return new RegExp(
-    String.raw`(?:^|[^\p{L}\p{N}_])(?:${alternation})\s*:\s*\S`,
-    "u",
-  );
+  const alternation = markers.map((marker) => marker.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)).join("|");
+  return new RegExp(String.raw`(?:^|[^\p{L}\p{N}_])(?:${alternation})\s*:\s*\S`, "u");
 }
 
 function hasSafetyJustificationBefore(
   sourceCode: SourceCode,
   owner: ESTree.Node,
   assertion: TypeAssertion,
-  pattern: RegExp,
+  pattern: RegExp
 ): boolean {
   return sourceCode
     .getCommentsBefore(owner)
-    .some(
-      (comment) => comment.end <= assertion.start && pattern.test(comment.value),
-    );
+    .some((comment) => comment.end <= assertion.start && pattern.test(comment.value));
 }
 
-function hasSafetyComment(
-  sourceCode: SourceCode,
-  node: TypeAssertion,
-  pattern: RegExp,
-): boolean {
+function hasSafetyComment(sourceCode: SourceCode, node: TypeAssertion, pattern: RegExp): boolean {
   let current: ESTree.Node = node;
   while (true) {
     if (hasSafetyJustificationBefore(sourceCode, current, node, pattern)) return true;
@@ -83,12 +71,11 @@ export const requireSafetyCommentForTypeAssertionRule = defineRule({
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Require a nearby SAFETY comment for every TypeScript type assertion except const assertions.",
+      description: "Require a nearby SAFETY comment for every TypeScript type assertion except const assertions."
     },
     messages: {
       missingSafetyComment:
-        "This type assertion has no `{{marker}}:` justification. State the checked invariant immediately before the assertion or its containing statement.",
+        "This type assertion has no `{{marker}}:` justification. State the checked invariant immediately before the assertion or its containing statement."
     },
     schema: [
       {
@@ -98,13 +85,13 @@ export const requireSafetyCommentForTypeAssertionRule = defineRule({
             type: "array",
             items: { type: "string", minLength: 1 },
             minItems: 1,
-            uniqueItems: true,
-          },
+            uniqueItems: true
+          }
         },
-        additionalProperties: false,
-      },
+        additionalProperties: false
+      }
     ],
-    defaultOptions: [{ markers: ["SAFETY"] }],
+    defaultOptions: [{ markers: ["SAFETY"] }]
   },
   createOnce(context) {
     const patterns = new Map<string, RegExp>();
@@ -119,13 +106,13 @@ export const requireSafetyCommentForTypeAssertionRule = defineRule({
       context.report({
         node,
         messageId: "missingSafetyComment",
-        data: { marker: markers[0] ?? DEFAULT_SAFETY_MARKERS[0] },
+        data: { marker: markers[0] ?? DEFAULT_SAFETY_MARKERS[0] }
       });
     };
 
     return {
       TSAsExpression: checkAssertion,
-      TSTypeAssertion: checkAssertion,
+      TSTypeAssertion: checkAssertion
     };
-  },
+  }
 });

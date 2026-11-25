@@ -8,12 +8,12 @@ export const noReflectApplyRule = defineRule({
     type: "problem",
     docs: {
       description:
-        "Disallow Reflect.apply; call typed functions directly or model dynamic dispatch behind an interface.",
+        "Disallow Reflect.apply; call typed functions directly or model dynamic dispatch behind an interface."
     },
     messages: {
       reflectApply:
-        "Replace `Reflect.apply` with a typed function call. Model dynamic dispatch behind a named interface.",
-    },
+        "Replace `Reflect.apply` with a typed function call. Model dynamic dispatch behind a named interface."
+    }
   },
   createOnce(context) {
     return {
@@ -22,7 +22,7 @@ export const noReflectApplyRule = defineRule({
         if (isGlobalReflectMethodCall(context.sourceCode, node.callee, "apply")) {
           context.report({ node, messageId: "reflectApply" });
         }
-      },
+      }
     };
-  },
+  }
 });

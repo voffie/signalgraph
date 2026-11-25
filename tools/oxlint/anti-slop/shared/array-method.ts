@@ -29,9 +29,7 @@ export function resolveArrayBinding(sourceCode: SourceCode, node: ESTree.Node): 
 }
 
 /** Read static method names, including computed string literals, without evaluating expressions. */
-export function arrayMethodTarget(
-  node: ESTree.Node,
-): { readonly name: string; readonly object: ESTree.Node } | null {
+export function arrayMethodTarget(node: ESTree.Node): { readonly name: string; readonly object: ESTree.Node } | null {
   node = unwrapArrayExpression(node);
   if (node.type !== "MemberExpression") return null;
   const property = node.property;
@@ -51,7 +49,8 @@ function isArrayAnnotation(type: ESTree.TSType): boolean {
     return isArrayAnnotation(type.typeAnnotation);
   }
   return (
-    type.type === "TSTypeReference" && type.typeName.type === "Identifier" &&
+    type.type === "TSTypeReference" &&
+    type.typeName.type === "Identifier" &&
     (type.typeName.name === "Array" || type.typeName.name === "ReadonlyArray")
   );
 }
@@ -60,7 +59,7 @@ function isArrayAnnotation(type: ESTree.TSType): boolean {
 export function isKnownArrayExpression(
   sourceCode: SourceCode,
   node: ESTree.Node,
-  visited = new Set<Variable>(),
+  visited = new Set<Variable>()
 ): boolean {
   node = unwrapArrayExpression(node);
   if (node.type === "ArrayExpression") return true;
@@ -76,16 +75,19 @@ export function isKnownArrayExpression(
   const variable = resolveArrayBinding(sourceCode, node);
   if (variable === null || visited.has(variable)) return false;
   visited.add(variable);
-  if (variable.references.some(reference => reference.isWrite() && !reference.init)) return false;
+  if (variable.references.some((reference) => reference.isWrite() && !reference.init)) return false;
   for (const identifier of variable.identifiers) {
     const annotation = identifier.typeAnnotation?.typeAnnotation;
     if (annotation !== undefined) return isArrayAnnotation(annotation);
   }
   for (const definition of variable.defs) {
     if (
-      definition.type === "Variable" && definition.node.type === "VariableDeclarator" &&
-      definition.node.id.type === "Identifier" && definition.node.init !== null &&
-      definition.node.parent.type === "VariableDeclaration" && definition.node.parent.kind === "const"
+      definition.type === "Variable" &&
+      definition.node.type === "VariableDeclarator" &&
+      definition.node.id.type === "Identifier" &&
+      definition.node.init !== null &&
+      definition.node.parent.type === "VariableDeclaration" &&
+      definition.node.parent.kind === "const"
     ) {
       return isKnownArrayExpression(sourceCode, definition.node.init, visited);
     }

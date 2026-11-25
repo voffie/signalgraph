@@ -11,7 +11,7 @@ tester.run("anti-slop/no-module-mocking", noModuleMockingRule, {
     "vi.spyOn(store, 'save');",
     "const vi = { mock() {} }; vi.mock();",
     "function test(jest: { mock(): void }) { jest.mock(); }",
-    "import { vi as localVi } from './helpers'; localVi.mock('./module');",
+    "import { vi as localVi } from './helpers'; localVi.mock('./module');"
   ],
   invalid: [
     { code: "vi.mock('./user-store');", errors: [error] },
@@ -22,7 +22,7 @@ tester.run("anti-slop/no-module-mocking", noModuleMockingRule, {
     { code: "import { vi as testApi } from 'vitest'; testApi.mock('./user-store');", errors: [error] },
     {
       code: "import { jest } from '@jest/globals'; jest.mock('./user-store');",
-      errors: [error],
-    },
-  ],
+      errors: [error]
+    }
+  ]
 });

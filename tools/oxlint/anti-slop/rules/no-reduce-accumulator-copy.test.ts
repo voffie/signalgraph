@@ -25,7 +25,7 @@ tester.run("anti-slop/no-reduce-accumulator-copy", noReduceAccumulatorCopyRule, 
     "const Array = custom; items.reduce((acc, item) => Array.from(acc), []);",
     "items.reduce((acc, item) => { let alias = acc; alias = item; return Object.assign({}, alias); }, {});",
     "items.reduce((acc, item) => [...acc, item], []);", // Owned by the native rule.
-    "items.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});",
+    "items.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});"
   ],
   invalid: [
     { code: "items.reduce((acc, item) => Object.assign({}, acc, { [item.id]: item }), {});", errors: [error] },
@@ -35,18 +35,30 @@ tester.run("anti-slop/no-reduce-accumulator-copy", noReduceAccumulatorCopyRule, 
     { code: "items.reduce(function (acc, item) { return Object.assign({}, item, acc); }, {});", errors: [error] },
     { code: "items['reduce'](((acc, item) => Object['assign']({}, acc, item)), {});", errors: [error] },
     { code: "items.reduce((acc = {}, item) => Object.assign({}, acc, item), {});", errors: [error] },
-    { code: "items.reduce((acc, item) => { const alias = acc; return Object.assign({}, alias, item); }, {});", errors: [error] },
+    {
+      code: "items.reduce((acc, item) => { const alias = acc; return Object.assign({}, alias, item); }, {});",
+      errors: [error]
+    },
     { code: "items.reduce((acc, item) => Object.assign({}, acc as State, item), {});", errors: [error] },
-    { code: "items.reduce((acc, item) => { const next = Object.assign({}, acc); next[item.id] = item; return next; }, {});", errors: [error] },
+    {
+      code: "items.reduce((acc, item) => { const next = Object.assign({}, acc); next[item.id] = item; return next; }, {});",
+      errors: [error]
+    },
     { code: "items.reduce((acc, item) => acc.concat([item]), []);", errors: [error] },
     { code: "items.reduceRight((acc, item, index) => acc['concat']([item]), [] as Item[]);", errors: [error] },
-    { code: "items.reduce((acc, item) => { const next = acc.slice(); next.push(item); return next; }, []);", errors: [error] },
+    {
+      code: "items.reduce((acc, item) => { const next = acc.slice(); next.push(item); return next; }, []);",
+      errors: [error]
+    },
     { code: "items.reduce((acc, item) => { const alias = acc; return alias.concat(item); }, []);", errors: [error] },
     { code: "const initial = []; items.reduce((acc, item) => acc.concat(item), initial);", errors: [error] },
-    { code: "items.reduce((acc, item) => { const next = Array.from(acc); next.push(item); return next; }, []);", errors: [error] },
+    {
+      code: "items.reduce((acc, item) => { const next = Array.from(acc); next.push(item); return next; }, []);",
+      errors: [error]
+    },
     { code: "items.reduce((acc, item) => acc.toSpliced(acc.length, 0, item), []);", errors: [error] },
     { code: "items.reduce((acc, item) => acc.toSorted(), []);", errors: [error] },
     { code: "items.reduce((acc, item) => acc.toReversed(), []);", errors: [error] },
-    { code: "items.reduce((acc, item) => acc.with(0, item), []);", errors: [error] },
-  ],
+    { code: "items.reduce((acc, item) => acc.with(0, item), []);", errors: [error] }
+  ]
 });

@@ -46,6 +46,7 @@ it is not the default application API.
 At a genuinely unknown boundary, keep unknown decoding private to the Adapter and let the framework
 supply the raw input type:
 
+<!-- prettier-ignore -->
 ```ts
 const decodeCreateInvoiceCommand = Schema.decodeUnknownEffect(CreateInvoiceCommand);
 

@@ -55,13 +55,12 @@ export const noChainedTypeAssertionsRule = defineRule({
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Disallow chained TypeScript as and angle-bracket assertions, including parenthesized chains.",
+      description: "Disallow chained TypeScript as and angle-bracket assertions, including parenthesized chains."
     },
     messages: {
       chained:
-        "This assertion chain discards type evidence. Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
-    },
+        "This assertion chain discards type evidence. Keep the original precise type, or parse untrusted input at its boundary before narrowing it."
+    }
   },
   createOnce(context) {
     const checkTypeAssertion = (node: TypeAssertionExpression) => {
@@ -71,7 +70,7 @@ export const noChainedTypeAssertionsRule = defineRule({
 
     return {
       TSAsExpression: checkTypeAssertion,
-      TSTypeAssertion: checkTypeAssertion,
+      TSTypeAssertion: checkTypeAssertion
     };
-  },
+  }
 });

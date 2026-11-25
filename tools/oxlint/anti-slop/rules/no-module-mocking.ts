@@ -1,8 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
+import type { ESTree, SourceCode } from "@oxlint/plugins";
 
 import { resolveVariable } from "../shared/scope.ts";
-
-import type { ESTree, SourceCode } from "@oxlint/plugins";
 
 const moduleMockMethods = new Set(["doMock", "mock", "unstable_mockModule"]);
 
@@ -13,13 +12,10 @@ function importedName(node: ESTree.Node): string | null {
 
 function isTestFrameworkObject(
   sourceCode: SourceCode,
-  expression: ESTree.Expression,
+  expression: ESTree.Expression
 ): expression is ESTree.IdentifierReference {
   if (expression.type !== "Identifier") return false;
-  if (
-    (expression.name === "vi" || expression.name === "jest") &&
-    sourceCode.isGlobalReference(expression)
-  ) {
+  if ((expression.name === "vi" || expression.name === "jest") && sourceCode.isGlobalReference(expression)) {
     return true;
   }
 
@@ -43,9 +39,7 @@ function moduleMockCall(sourceCode: SourceCode, callee: ESTree.Expression): bool
   const property = callee.property;
   const method = callee.computed
     ? property.type === "Literal" &&
-      (property.value === "doMock" ||
-        property.value === "mock" ||
-        property.value === "unstable_mockModule")
+      (property.value === "doMock" || property.value === "mock" || property.value === "unstable_mockModule")
       ? property.value
       : null
     : property.type === "Identifier"
@@ -59,13 +53,12 @@ export const noModuleMockingRule = defineRule({
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Disallow Vitest and Jest module mocking; tests must replace dependencies through real interfaces.",
+      description: "Disallow Vitest and Jest module mocking; tests must replace dependencies through real interfaces."
     },
     messages: {
       moduleMock:
-        "Replace module mocking with dependency injection through a real interface, service layer, or faithful test implementation.",
-    },
+        "Replace module mocking with dependency injection through a real interface, service layer, or faithful test implementation."
+    }
   },
   createOnce(context) {
     return {
@@ -74,7 +67,7 @@ export const noModuleMockingRule = defineRule({
         if (moduleMockCall(context.sourceCode, node.callee)) {
           context.report({ node, messageId: "moduleMock" });
         }
-      },
+      }
     };
-  },
+  }
 });

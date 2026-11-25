@@ -6,10 +6,14 @@ import { arrayMethodTarget, isKnownArrayExpression, unwrapArrayExpression } from
 export const noArrayFilterMapRule = defineRule({
   meta: {
     type: "suggestion",
-    docs: { description: "Disallow adjacent array filter/map passes in favor of lazy iterator helpers or a single transformation." },
-    messages: {
-      arrayFilterMap: "Avoid consecutive array `{{first}}` and `{{second}}` passes. Prefer `.values().{{first}}(...).{{second}}(...).toArray()` where iterator helpers are supported, or a single `flatMap`/mutating reducer. Preserve callback ordering, indexes, and filtering semantics.",
+    docs: {
+      description:
+        "Disallow adjacent array filter/map passes in favor of lazy iterator helpers or a single transformation."
     },
+    messages: {
+      arrayFilterMap:
+        "Avoid consecutive array `{{first}}` and `{{second}}` passes. Prefer `.values().{{first}}(...).{{second}}(...).toArray()` where iterator helpers are supported, or a single `flatMap`/mutating reducer. Preserve callback ordering, indexes, and filtering semantics."
+    }
   },
   createOnce(context) {
     return {
@@ -22,7 +26,7 @@ export const noArrayFilterMapRule = defineRule({
         if (inner === null || inner.name !== (outer.name === "map" ? "filter" : "map")) return;
         if (!isKnownArrayExpression(context.sourceCode, inner.object)) return;
         context.report({ node, messageId: "arrayFilterMap", data: { first: inner.name, second: outer.name } });
-      },
+      }
     };
-  },
+  }
 });

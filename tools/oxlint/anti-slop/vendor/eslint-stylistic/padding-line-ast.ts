@@ -7,12 +7,10 @@ type Token = SyntaxToken | Comment;
 export const LINEBREAKS = new Set(["\r\n", "\r", "\n", "\u2028", "\u2029"]);
 
 /** Test a closing brace without treating comment text as punctuation. */
-export const isClosingBraceToken = (token: Token): boolean =>
-  token.type === "Punctuator" && token.value === "}";
+export const isClosingBraceToken = (token: Token): boolean => token.type === "Punctuator" && token.value === "}";
 
 /** Test a semicolon without treating comment text as punctuation. */
-export const isSemicolonToken = (token: Token): boolean =>
-  token.type === "Punctuator" && token.value === ";";
+export const isSemicolonToken = (token: Token): boolean => token.type === "Punctuator" && token.value === ";";
 
 /** Filter the optional final semicolon when identifying block-like statements. */
 export const isNotSemicolonToken = (token: Token): boolean => !isSemicolonToken(token);
@@ -23,25 +21,19 @@ export const isTokenOnSameLine = (left: { loc: Location }, right: { loc: Locatio
 
 /** Recognize declarations and expressions used by the upstream IIFE matcher. */
 export const isFunction = (node: ESTree.Node): boolean =>
-  node.type === "FunctionDeclaration" ||
-  node.type === "FunctionExpression" ||
-  node.type === "ArrowFunctionExpression";
+  node.type === "FunctionDeclaration" || node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression";
 
 /** Preserve the upstream multiline statement heuristic. */
-export const isSingleLine = (node: ESTree.Node): boolean =>
-  node.loc.start.line === node.loc.end.line;
+export const isSingleLine = (node: ESTree.Node): boolean => node.loc.start.line === node.loc.end.line;
 
 /** Unwrap optional chaining before checking IIFE syntax. */
 export const skipChainExpression = (node: ESTree.Node): ESTree.Node =>
   node.type === "ChainExpression" ? node.expression : node;
 
 /** Only a program or function-body expression can begin a directive prologue. */
-export const isTopLevelExpressionStatement = (
-  node: ESTree.Node,
-): node is ESTree.ExpressionStatement =>
+export const isTopLevelExpressionStatement = (node: ESTree.Node): node is ESTree.ExpressionStatement =>
   node.type === "ExpressionStatement" &&
-  (node.parent.type === "Program" ||
-    (node.parent.type === "BlockStatement" && isFunction(node.parent.parent)));
+  (node.parent.type === "Program" || (node.parent.type === "BlockStatement" && isFunction(node.parent.parent)));
 
 /** A single wrapping pair suffices to exclude a string from directive syntax. */
 export function isParenthesized(node: ESTree.Node, sourceCode: SourceCode): boolean {

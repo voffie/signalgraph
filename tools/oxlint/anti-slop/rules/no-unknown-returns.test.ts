@@ -19,7 +19,7 @@ tester.run("anti-slop/no-unknown-returns", noUnknownReturnsRule, {
     "type Result = { value: unknown }; function load(): Result { return result; }",
     "function load(): Promise<User> { return promise; }",
     "type Identity<T> = T; function load(): Identity<User> { return user; }",
-    "type Value = unknown; function outer() { type Value = User; function load(): Value { return user; } }",
+    "type Value = unknown; function outer() { type Value = User; function load(): Value { return user; } }"
   ],
   invalid: [
     { code: "function load(): unknown { return input; }", errors: [error] },
@@ -30,18 +30,21 @@ tester.run("anti-slop/no-unknown-returns", noUnknownReturnsRule, {
     { code: "function load(): string | unknown { return input; }", errors: [error] },
     { code: "function load(): Promise<unknown> { return promise; }", errors: [error] },
     { code: "type UnknownValue = unknown; function load(): UnknownValue { return input; }", errors: [error] },
-    { code: "type Item = unknown; type Fallback<Input> = Input extends infer Item ? string : () => Item;", errors: [error] },
+    {
+      code: "type Item = unknown; type Fallback<Input> = Input extends infer Item ? string : () => Item;",
+      errors: [error]
+    },
     {
       code: "function outer() { type Result = unknown; function load(): Result { return input; } }",
-      errors: [error],
+      errors: [error]
     },
     {
       code: "type Identity<T> = T; function load(): Identity<unknown> { return input; }",
-      errors: [error],
+      errors: [error]
     },
     {
       code: "type Identity<T> = T; type Wrapped<T> = Promise<Identity<T>>; function load(): Wrapped<unknown> { return promise; }",
-      errors: [error],
-    },
-  ],
+      errors: [error]
+    }
+  ]
 });

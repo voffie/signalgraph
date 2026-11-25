@@ -14,7 +14,7 @@ const second = join(probeRoot, "second.ts");
 
 function runSpacingLint(...args: string[]) {
   const result = spawnSync("pnpm", ["exec", "oxlint", "--config", config, ...args], {
-    encoding: "utf8",
+    encoding: "utf8"
   });
   return { status: result.status, output: `${result.stdout ?? ""}\n${result.stderr ?? ""}` };
 }
@@ -23,11 +23,9 @@ try {
   writeFileSync(
     config,
     JSON.stringify({
-      jsPlugins: [
-        { name: "anti-slop", specifier: fileURLToPath(new URL("../index.ts", import.meta.url)) },
-      ],
-      rules: { "anti-slop/require-readable-spacing": "error" },
-    }),
+      jsPlugins: [{ name: "anti-slop", specifier: fileURLToPath(new URL("../index.ts", import.meta.url)) }],
+      rules: { "anti-slop/require-readable-spacing": "error" }
+    })
   );
   writeFileSync(first, "export const a = 1;\n/** Attached to b. */\nexport const b = 2;\n");
   writeFileSync(second, "export function f() {\nconst a = 1;\nconst b = 2;\nreturn a + b;\n}\n");
@@ -38,14 +36,8 @@ try {
 
   const fixed = runSpacingLint("--fix", first, second);
   assert.equal(fixed.status, 0, fixed.output);
-  assert.equal(
-    readFileSync(first, "utf8"),
-    "export const a = 1;\n\n/** Attached to b. */\nexport const b = 2;\n",
-  );
-  assert.equal(
-    readFileSync(second, "utf8"),
-    "export function f() {\nconst a = 1;\nconst b = 2;\n\nreturn a + b;\n}\n",
-  );
+  assert.equal(readFileSync(first, "utf8"), "export const a = 1;\n\n/** Attached to b. */\nexport const b = 2;\n");
+  assert.equal(readFileSync(second, "utf8"), "export function f() {\nconst a = 1;\nconst b = 2;\n\nreturn a + b;\n}\n");
 
   const stable = [readFileSync(first, "utf8"), readFileSync(second, "utf8")];
   const clean = runSpacingLint(first, second);

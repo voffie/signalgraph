@@ -5,7 +5,7 @@ import { filesystem } from "blume/sources";
 
 export default defineConfig({
   title: "SignalGraph",
-  description: "Documentation powered by Blume.",
+  description: "Build typed messaging flows with SignalGraph, Effect, and RabbitMQ.",
   logo: {
     image: "/icon.svg",
     text: "SignalGraph"

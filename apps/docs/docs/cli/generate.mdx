@@ -1,10 +1,26 @@
 ---
 title: Generate
+description: Generate a typed SignalGraph client from a project schema.
 ---
 
-The `generate` command is what SignalGraph uses to generate the custom client the user interacts with.
-When it runs it reads the `schema` field in `signalgraph.config.ts` and generates a topology/message graph.
-After that it generates an `index.ts` file that the end user imports. This file gets generated inside the directory
-which has been set by the `out` field inside the same config file.
+```sh
+npx signalgraph generate
+```
 
-You can find more information about the generated client [here](../client)
+The CLI looks for the nearest `signalgraph.config.ts` by walking up from your working directory. It loads the configured schema module, checks the message and consumer exports, and writes `index.ts` inside `out`. The success message shows the generated path and the message and consumer counts. A broker connection is only needed when you run the client.
+
+## Watch and debug
+
+```sh
+npx signalgraph generate --watch
+npx signalgraph generate --log-level debug
+```
+
+`--watch` (or `-w`) regenerates after changes to the config or the configured schema file. Restart the watcher if it exits after a generation error. Debug logging shows the resolved config, schema, and output paths.
+
+## Common generation errors
+
+- If no config is found, run the command from the project directory or add [signalgraph.config.ts](/config/).
+- If the config cannot load as ESM, check for `"type": "module"` in the nearest `package.json`.
+- If a consumer references an unexported message, export the message as a top-level declaration and have the consumer reference that exact declaration.
+- If names collide after conversion to client property names, rename one declaration. For example, `orders.created` and `orders-created` both become `ordersCreated`.

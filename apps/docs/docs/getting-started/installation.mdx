@@ -1,49 +1,36 @@
 ---
 title: Installation
-description: Install SignalGraph core and adapter
+description: Install SignalGraph, Effect, and the RabbitMQ adapter.
 ---
 
+Use a Node.js ESM project. Set `"type": "module"` in its `package.json`. Use Node.js 22.19 or newer for the current CLI and its Effect Node dependencies.
+
+Install Effect and SignalGraph. Add the RabbitMQ adapter in applications that publish or consume messages through RabbitMQ.
+
 <CodeGroup>
 
 ```sh npm
-npm install signalgraph
+npm install effect signalgraph @signalgraph/adapter-rabbitmq
 ```
 
 ```sh pnpm
-pnpm add signalgraph
-```
-
-```sh bun
-bun add signalgraph
-```
-
-```sh yarn
-yarn add signalgraph
+pnpm add effect signalgraph @signalgraph/adapter-rabbitmq
 ```
 
 </CodeGroup>
 
-## Adapter
-
-SignalGraph is built up as multiple packages where each broker is represented by an
-adapter package. You can learn more about them [here](../adapter/index.mdx).
-
-The example below is using the [RabbitMQ adapter](/adapter/rabbitmq)
+For the [quickstart](/getting-started/quickstart/), also install `tsx` to run the TypeScript files directly:
 
 <CodeGroup>
+
 ```sh npm
-npm install @signalgraph/adapter-rabbitmq
+npm install -D tsx
 ```
 
 ```sh pnpm
-pnpm add @signalgraph/adapter-rabbitmq
+pnpm add -D tsx
 ```
 
-```sh bun
-bun add @signalgraph/adapter-rabbitmq
-```
-
-```sh yarn
-yarn add @signalgraph/adapter-rabbitmq
-```
 </CodeGroup>
+
+Next, follow the [quickstart](/getting-started/quickstart/) or go to the [config reference](/config/) if you already have a schema.

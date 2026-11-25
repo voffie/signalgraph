@@ -1,55 +1,40 @@
 ---
 title: Schema
-description: Define your broker layout using SignalGraph's schema module
+description: Declare the messages your application publishes and the consumers that handle them.
 ---
 
-SignalGraph has simplified everything down to two core primitives, message & consumer. These are then translated by each adapter
-into their equivalent primitives.
+A SignalGraph schema is a TypeScript module with named `message()` and `consumer()` exports. The generator uses them for the client API and the broker topology.
 
-## Message
-A `message` is exactly what the name supplies a message. It defines the name and the structure of
-a specific message.
-
-```ts title="Message Definition"
+```ts title="src/schema/schema.ts"
 import { Schema } from "effect";
-import { message } from "signalgraph";
+import { consumer, message } from "signalgraph";
 
 export const OrderCreated = message({
   name: "orders.created",
-  schema: Schema.Struct({
-    orderId: Schema.String,
-  }),
-});
-```
-
-Currently a `message` support these fields:
-* `name: string` - The name of the message. Used to separate messages from each other
-* `schema: Effect Schema` - The structure of the message. Any [Effect schema](https://effect.website/docs/v4/api/effect/Schema) is supported.
-
-## Consumer
-A `consumer` is the SignalGraph primitive for creating a subscriber. Each message can have multiple `consumers`
-and `SignalGraph` will be using a fanout strategy to allow each `consumer` to get all messages.
-
-```ts title="Consumer definition"
-import { Schema } from "effect";
-import { message, consumer } from "signalgraph";
-
-export const OrderCreated = message({
-  name: "orders.created",
-  schema: Schema.Struct({
-    orderId: Schema.String,
-  }),
+  schema: Schema.Struct({ orderId: Schema.String })
 });
 
 export const Billing = consumer({
   name: "billing",
   message: OrderCreated,
+  prefetch: 10,
+  dlq: true
 });
 ```
 
-Currently a `consumer` support these fields:
-* `name: string` - The name of the consumer. Used to separate consumers from each other
-* `message: Message` - The variable of the `message` it subscribes to. Can also be an inline `message`
-* `prefetch?: number` - The amount of messages the broker should prefetch
-* `retry?: RetryPolicy` - Custom retry policy when a handler fails, read more [here](./retry).
-* `dlq?: boolean` - On/off switch if a DLQ (Dead Letter Queue) or equivalent should be created for the supplied adapter/broker
+## Messages
+
+- `name` identifies the message on the broker. Use a unique, nonempty name.
+- `schema` defines both the published payload and what a handler receives after decoding. Its encode and decode steps must run without additional Effect services. With the RabbitMQ adapter, the encoded value must be JSON-serializable.
+
+## Consumers
+
+- `name` identifies the consumer. Use a unique, nonempty name. Each consumer can receive a copy of the message it subscribes to.
+- `message` references the same message object exported from the schema module. Declare the message first and pass that declaration to `consumer()`.
+- `prefetch` optionally sets the broker's limit on unacknowledged deliveries for the consumer. RabbitMQ treats `0` as unlimited. Omitting it leaves the broker default in effect.
+- `retry` optionally sets the [retry policy](/schema/retry/) for handler failures.
+- `dlq` controls dead-lettering after the last attempt and defaults to `true`. With RabbitMQ, set it to `false` to discard a failed delivery after the configured attempts are exhausted.
+
+The generator converts message and consumer names to client property names. For example, `orders.created` becomes `ordersCreated`. Keep those generated names distinct, and reserve `start` and `listen` for the client lifecycle.
+
+See the [client reference](/client/) for the generated API.

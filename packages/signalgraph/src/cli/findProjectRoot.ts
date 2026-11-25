@@ -2,11 +2,13 @@ import { Effect, FileSystem, Path } from "effect";
 
 import { ConfigNotFoundError } from "./CliErrors.ts";
 
+/** A generation project rooted at the directory containing its config. */
 export interface Project {
   root: string;
   configPath: string;
 }
 
+/** Finds the closest SignalGraph configuration above the working directory. */
 export const findProjectRoot = Effect.fn(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

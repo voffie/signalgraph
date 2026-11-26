@@ -65,7 +65,7 @@ await Effect.runPromise(
 );
 ```
 
-Run `npx tsx src/handlers.ts`. Wait for the log confirming that RabbitMQ topology was declared and consumers registered before starting the publisher.
+Run `node src/handlers.ts`. Wait for the log confirming that RabbitMQ topology was declared and consumers registered before starting the publisher.
 
 ## 4. Publish a message
 
@@ -86,6 +86,6 @@ await Effect.runPromise(
 );
 ```
 
-In a second terminal, run `npx tsx src/publish.ts`. The consumer should print `Billing received order order-123`. Press Ctrl+C in the consumer terminal to stop it and drain in-flight work. If you started the demo container, stop it from its terminal too.
+In a second terminal, run `node src/publish.ts`. The consumer should print `Billing received order order-123`. Press Ctrl+C in the consumer terminal to stop it and drain in-flight work. If you started the demo container, stop it from its terminal too.
 
 For a flow where one handler publishes a follow-up message and you can inspect the resulting trace, see [Devtools](/integrations/devtools/).

@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "generate": "signalgraph generate",
-    "consume": "tsx src/handlers.ts",
-    "send": "tsx src/publish.ts"
+    "consume": "node src/handlers.ts",
+    "send": "node src/publish.ts"
   },
   "dependencies": {
     "@signalgraph/adapter-rabbitmq": "workspace:^",

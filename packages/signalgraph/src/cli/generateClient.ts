@@ -82,9 +82,10 @@ export const generateClient = Effect.fn(function* (config: Config, data: SchemaD
   const aliases = generateTypeAliases(data.messageExportNames).join("\n\n");
 
   const messageGraph = [
-    "const messageGraph = {",
+    "/** Message and consumer declarations for the client and deployment tools. */",
+    "export const messageGraph: Runtime.MessageGraph = {",
     indent(generateMessageGraph(data).join(",\n")),
-    "} satisfies Runtime.MessageGraph;"
+    "};"
   ].join("\n");
 
   const bindings = [

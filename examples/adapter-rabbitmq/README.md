@@ -1,44 +1,23 @@
-# RabbitMQ Example
+# RabbitMQ example
 
-This example publishes an order, handles it in Analytics, and forwards the completion to Shipping.
+Analytics handles the order message and publishes a completion message that Shipping handles.
 
 ## Getting started
 
 From the repository root, run `pnpm install` and `pnpm build`. Run the remaining commands from this example directory.
 
-1. Generate the SignalGraph client
+Start Docker. Generate the client, start RabbitMQ, and run the consumer:
 
-```bash
+```sh
 pnpm generate
-```
-
-This runs the SignalGraph client generator using the configuration and schema to
-produce the generated client used by the example.
-
-**Make sure Docker is running, then continue with these steps.**
-
-2. Start RabbitMQ
-
-```bash
 docker compose up -d
-```
-
-This starts a RabbitMQ broker that the example connects to.
-
-3. Start the consumer application
-
-```bash
 pnpm consume
 ```
 
-This starts the application and registers all consumer handlers.
+Wait for the consumer to log that it has declared the RabbitMQ topology. Publish the order from a second terminal in this directory:
 
-4. Publish the first message
-
-```bash
+```sh
 pnpm send
 ```
-
-This publishes the initial message that starts the message flow.
 
 Stop the consumer with Ctrl+C, then run `docker compose down` to stop RabbitMQ.

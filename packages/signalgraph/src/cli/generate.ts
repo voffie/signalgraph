@@ -54,7 +54,7 @@ export const generate = Command.make(
 
       yield* Console.log("Watching the SignalGraph config and schema for changes. Press Ctrl+C to stop.");
 
-      // Each config revision owns its schema watcher, so changing the schema path releases the old watcher.
+      // When the schema path changes, switchMap cancels the previous schema watcher.
       yield* Stream.concat(
         Stream.succeed(initial),
         fs.watch(initial.project.configPath).pipe(

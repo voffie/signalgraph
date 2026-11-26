@@ -3,7 +3,7 @@ title: Config
 description: Set the schema file and generated client directory.
 ---
 
-Place `signalgraph.config.ts` at the root of your ESM application and default-export a config. Both paths are resolved relative to the config file, even if you run the CLI from a subdirectory.
+Create `signalgraph.config.ts` at the root of your ESM application and use a default export. The CLI resolves both paths relative to the config file, even when you run it from a subdirectory.
 
 ```ts title="signalgraph.config.ts"
 import { defineConfig } from "signalgraph/config";

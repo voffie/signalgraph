@@ -39,17 +39,17 @@ export interface IBroker {
 }
 
 /**
- * Delivery is at-least-once. A message is acked only after its handler succeeded,
- * or after its retry/DLQ copy was confirmed by the broker. A crash in between can
- * deliver a message twice with the same messageId, so handlers should be idempotent.
+ * Delivery is at least once. The adapter acknowledges a message after its handler succeeds
+ * or after the broker confirms a copy for retry or dead-lettering. A crash before acknowledgement
+ * can cause redelivery with the same `messageId`. Handlers should be idempotent.
  *
- * Shutdown order, driven by the runtime: `stop` -> `awaitIdle` (with a timeout) -> `close`.
+ * The runtime calls `stop`, waits for `awaitIdle` up to the shutdown timeout, then calls `close`.
  *
- * Every adapter should have tests for:
- * - nothing starts after `stop`, and messages published afterwards stay queued
- * - `awaitIdle` waits for a running handler, and resolves at once when idle
- * - `deliver` still works after `stop` (a draining handler may publish)
- * - `stop` and `close` are idempotent
- * - `close` with a handler still running returns its message to the broker
+ * Tests for each adapter should verify that:
+ * - After `stop`, no new handlers start and new messages stay queued.
+ * - `awaitIdle` waits for running handlers and returns immediately when idle.
+ * - `deliver` accepts messages after `stop` so running handlers can publish.
+ * - `stop` and `close` are idempotent.
+ * - `close` returns messages with running handlers to the broker.
  */
 export class Broker extends Context.Service<Broker, IBroker>()("@signalgraph/runtime/Broker") {}

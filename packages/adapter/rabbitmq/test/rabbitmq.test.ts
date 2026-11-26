@@ -58,7 +58,7 @@ const managementApi = (container: StartedRabbitMQContainer) => ({
 async function closeAllConnections(container: StartedRabbitMQContainer): Promise<void> {
   const { base, headers } = managementApi(container);
 
-  // The management API reports connections a few seconds late, so wait until ours shows up.
+  // The management API can take a few seconds to report a new connection.
   for (let attempt = 0; attempt < 30; attempt++) {
     const connections = await (await fetch(`${base}/connections`, { headers })).json();
 
@@ -87,7 +87,6 @@ async function deleteQueue(container: StartedRabbitMQContainer, queue: string): 
   }
 }
 
-// The management API reports connections a few seconds late, so wait until
 async function getConnectionNames(container: StartedRabbitMQContainer): Promise<Array<string>> {
   const { base, headers } = managementApi(container);
 
@@ -604,7 +603,7 @@ describe("RabbitMQBroker", () => {
           yield* broker.awaitIdle;
           yield* broker.close;
 
-          // Message 1 was acked. the follow-up (2) was accepted by the broker and stays queued.
+          // The adapter acknowledged message 1. RabbitMQ accepted message 2 and kept it queued.
           expect(yield* Effect.promise(() => getQueueMessageCount(rabbitmq, "analytics"))).toBe(1);
         }).pipe(Effect.provide(RabbitMQBroker({ url: rabbitmq.getAmqpUrl() }))),
       60000

@@ -7,7 +7,7 @@ description: Generate a typed SignalGraph client from a project schema.
 npx signalgraph generate
 ```
 
-The CLI looks for the nearest `signalgraph.config.ts` by walking up from your working directory. It loads the configured schema module, checks the message and consumer exports, and writes `index.ts` inside `out`. The success message shows the generated path and the message and consumer counts. A broker connection is only needed when you run the client.
+The CLI looks for `signalgraph.config.ts` in the working directory and its parents. It validates the schema exports and writes `index.ts` to `out`. On success, it prints the output path and the number of messages and consumers. Connect to the broker when you run the client.
 
 ## Watch and debug
 
@@ -16,7 +16,7 @@ npx signalgraph generate --watch
 npx signalgraph generate --log-level debug
 ```
 
-`--watch` (or `-w`) regenerates after changes to the config or the configured schema file. Restart the watcher if it exits after a generation error. Debug logging shows the resolved config, schema, and output paths.
+Use `--watch` or `-w` to regenerate after changes to the config or schema file. Restart the watcher if it exits after a generation error. Debug logging shows the resolved config, schema, and output paths.
 
 ## Common generation errors
 

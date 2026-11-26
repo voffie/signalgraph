@@ -86,7 +86,7 @@
           }}
           role="button"
           tabindex="0"
-          title={`${label} — ${fmtMs(span.endTime - span.startTime)}`}
+          title={`${label}, ${fmtMs(span.endTime - span.startTime)}`}
           class="flex cursor-pointer items-center gap-2.5">
           <span
             class={cn(

@@ -173,7 +173,7 @@ describe("signalgraph generate --watch", () => {
           payload.orderId.toUpperCase();
           return Effect.void;
         });
-        // @ts-expect-error The old message resource is gone after regeneration.
+        // @ts-expect-error Regeneration removes the old message property.
         client.ordersCreated;
       }
     `

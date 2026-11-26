@@ -20,8 +20,7 @@ describe("RabbitMQBroker over an unreliable network", () => {
   const control = () => `http://${toxiproxy.getHost()}:${toxiproxy.getMappedPort(8474)}`;
   const toxicsUrl = () => `${control()}/proxies/rabbitmq/toxics`;
 
-  // A bandwidth of zero in both directions: the TCP connection stays open but nothing flows,
-  // which is the "silent" failure that only heartbeats can detect
+  // Zero bandwidth in both directions keeps the TCP connection open and blocks heartbeats.
   async function addBlackhole() {
     for (const stream of ["upstream", "downstream"]) {
       await fetch(toxicsUrl(), {
@@ -77,10 +76,10 @@ describe("RabbitMQBroker over an unreliable network", () => {
         yield* client.start();
 
         yield* Effect.promise(() => proxy.setEnabled(false));
-        yield* Effect.sleep("1 second"); // the drop is noticed and reconnecting has started to fail
+        yield* Effect.sleep("1 second"); // Give the adapter time to detect the disconnect and attempt to reconnect.
 
         const publishing = yield* Effect.forkChild(client.orderCreated.publish({ orderId: 7 }));
-        yield* Effect.sleep("1 second"); // the publish is now waiting for a session
+        yield* Effect.sleep("1 second"); // Give the publish time to reach the wait for a session.
 
         yield* Effect.promise(() => proxy.setEnabled(true));
 

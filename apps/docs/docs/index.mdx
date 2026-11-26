@@ -7,7 +7,7 @@ sidebar:
   order: 0
 ---
 
-SignalGraph turns Effect schemas into a typed messaging client. Define each message and the consumers that subscribe to it, then run the CLI. At startup, the broker adapter uses those declarations to set up the messaging topology.
+SignalGraph generates a typed messaging client from Effect schemas. Declare your messages and consumers before running the generator. When the consumer starts, the RabbitMQ adapter declares the exchanges, queues, and bindings.
 
 ```ts title="src/schema/schema.ts"
 import { Schema } from "effect";
@@ -24,8 +24,8 @@ export const Billing = consumer({
 });
 ```
 
-The generated client gives you `client.ordersCreated.publish(...)` and `client.billing.handle(...)`, both typed from the same schema. The adapter handles transport and delivery. RabbitMQ is the supported broker.
+The generated client exposes `client.ordersCreated.publish(...)` and `client.billing.handle(...)`, both typed from the same schema. The adapter handles transport and delivery. RabbitMQ is the supported broker.
 
-- [Quickstart](/getting-started/quickstart/) takes you from a schema to a running publisher and consumer.
+- [Quickstart](/getting-started/quickstart/) shows how to generate the client and run a publisher and consumer.
 - [RabbitMQ adapter](/adapters/rabbitmq/) covers connection settings, delivery guarantees, and shutdown.
 - [Devtools](/integrations/devtools/) shows how OpenTelemetry traces connect publishers and handlers.

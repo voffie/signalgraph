@@ -1,6 +1,6 @@
-# Coding Standards
+# Coding standards
 
-## Monorepo Boundaries
+## Monorepo boundaries
 
 Treat every workspace under `apps/*` as an independent runnable or deployable composition root.
 An app may depend on external packages and workspaces under `packages/*`; it must never import from,
@@ -22,7 +22,7 @@ framework wiring, app-specific configuration, and final Layer or dependency comp
 app; place reusable behavior behind package public entrypoints. This is an incremental direction,
 not a requirement to relocate existing app-local modules before another owner needs them.
 
-## Provenance and Parsing
+## Provenance and parsing
 
 Choose validation from evidence about the value's origin:
 
@@ -75,7 +75,7 @@ A deliberately low-level public codec may expose unknown input or parse options 
 of its real contract; document that boundary instead of disguising it with aliases or casts. Typed
 decoder substitution changes the function contract but does not by itself remove runtime validation.
 
-## Preserve Established Type Information
+## Preserve established type information
 
 Treat types as evidence about where a value came from and which invariants have already been
 established. Preserve the strongest meaningful domain, application, library, or platform type
@@ -100,7 +100,7 @@ const transformOperation = (operation: OpenApiOperation): OpenApiOperation => {
 };
 ```
 
-### Refine Known Values Without Widening
+### Refine known values without widening
 
 Once a boundary has parsed a value, later operations accept that established type. When a
 calculation, patch, or combination introduces an additional constraint, transform from the known
@@ -119,8 +119,8 @@ contract discards provenance and turns compiler-rejected mistakes into runtime p
 
 Prefer, in order, a composed Effect Schema whose source schema owns the established input type, a
 typed smart constructor, or a typed refinement function when no source schema exists. Name the
-operation for what it does—`refineInvoiceTransition` or `toPersistedInvoice`, for example—rather than
-calling an already parsed value an unknown-input parse.
+operation for what it does. Use names such as `refineInvoiceTransition` or `toPersistedInvoice` for
+operations on already parsed values.
 
 Apply the same rule to encoding and intermediate representations. A known value must not pass through
 `unknown`, `object`, a generic record, JSON, or a broader primitive merely to make a transformation
@@ -170,11 +170,10 @@ framework folklore, and "this callback always passes that type" are not evidence
 
 ### `SAFETY` assertions inside library internals
 
-Inside a library package's internals (not its public signatures, and not in apps), an assertion is
-also permitted when it buys a better public API, such as inference that callers would otherwise
-lose, or removing plumbing from the public surface, and TypeScript cannot express the invariant
-without it. That includes a chain through `unknown` when TypeScript reports the two types do not
-overlap. Each such assertion must carry, directly above it:
+Library internals can use an assertion that improves the public API when TypeScript cannot express
+the invariant. For example, an assertion can preserve type inference or keep internal parameters
+out of public signatures. This exception applies only to library internals. It includes a chain
+through `unknown` when TypeScript reports that the types do not overlap. Each such assertion must carry, directly above it:
 
 - a `// SAFETY:` comment proving the runtime value has the asserted type: where the value comes
   from, which invariant guarantees it, and why TypeScript cannot see that invariant;
@@ -205,7 +204,7 @@ The governing rule is: **preserve evidence already established, create evidence 
 unknown input at its boundary, and never fabricate evidence with an assertion after throwing it
 away.**
 
-## Schema Testing
+## Schema testing
 
 Do not add tests that merely restate a schema's declared constraints with representative valid or
 invalid values. Schema libraries own their decoding mechanics, and the schema declaration itself is
@@ -216,7 +215,7 @@ such as a transformation, normalization, custom filter, compatibility contract, 
 round trip, or a previously regressed edge case. Test boundary behavior through the boundary's
 public interface when parsing failures produce caller-visible application or protocol outcomes.
 
-## Optional Values
+## Optional values
 
 Represent every optional field, property, parameter, and return value with `Option.Option<A>`.
 
@@ -233,7 +232,7 @@ const withBody = Option.some("Invoice details");
 const withoutBody = Option.none<string>();
 ```
 
-## Effect Imports
+## Effect imports
 
 Import stable Effect modules as named namespace exports from the `effect` package root. Combine
 multiple stable modules in one declaration:
@@ -251,7 +250,7 @@ import { HttpServerResponse } from "effect/unstable/http";
 Do not use direct leaf-module namespace imports such as `import * as Effect from "effect/Effect"`.
 Use the same import form consistently in source files and tests.
 
-## Error Design
+## Error design
 
 Treat errors as product interfaces and observability data. Every error must explain what operation or outcome failed and give the most specific safe reason known. Tell the caller how to correct, retry, reconcile, or escalate the failure; provide reassurance only when the application can prove what was unaffected. Use calm, direct language without blame, jokes, generic fallback copy, or implementation jargon.
 
@@ -259,7 +258,7 @@ Carry diagnostic context as typed fields rather than burying it in prose. Includ
 
 Read [`docs/errors.md`](errors.md) before adding or changing typed errors, rendered error messages, public error schemas, HTTP error statuses, retry guidance, or failure telemetry. It is the source of truth for error principles, internal/public boundaries, contextual data, and the error review checklist.
 
-## Effect Code Style
+## Effect code style
 
 Use `Effect.gen(function* () { ... })` and `yield*` for business workflows. A generator is the
 default when an operation retrieves contextual services, performs multiple dependent steps, names
@@ -309,7 +308,7 @@ Apply this decision matrix:
 - multiple dependent `map` / `flatMap` / `andThen` steps: rewrite as a generator so intermediate
   values and control flow are explicit.
 
-## Effect Tagged Error Translation
+## Effect tagged error translation
 
 Prefer `Effect.catchTag` or `Effect.catchTags` when translating an error channel whose expected
 failures have `_tag` discriminants. List each known source error explicitly, preserve an
@@ -364,7 +363,7 @@ const registerAccount = Effect.fn("AccountRegistry.registerAccount")(
 Use a callback transform only when composing multiple combinators or when the transform needs the
 original function arguments.
 
-## Effect Service Dependencies in Layers
+## Effect service dependencies in Layers
 
 When a Layer or framework builder depends on a contextual Effect service, yield that service inside
 the Effect that constructs the Layer's implementation. Keep the service in the Layer requirement
@@ -394,9 +393,9 @@ higher-order rather than an Effect service.
 Tests follow the same requirement channel: provide a faithful implementation with `Layer.succeed`
 or a test Layer, then provide that Layer to the dependency-preserving Layer under test.
 
-## Effect Service Modules
+## Effect service modules
 
-### Service Constructor Locality
+### Service constructor locality
 
 Do not pass dependency-bearing constructor functions through application code or import them into
 runtime composition modules. In an Effect project, an exported free function named
@@ -423,7 +422,7 @@ export const invoiceServiceLayerWithoutDependencies = Layer.effect(InvoiceServic
 ```
 
 Do not introduce exported `make<X>` functions for dependency bundles, runtime registries, test
-harness capabilities, or alternate manual dependency injection. Model them as contextual services
+setup capabilities, or alternate manual dependency injection. Model them as contextual services
 with Layers when they own capabilities or runtime state; keep genuinely pure construction local to
 its owning module or expose a domain-named operation that describes the value being derived rather
 than a generic constructor seam.
@@ -451,8 +450,8 @@ A contextual service name does not have to end in `Service`. Use the shortest na
 stable capability. `InvoiceService` is a sensible default when `Service` honestly describes a broad,
 cohesive capability; a more specific established name such as `InvoiceStore` is preferable when it
 better describes the authority. Apply the same chosen capability name consistently to its interface,
-constructor, and Layers—for example, `IInvoiceStore`, `makeInvoiceStore`, `invoiceStoreLayer`, and
-`invoiceStoreTestLayer`.
+constructor, and Layers. For example, use `IInvoiceStore`, `makeInvoiceStore`, `invoiceStoreLayer`,
+and `invoiceStoreTestLayer`.
 
 ```ts
 /** Defines the Invoice service capability exposed to application callers. */

@@ -3,7 +3,7 @@ title: Devtools
 description: Inspect SignalGraph publishes, handlers, and follow-up messages with OpenTelemetry.
 ---
 
-Devtools turns OpenTelemetry spans into a message-flow graph. It shows which handlers ran, which messages they published next, and how those spans line up in the timeline. Grafana Tempo is the first supported trace backend.
+Devtools reads OpenTelemetry traces from a configured trace backend. Grafana Tempo is the first supported backend. The graph shows which handlers received a message and which messages those handlers published. The timeline shows when each span started and how long it lasted.
 
 ![Message graph and timeline showing orders.created reaching Analytics and Billing, then Billing publishing billing.completed for Email](./images/trace_overview.png)
 
@@ -19,17 +19,17 @@ docker compose up -d
 pnpm consume
 ```
 
-Open `http://127.0.0.1:4300`. Choose **Add connection**, name it, select **Tempo**, and enter `http://localhost:3200` as the URL. If the connection is already saved, use **Search → Switch connection** to select it.
+Open `http://127.0.0.1:4300`. Choose **Add connection**, name it, select **Tempo**, and enter `http://localhost:3200` as the URL. For a saved connection, open **Search** and choose **Switch connection**.
 
-When the consumer is ready, run `pnpm send` from a second terminal in the same example directory. Wait for spans to arrive, then click **Refresh trace**. The example should show `orders.created` reaching Billing and Analytics, with Billing publishing `billing.completed` for Email.
+When the consumer is ready, run `pnpm send` from a second terminal in the same example directory. Wait for spans to arrive, then click **Refresh trace**. Billing and Analytics handle `orders.created`. Billing publishes `billing.completed`, which Email handles.
 
 When you're done, stop the consumer with Ctrl+C and run `docker compose down` from the example directory.
 
 ## Inspect a trace
 
 - Click a graph node or a timeline span to inspect attributes and message IDs.
-- Open **Search → Switch trace** to select a specific trace. **Refresh trace** reloads that trace. On the default page, it fetches the latest trace.
-- If loading fails, check that the active Tempo connection is available and choose **Retry trace**. If the list is empty, check the lookback window in Settings and verify that both processes are exporting spans.
+- Open **Search** and choose **Switch trace** to select a trace. **Refresh trace** reloads that trace. On the default page, it fetches the latest trace.
+- If loading fails, check that the active trace connection is available and choose **Retry trace**. If the list is empty, check the lookback window in Settings and verify that both processes are exporting spans.
 
 ![Billing handler selected in the graph, with the inspector showing the orders.created message name, message ID, and correlation ID](./images/inspector_detail.png)
 
@@ -45,7 +45,7 @@ import { Devtools } from "@signalgraph/devtools";
 yield* client.listen({ integrations: [Devtools()] });
 ```
 
-Configure an OTLP exporter in the publisher and consumer processes. Devtools queries Tempo's HTTP API, usually on port `3200` for a local setup. The example sends spans to the separate OTLP HTTP ingestion endpoint, `http://localhost:4318/v1/traces`. Devtools does not collect spans itself.
+Configure an OTLP exporter in the publisher and consumer processes. For a Tempo connection, enter the query API URL in devtools. Local Tempo instances usually serve queries on port `3200`. The example sends spans to the separate OTLP HTTP ingestion endpoint, `http://localhost:4318/v1/traces`. Devtools does not collect spans itself.
 
 | Option | Default | Purpose |
 | --- | --- | --- |

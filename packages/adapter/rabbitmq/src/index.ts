@@ -7,16 +7,16 @@ import * as Runtime from "signalgraph/runtime";
 
 type RabbitMQOptions = {
   url: string;
-  /** Heartbeat interval in seconds. Detection of a dead connection takes about twice this. Default 15. */
+  /** Heartbeat interval in seconds. Detecting a lost connection takes about two intervals. Defaults to 15. */
   readonly heartbeat?: number;
   readonly reconnect?: {
     readonly initialDelay?: Duration.Input; // default 1 second
     readonly maxDelay?: Duration.Input; // default 30 seconds
     readonly factor?: number; // default 2
   };
-  /** How long a publish waits for a lost connection to come back before failing. Default 30 seconds. */
+  /** Maximum time a publish waits for a usable publish channel. Defaults to 30 seconds. */
   readonly publishWaitTimeout?: Duration.Input;
-  /** How long one connection attempt may take before it is abandoned and retried. Default 10 seconds. */
+  /** Maximum duration of one connection attempt. Defaults to 10 seconds. */
   readonly connectTimeout?: Duration.Input;
 };
 
@@ -52,7 +52,7 @@ function retryDelay(policy: RetryPolicy, attempt: number) {
   }
 }
 
-// Message only: errors can carry connection details, and credentials must never be logged.
+// Extract the message so callers can log it without attaching the original connection error.
 // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Node event emitters supply untrusted error values.
 const errorMessage = (error: unknown) => (Predicate.isError(error) ? error.message : String(error));
 
@@ -67,7 +67,7 @@ type PublishFn = (
   options: amqp.Options.Publish
 ) => Effect.Effect<void, Runtime.ConnectionError>;
 
-/** One consumer of the graph, with everything needed to (re)start it. */
+/** The declarations needed to start or restart one consumer. */
 type Entry = {
   readonly messageName: string;
   readonly messageDef: Runtime.MessageGraph[string];
@@ -78,22 +78,22 @@ type Entry = {
 type ConsumerHandle = {
   /** Idempotent. Stops new deliveries. Does nothing unless the channel is healthy. */
   readonly cancel: () => Promise<void>;
-  /** Idempotent. Closes the channel, so the broker requeues every unacked message. */
+  /** Idempotent. Closes the channel. RabbitMQ requeues every unacknowledged message. */
   readonly close: () => Promise<void>;
   /** Releases the in-flight entries of this consumer only. */
   readonly release: () => void;
   readonly loop: Fiber.Fiber<never>;
 };
 
-/** Everything tied to one connection. Replaced as a whole when the connection dies. */
+/** The state for one connection. A reconnect replaces the entire session. */
 type Session = {
   readonly conn: Connection;
   readonly consumers: Map<string, ConsumerHandle>;
   /** Undefined while the publish channel is being rebuilt. */
   publisher: PublishFn | undefined;
-  /** False once the connection is dead or the session is being discarded. Checked by every callback. */
+  /** Each callback checks this flag. It is false once the connection closes or the adapter discards the session. */
   alive: boolean;
-  /** True once it became the current session. A setup attempt that fails retries as a whole. */
+  /** True once this session becomes current. A setup failure retries the entire session. */
   established: boolean;
   /** The reason from the connection's 'error' event, which arrives before its 'close'. */
   errorReason: string | undefined;
@@ -128,11 +128,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
     Effect.gen(function* () {
       const layerScope = yield* Effect.scope;
 
-      // ---- Options. A malformed URL is the one startup error that is never retried. ----
+      // Validate configuration before attempting a connection.
 
       const parsedUrl = yield* Effect.try({
         try: () => new URL(options.url),
-        // No cause and no URL in the error: both can contain credentials.
+        // The cause and URL can both contain credentials.
         catch: () => new Runtime.InitializationError({ cause: undefined, message: "Invalid RabbitMQ URL" })
       });
 
@@ -143,7 +143,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         });
       }
 
-      // Precedence: the option, then a heartbeat already in the URL, then 15 seconds.
+      // Prefer the explicit heartbeat, then the URL setting, then 15 seconds.
       const urlHeartbeat = parsedUrl.searchParams.get("heartbeat");
       const heartbeat = options.heartbeat ?? (urlHeartbeat === null ? 15 : Number(urlHeartbeat));
 
@@ -177,7 +177,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         Schedule.jittered
       );
 
-      // ---- State ----
+      // State
 
       const inFlight = Broker.trackBrokerDeliveries();
       const events = yield* Queue.unbounded<SessionEvent>();
@@ -192,8 +192,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           message: "Not connected to RabbitMQ and the connection did not come back in time"
         });
 
-      // Marks the session dead. Synchronous and idempotent, so it is safe to call from any
-      // callback, and the first caller wins (one failure fires several events).
+      // Several events can report the same failure. Mark the session inactive before enqueuing recovery.
       const failSession = (session: Session, reason: string) => {
         if (!session.alive) return;
 
@@ -204,10 +203,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         Queue.offerUnsafe(events, { kind: "lost", session, reason: session.errorReason ?? reason });
       };
 
-      // ---- Publishing ----
+      // Publishing
 
-      // Waits for a usable publish channel, which is missing while the connection or the channel
-      // is being rebuilt. Polling keeps this free of waiters that could be stranded.
+      // Poll for a usable publish channel during recovery. This avoids retaining waiters on a failed session.
       const currentPublisher = Effect.suspend(() => {
         const publisher = current?.publisher;
 
@@ -245,13 +243,12 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           });
         });
 
-      // ---- Topology ----
+      // Topology
 
-      // Declares every exchange, queue, binding, retry queue and DLQ in the graph before any consumer
-      // starts, so a handler that publishes during startup never hits a missing exchange or queue.
-      // Uses its own channel because a rejected declaration closes the channel it was sent on,
-      // and that must not be a publish channel or consumer channel. It is additive: nothing is ever deleted
-      // or purged, so it is also used to restore a single consumer's queues after a failure.
+      // Declare exchanges, bindings, and queues for delivery, retry, and dead-lettering before consumers start.
+      // A handler can then publish to any declared exchange. RabbitMQ closes the channel if it rejects a
+      // declaration, so use a separate channel for topology changes. The adapter can restore one consumer's
+      // queues with the same operation because declarations preserve existing messages and resources.
       const declareTopology = (conn: Connection, graph: Runtime.MessageGraph) =>
         Effect.scoped(
           Effect.gen(function* () {
@@ -267,8 +264,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               (ch) => Effect.tryPromise(() => ch.close()).pipe(Effect.ignore)
             );
 
-            // A rejected declaration is reported through its promise AND as an 'error' event,
-            // and an unhandled 'error' event can crash the process.
+            // A rejected declaration also emits an 'error' event. An unhandled event can crash the process.
             channel.on("error", () => undefined);
 
             const declare = <A>(message: string, run: () => Promise<A>) =>
@@ -319,10 +315,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           })
         );
 
-      // ---- Publish channel ----
+      // Publish channel
 
-      // Opens a confirm channel and makes it the session's publisher. Used for a new session and
-      // to replace a publish channel that died on its own.
+      // Open a confirm channel for a new session or replace a failed channel on an existing session.
       const openPublisher = (session: Session) =>
         Effect.gen(function* () {
           const channel = yield* Effect.tryPromise({
@@ -334,14 +329,14 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               })
           });
 
-          // Messages RabbitMQ handed back as unroutable. The `return` event arrives before the
-          // confirm of the same message, so the confirm callback can check this set.
+          // For an unroutable message, RabbitMQ emits `return` before the confirmation.
+          // The confirmation callback checks this set to distinguish the two outcomes.
           const returned = new Set<string>();
 
           const publishKey = (exchange: string, routingKey: string, messageId: Option.Option<string>) =>
             JSON.stringify([exchange, routingKey, Option.getOrNull(messageId)]);
 
-          // Backpressure: publish() returned false, so new publishes wait until the channel drains.
+          // When publish() returns false, wait for the channel to drain before sending another message.
           let drained: Deferred.Deferred<void> | undefined;
 
           const releaseGate = () => {
@@ -419,7 +414,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           channel.on("close", () => {
             releaseGate(); // never leave publishers waiting on a dead channel
 
-            // Replaced already, or the whole connection is gone and its recovery covers this.
+            // Skip recovery if the adapter replaced the channel or the connection already failed.
             if (!session.alive || session.publisher !== publisher) return;
 
             session.publisher = undefined;
@@ -437,16 +432,16 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           session.publisher = publisher;
         });
 
-      // ---- Sessions ----
+      // Sessions
 
-      // One connection attempt: connect, open the publish channel, wire the connection's events.
-      // A throw from amqp.connect and a rejection are both retried; the URL was validated up front.
+      // Connect, open the publish channel, and register connection listeners.
+      // The adapter retries both synchronous throws and promise rejections from amqp.connect.
       const openSession = Effect.gen(function* () {
         const conn = yield* Effect.tryPromise({
           try: (signal) => {
             const attempt = amqp.connect(connectionUrl);
 
-            // An abandoned attempt (timeout or interruption) must not leave a connection open when it arrives late.
+            // Close connections that open after the attempt times out or is interrupted.
             signal.addEventListener("abort", () => void attempt.then((late) => late.close()).catch(() => undefined), {
               once: true
             });
@@ -479,8 +474,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           errorReason: undefined
         };
 
-        // 'error' is followed by 'close' (and a graceful server shutdown only emits 'close'),
-        // so recovery hangs off 'close'. The 'error' listener only stops the process from crashing.
+        // The 'close' event starts recovery for both connection errors and a graceful server shutdown.
+        // The 'error' listener prevents Node.js from crashing on an unhandled event.
         conn.on("error", (err) => {
           session.errorReason = err.message;
         });
@@ -500,14 +495,14 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         return session;
       });
 
-      // ---- Consumers ----
+      // Consumers
 
       const startConsumer = ({ session, entry }: { readonly session: Session; readonly entry: Entry }) =>
         Effect.gen(function* () {
           const { messageName, consumer, handlers: consumerHandlers } = entry;
 
-          // "open": healthy. "failed": the broker cancelled the consumer but the channel is still open.
-          // "closed": the channel is gone. Acks and nacks are skipped unless the state is "open".
+          // In the "failed" state, RabbitMQ has cancelled the consumer and the channel is still open.
+          // The adapter acknowledges or rejects deliveries only in the "open" state.
           let state: "open" | "failed" | "closed" = "open";
           let cancelled = false;
           let errorReason: string | undefined;
@@ -521,7 +516,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
               })
           });
 
-          // The state is set before we close the channel ourselves, so our own close is not treated as a failure.
+          // Set the state before closing the channel so its event handler skips recovery.
           const closeChannel = () => {
             if (state === "closed") {
               return Promise.resolve();
@@ -555,7 +550,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             if (wasOpen) fail(errorReason ?? "channel closed");
           });
 
-          // Whatever fails below must not leave this channel open.
+          // Close the channel if consumer setup fails.
           const closeOnError = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
             Effect.onError(effect, () => Effect.tryPromise(() => closeChannel()).pipe(Effect.ignore));
 
@@ -575,8 +570,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const messages = yield* Queue.unbounded<Delivery>();
           const pending = new Set<() => void>();
 
-          // The broker can close a channel at any time, and ack/nack then throw synchronously.
-          // The broker requeues unacked messages itself in that case, so swallowing is safe.
+          // Acknowledging or rejecting a delivery can throw if RabbitMQ closes the channel.
+          // RabbitMQ requeues unacknowledged messages on that channel.
           const settleNow = (action: () => void) => {
             if (state !== "open") return;
 
@@ -593,7 +588,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const requeue = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.nack(msg, false, true));
           const discard = (msg: amqp.ConsumeMessage) => settle(() => consumerChannel.nack(msg, false, false));
 
-          // Retry and DLQ settle the same way: confirmed copy first, ack of the original after.
+          // Wait for RabbitMQ to confirm the retry or dead-letter copy before acknowledging the original.
           const republish = (routingKey: string, msg: amqp.ConsumeMessage, headers: amqp.MessagePropertyHeaders = {}) =>
             publishConfirmed("", routingKey, msg.content, {
               ...msg.properties,
@@ -614,20 +609,19 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                   return;
                 }
 
-                // The connection is gone, or this consumer is being replaced. The broker requeues
-                // whatever is still unacked.
+                // RabbitMQ requeues unacknowledged messages when the channel closes.
                 if (!session.alive || state !== "open") {
                   return;
                 }
 
                 if (isStopping) {
-                  // Arrived after stop(): hand it straight back.
+                  // Requeue deliveries that arrive after stop().
                   settleNow(() => consumerChannel.nack(msg, false, true));
 
                   return;
                 }
 
-                // Counted on receipt, so buffered messages are covered by awaitIdle too.
+                // Count each delivery on receipt so awaitIdle includes buffered deliveries.
                 const leaveEntry = inFlight.enter();
 
                 const leave = () => {
@@ -650,7 +644,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
             yield* Effect.gen(function* () {
               if (isStopping) {
-                // Received before stop() but never started: return it instead of handling it.
+                // Requeue buffered deliveries that have not started when stop() runs.
                 yield* requeue(msg);
 
                 return;
@@ -741,7 +735,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
                         "RabbitMQ delivery processing failed with no retry or dead-letter route"
                       ).pipe(Effect.annotateLogs(delivery));
                     }).pipe(
-                      // The retry/DLQ copy could not be confirmed, so keep the original: put it back.
+                      // Requeue the original when RabbitMQ does not confirm the retry or dead-letter copy.
                       Effect.catchTag("ConnectionError", () =>
                         Effect.logError(
                           "RabbitMQ could not confirm the retry or dead-letter copy. Attempting to requeue the original."
@@ -788,7 +782,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
             loop
           };
 
-          // stop() may have run while this consumer was starting, and it only cancels consumers that already existed.
+          // A consumer that finishes setup after stop() must be cancelled here.
           if (isStopping) {
             yield* Effect.tryPromise(() => handle.cancel()).pipe(Effect.ignore);
           }
@@ -833,8 +827,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           );
         });
 
-      // Closes a consumer's channel first, so the broker requeues its unacked messages and an
-      // interrupted handler can no longer ack, then it stops its loop and releases its in-flight entries.
+      // Close the channel to requeue unacknowledged deliveries before interrupting the consumer loop.
+      // A handler cannot acknowledge a delivery once the channel closes.
       const discardConsumer = (handle: ConsumerHandle) =>
         Effect.gen(function* () {
           yield* Effect.tryPromise(() => handle.close()).pipe(Effect.ignore);
@@ -842,10 +836,9 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           handle.release();
         });
 
-      // Closes the session's connection, stops its handlers and releases their in-flight entries.
-      // The broker has already requeued their unacked messages, and their acks can no longer succeed,
-      // so running them to completion would only produce a second run next to the redelivered one.
-      // Safe to release everything: a session is only replaced while no other session is alive.
+      // Close the connection to requeue unacknowledged messages. Interrupt the old handlers so they
+      // do not continue processing messages RabbitMQ can redeliver. Release all delivery entries
+      // before any replacement session starts.
       const discardSession = (session: Session) =>
         Effect.gen(function* () {
           session.alive = false;
@@ -856,7 +849,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           inFlight.releaseAll();
         });
 
-      // One complete attempt: a new session with its consumers, made current only if everything worked.
+      // Check that the session is active after starting any registered consumers.
       const establish = Effect.gen(function* () {
         const session = yield* openSession;
 
@@ -890,11 +883,11 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         Effect.retry(reconnectSchedule)
       );
 
-      // ---- Recovery ----
+      // Recovery
 
       const handleLost = (event: Extract<SessionEvent, { kind: "lost" }>) =>
         Effect.gen(function* () {
-          // A setup attempt that died reports its own failure through connectWithRetry.
+          // connectWithRetry handles failures that occur during session setup.
           if (!event.session.established) {
             return;
           }
@@ -909,7 +902,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           const { session, entry } = event;
           const name = entry.consumer.name;
 
-          // If the connection died too, the session recovery covers every consumer.
+          // Rebuilding the session already restarts every consumer.
           if (!session.alive || isStopping) {
             return;
           }
@@ -947,8 +940,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
           yield* Effect.logWarning(`RabbitMQ publish channel lost (${event.reason}); restarting it`);
 
-          // A publish to a missing exchange is the usual reason this channel died, so the topology
-          // is declared again before the new channel is opened.
+          // Publishing to a missing exchange closes the channel. Redeclare the topology before opening its replacement.
           const rebuild = Effect.gen(function* () {
             if (startArgs !== undefined) yield* declareTopology(session.conn, startArgs.graph);
             yield* openPublisher(session);
@@ -976,7 +968,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         }
       };
 
-      // ---- Startup ----
+      // Startup
 
       // Registered first, so on shutdown it runs last: the supervisor and consumer loops are
       // interrupted before the connection closes, and retry publishes still have a channel while draining.
@@ -995,8 +987,7 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
       yield* connectWithRetry;
 
-      // Event callbacks run outside Effect, so they only put events on a queue. This fiber handles
-      // them inside the app's own Effect context, with its loggers.
+      // Node.js callbacks enqueue events. The supervisor handles them with the application's Effect context and loggers.
       yield* Effect.forkIn(layerScope)(
         Effect.forever(
           Queue.take(events).pipe(
@@ -1006,13 +997,13 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
         )
       );
 
-      // ---- Broker contract ----
+      // Broker contract
 
       const start = ({ graph, handlers }: { graph: Runtime.MessageGraph; handlers: Broker.HandlerRegistry }) =>
         Effect.gen(function* () {
           startArgs = { graph, handlers };
 
-          // During an outage the session that comes back populates itself from startArgs.
+          // Recovery reads startArgs to start consumers after reconnecting.
           const session = current;
 
           if (session !== undefined) yield* populate(session);
@@ -1023,8 +1014,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
         yield* Effect.logInfo(`Stopping RabbitMQ consumers; ${inFlight.count()} messages in flight`);
 
-        // cancel() is idempotent, so a repeated stop() is a no-op. If the session is being
-        // rebuilt there is nothing to cancel, and isStopping keeps the new one from consuming.
+        // Cancelling a consumer twice has no effect. The isStopping flag also prevents a
+        // replacement session from starting consumers.
         yield* Effect.forEach(
           [...(current?.consumers.values() ?? [])],
           (handle) =>
@@ -1045,8 +1036,8 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
 
         const consumers = [...(current?.consumers.values() ?? [])];
 
-        // Closing the channels first means the broker requeues every unacked message,
-        // and an interrupted handler can no longer ack. A closed channel also skips any later cancel().
+        // Close the channels first so RabbitMQ requeues unacknowledged messages. A handler
+        // cannot acknowledge a delivery after its channel closes.
         const results = yield* Effect.forEach(consumers, (handle) =>
           Effect.tryPromise({
             try: () => handle.close(),
@@ -1055,10 +1046,10 @@ export function RabbitMQBroker(options: RabbitMQOptions) {
           }).pipe(Effect.result)
         );
 
-        // Interrupts handlers that are still running (forced shutdown).
+        // Interrupt any handlers still running at shutdown.
         yield* Effect.forEach(consumers, (handle) => Fiber.interrupt(handle.loop), { discard: true });
 
-        // Whatever is left was handed back to the broker by the channel close.
+        // Closing the channel returned the remaining deliveries to RabbitMQ.
         inFlight.releaseAll();
 
         const firstFailure = results.find((result) => Result.isFailure(result));

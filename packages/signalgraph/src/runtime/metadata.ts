@@ -4,7 +4,7 @@ import { Effect, Option, Random } from "effect";
 
 import { CurrentMessageMetadata } from "./references.ts";
 
-/** Identifies a delivery and links it to the original message flow. */
+/** Identifies a delivery and the correlation ID it shares with related messages. */
 export interface MessageMetadata {
   readonly messageId: string;
   readonly correlationId: string;
@@ -23,7 +23,7 @@ function generateMessageId() {
   });
 }
 
-/** Creates metadata for an outgoing message, inheriting correlation from the current delivery. */
+/** Creates metadata for an outgoing message. Reuses the correlation ID of the current delivery. */
 export function createPublishMetadata(): Effect.Effect<MessageMetadata> {
   return Effect.gen(function* () {
     const parent = yield* CurrentMessageMetadata;

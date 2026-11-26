@@ -1,10 +1,10 @@
-# Error Design
+# Error design
 
 Errors are part of SignalGraph's public interface and its observability model. They must help a human or Agent understand what happened, decide what to do next, and correlate a public failure with internal traces without exposing private implementation details.
 
-These principles are informed by [“When life gives you lemons, write better error messages”](https://wix-ux.com/when-life-gives-you-lemons-write-better-error-messages-46c5223e1a2f).
+This guide draws on Wix UX's [When life gives you lemons, write better error messages](https://wix-ux.com/when-life-gives-you-lemons-write-better-error-messages-46c5223e1a2f).
 
-## Error Message Principles
+## Error message principles
 
 ### Explain what happened and why
 
@@ -32,7 +32,7 @@ Do not suggest retrying when an operation may have partially completed or when r
 
 State what was not affected when the application can prove it. For example, say that an Account name was unchanged only when the failed operation could not have committed that change.
 
-Never claim “no changes were made” across a non-atomic operation unless every participating service proves that outcome. Prefer acknowledging an uncertain outcome and directing the caller to read or reconcile the resource.
+Use "no changes were made" only when every service can confirm its part of the operation left the resource unchanged. If the outcome is uncertain, tell the caller to read or reconcile the resource.
 
 ### Use a calm, direct tone
 
@@ -53,7 +53,7 @@ A useful error ends with one of these outcomes:
 - inspect or reconcile the named resource when the outcome is uncertain; or
 - contact support with the response request identifier.
 
-## Contextual Error Data
+## Contextual error data
 
 Typed errors carry structured context in addition to a message. Include the fields needed to identify the failed operation and diagnose or recover from it:
 
@@ -65,15 +65,15 @@ Typed errors carry structured context in addition to a message. Include the fiel
 - retryability or recovery guidance; and
 - a request identifier at public boundaries.
 
-Context must be correct by construction. Public error schemas use discriminated variants with literal codes and variant-specific detail schemas; do not use an unrestricted details record that permits unrelated fields or disagreement between the code and details.
+Use a discriminated union for public errors. Each literal error code has its own details schema, so the code determines which fields can appear.
 
-## Internal and Public Errors
+## Internal and public errors
 
 Internal and public errors serve different audiences but follow the same principles.
 
 Internal typed errors retain enough safe structured data for traces and logs to identify the operation, domain entity, capability, and classified reason. Preserve an underlying cause where it adds diagnostic value and can be retained safely. Error messages begin with a specific, searchable description so an observed message leads back to its source.
 
-Public adapters translate internal errors into an intentional HTTP contract. Public errors contain:
+Public adapters map internal errors to the HTTP response schema. Public errors contain:
 
 - a stable `code`;
 - an operation-specific `message`;
@@ -85,20 +85,20 @@ Never expose credentials, access assertions, JWT claims, raw request bodies, SQL
 
 Translate each known tagged error explicitly with `Effect.catchTag` or `Effect.catchTags`. Do not use a catch-all that silently turns a newly introduced failure into a generic response. A new failure type should require an explicit decision about its public classification, message, status, structured context, observability, and recovery guidance.
 
-## HTTP Status Guidance
+## HTTP status guidance
 
-Choose status from the caller-visible meaning, not the implementation that failed:
+Choose the status that describes what happened to the caller's request.
 
-- `400` — the caller can correct malformed or invalid request data;
-- `401` — the request could not be authenticated;
-- `404` — a syntactically valid resource identity is unknown;
-- `405` — the route does not support the request method;
-- `409` — current resource state conflicts with the requested operation;
-- `415` — the request uses an unsupported media type;
-- `500` — SignalGraph cannot complete the operation because of an internal invariant or non-transient internal failure; and
-- `503` — a required capability is temporarily unavailable.
+- Use `400` when the caller can correct malformed or invalid request data.
+- Use `401` when authentication fails.
+- Use `404` when the resource identifier is valid and the resource is unknown.
+- Use `405` when the route does not support the request method.
+- Use `409` when the current resource state conflicts with the requested operation.
+- Use `415` when the request uses an unsupported media type.
+- Use `500` when an internal invariant fails or an internal failure persists.
+- Use `503` when a required capability is temporarily unavailable.
 
-## Review Checklist
+## Review checklist
 
 Before adding or changing an error, verify:
 

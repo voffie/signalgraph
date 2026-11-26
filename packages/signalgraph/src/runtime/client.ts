@@ -71,8 +71,8 @@ const waitForSignal = Effect.callback<void>((resume) => {
 });
 
 /**
- * Builds a client with the configured broker. Resource payload types are inferred from the schemas.
- * Generated modules bind each resource to its topology entry.
+ * Builds a client with the configured broker. The generated client infers payload types from the schemas.
+ * The generated module binds each message and consumer to its definition.
  */
 export function createClient<Resources>(graph: MessageGraph, bind: (resources: ClientResources) => Resources) {
   return Effect.gen(function* () {

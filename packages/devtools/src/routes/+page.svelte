@@ -374,7 +374,7 @@
             onpointermove={onPointerMove}
             onpointerup={onPointerUp}
             role="application"
-            aria-label="Trace graph canvas — drag to pan, scroll to zoom">
+            aria-label="Trace graph. Drag to pan. Scroll to zoom.">
             <defs>
               <pattern id="dotgrid" x={0} y={0} width={28} height={28} patternUnits="userSpaceOnUse">
                 <circle cx={0.5} cy={0.5} r={0.6} fill="rgba(255,255,255,0.07)" />

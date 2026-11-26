@@ -69,7 +69,7 @@ export function emid(src: PositionedGraphNode, tgt: PositionedGraphNode) {
 /** Formats a timeline duration at millisecond or second precision. */
 export function fmtMs(ms: number): string {
   if (ms === 0) {
-    return "—";
+    return "0ms";
   }
 
   return ms < 1000 ? `${ms.toFixed(3)}ms` : `${(ms / 1000).toFixed(1)}s`;

@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect";
 import { Client } from "../generated/index.ts";
 import { traceExportLayer } from "./telemetry.ts";
 
-// Run `handlers.ts` first - it declares the exchanges/queues this depends on.
+// Run `handlers.ts` first to declare the RabbitMQ exchanges and queues.
 const program = Effect.gen(function* () {
   const client = yield* Client;
 

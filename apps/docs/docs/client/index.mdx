@@ -3,7 +3,7 @@ title: Client
 description: Use the generated SignalGraph client to publish messages and register handlers.
 ---
 
-The [generator](/cli/generate/) writes `index.ts` to the configured output directory. Import `Client` from that directory and yield it inside an Effect with a broker layer provided. Regenerate the file when the schema changes.
+The [generator](/cli/generate/) writes `index.ts` to the configured output directory. Import `Client` from that directory and yield it inside an Effect. Provide the broker layer to that Effect. Regenerate the file when the schema changes.
 
 ```ts
 import { Client } from "../generated/index.ts";
@@ -31,11 +31,11 @@ Publishing a follow-up message inside a handler gives it a new message ID while 
 yield* client.ordersCreated.publish({ orderId: "order-123" });
 ```
 
-`publish` encodes the payload using its message schema. An invalid payload fails with `InvalidPayloadError` and a transport failure can return `ConnectionError`. A broker confirmation establishes transport acceptance. Handler completion is a separate event.
+`publish` encodes the payload using its message schema. An invalid payload fails with `InvalidPayloadError`. A transport failure can return `ConnectionError`. A broker confirmation establishes transport acceptance. Handler completion is a separate event.
 
 ## Start and shut down
 
 - `start()` registers the topology with the broker and starts consumption. It returns after startup and is useful when you control the application's lifecycle, such as in an integration test.
-- `listen()` starts the configured integrations and the client, then waits for a shutdown signal. On the first SIGINT or SIGTERM it stops accepting deliveries and waits for in-flight work for up to `gracePeriod` (30 seconds by default). A second shutdown signal skips the rest of the wait.
+- `listen()` starts the configured integrations and the client, then waits for a shutdown signal. On the first SIGINT or SIGTERM, the client stops accepting deliveries and waits up to `gracePeriod` for active handlers. The default is 30 seconds. A second shutdown signal skips the rest of the wait.
 
 A publish-only process can yield `Client` and publish. Start the consumer application first so its topology exists. See the [Quickstart](/getting-started/quickstart/) for both processes.

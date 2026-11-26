@@ -1,6 +1,6 @@
 # SignalGraph
 
-SignalGraph generates a typed messaging client from your Effect schemas. Declare which messages exist and who consumes them, then supply a broker adapter when you run the application.
+SignalGraph generates a typed messaging client from your Effect schemas. Declare your messages and consumers. Provide a broker adapter when you run the client.
 
 ## Quick start
 
@@ -64,18 +64,16 @@ See the [RabbitMQ example](examples/adapter-rabbitmq) for both runnable processe
 
 ## Links
 
-- [Docs](https://signalgraph-docs.voffie.workers.dev): Documentation
-- [Issues](https://github.com/voffie/signalgraph/issues): Report bugs and share feature requests
+- [Documentation](https://signalgraph-docs.voffie.workers.dev)
+- [Report a bug or request a feature](https://github.com/voffie/signalgraph/issues)
 
 ## Packages
 
-The core package owns the schema and generated client. Adapters supply transport, and integrations add capabilities such as trace visualization.
-
-| Package                                                      | Description                         |
-| ------------------------------------------------------------ | ----------------------------------- |
-| [`signalgraph`](packages/signalgraph)                        | The core package (CLI + schema DSL) |
-| [`@signalgraph/adapter-rabbitmq`](packages/adapter/rabbitmq) | RabbitMQ transport                  |
-| [`@signalgraph/devtools`](packages/devtools)                 | Devtools integration                |
+| Package                                                      | Description                              |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| [`signalgraph`](packages/signalgraph)                        | Schema declarations and client generator |
+| [`@signalgraph/adapter-rabbitmq`](packages/adapter/rabbitmq) | RabbitMQ transport                       |
+| [`@signalgraph/devtools`](packages/devtools)                 | OpenTelemetry trace viewer               |
 
 ## License
 

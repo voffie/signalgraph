@@ -8,7 +8,7 @@ import { Effect } from "effect";
 export interface InFlight {
   /** Synchronous, so it is safe to call from callbacks. Returns an idempotent release. */
   readonly enter: () => () => void;
-  /** Releases everything still outstanding. For use after the broker has taken the messages back. */
+  /** Clears the remaining deliveries from the count after the broker requeues them. */
   readonly releaseAll: () => void;
   readonly awaitIdle: Effect.Effect<void>;
   readonly count: () => number;

@@ -12,6 +12,12 @@ export class ConnectionError extends Schema.TaggedError<ConnectionError>()("Conn
   cause: Schema.Unknown
 }) {}
 
+/** A delivery could not be consumed. */
+export class ConsumeError extends Schema.TaggedError<ConsumeError>()("ConsumeError", {
+  message: Schema.String,
+  cause: Schema.Unknown
+}) {}
+
 /** Broker setup could not establish the requested configuration or topology. */
 export class InitializationError extends Schema.TaggedError<InitializationError>()("InitializationError", {
   message: Schema.String,

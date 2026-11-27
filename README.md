@@ -69,11 +69,12 @@ See the [RabbitMQ example](examples/adapter-rabbitmq) for both runnable processe
 
 ## Packages
 
-| Package                                                      | Description                              |
-| ------------------------------------------------------------ | ---------------------------------------- |
-| [`signalgraph`](packages/signalgraph)                        | Schema declarations and client generator |
-| [`@signalgraph/adapter-rabbitmq`](packages/adapter/rabbitmq) | RabbitMQ transport                       |
-| [`@signalgraph/devtools`](packages/devtools)                 | OpenTelemetry trace viewer               |
+| Package                                                          | Description                              |
+| ---------------------------------------------------------------- | ---------------------------------------- |
+| [`signalgraph`](packages/signalgraph)                            | Schema declarations and client generator |
+| [`@signalgraph/adapter-rabbitmq`](packages/adapter/rabbitmq)     | RabbitMQ transport                       |
+| [`@signalgraph/adapter-cloudflare`](packages/adapter/cloudflare) | Cloudflare Queues transport              |
+| [`@signalgraph/devtools`](packages/devtools)                     | OpenTelemetry trace viewer               |
 
 ## License
 

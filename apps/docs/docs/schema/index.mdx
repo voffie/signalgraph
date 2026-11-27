@@ -25,15 +25,15 @@ export const Billing = consumer({
 ## Messages
 
 - `name` identifies the message on the broker. Use a unique, nonempty name.
-- `schema` defines both the published payload and what a handler receives after decoding. Its encode and decode steps must run without additional Effect services. With the RabbitMQ adapter, the encoded value must be JSON-serializable.
+- `schema` defines both the published payload and what a handler receives after decoding. Its encode and decode steps must run without additional Effect services. Both RabbitMQ and Cloudflare Queues require the encoded value to be JSON-serializable.
 
 ## Consumers
 
 - `name` identifies the consumer. Use a unique, nonempty name. Each consumer can receive a copy of the message it subscribes to.
 - `message` references the same message object exported from the schema module. Declare the message first and pass that declaration to `consumer()`.
-- `prefetch` optionally sets the broker's limit on unacknowledged deliveries for the consumer. RabbitMQ treats `0` as unlimited. Omitting it leaves the broker default in effect.
+- `prefetch` optionally sets the broker's limit on unacknowledged deliveries for the consumer. RabbitMQ treats `0` as unlimited. Omit this setting with Cloudflare Queues.
 - `retry` optionally sets the [retry policy](/schema/retry/) for handler failures.
-- `dlq` controls dead-lettering after the last attempt and defaults to `true`. With RabbitMQ, set it to `false` to discard a failed delivery after the configured attempts are exhausted.
+- `dlq` controls dead-lettering after the last attempt and defaults to `true`. Set it to `false` to discard a failed delivery after the configured attempts are exhausted.
 
 The generator converts message and consumer names to client property names. For example, `orders.created` becomes `ordersCreated`. Keep those generated names distinct, and reserve `start` and `listen` for the client lifecycle.
 

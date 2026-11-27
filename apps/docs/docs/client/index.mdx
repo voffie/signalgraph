@@ -11,7 +11,7 @@ import { Client } from "../generated/index.ts";
 const client = yield* Client;
 ```
 
-The generated module also exports the `Client` type and one payload type per message, such as `OrdersCreatedPayload`. Inline publish calls and handlers infer their payload types directly from the schema. Use the exported types when another module needs to name them.
+The generated module exports `messageGraph` for deployment tools such as the [Cloudflare adapter](/adapters/cloudflare/). It also exports the `Client` type and one payload type per message, such as `OrdersCreatedPayload`. Inline publish calls and handlers infer their payload types directly from the schema. Use the exported types when another module needs to name them.
 
 ## Handle messages
 
@@ -35,7 +35,7 @@ yield* client.ordersCreated.publish({ orderId: "order-123" });
 
 ## Start and shut down
 
-- `start()` registers the topology with the broker and starts consumption. It returns after startup and is useful when you control the application's lifecycle, such as in an integration test.
+- `start()` validates your handlers and starts the broker adapter. With RabbitMQ it returns after starting consumption. With Cloudflare Queues it processes the current batch and returns when it is settled.
 - `listen()` starts the configured integrations and the client, then waits for a shutdown signal. On the first SIGINT or SIGTERM, the client stops accepting deliveries and waits up to `gracePeriod` for active handlers. The default is 30 seconds. A second shutdown signal skips the rest of the wait.
 
-A publish-only process can yield `Client` and publish. Start the consumer application first so its topology exists. See the [Quickstart](/getting-started/quickstart/) for both processes.
+A publish-only process can yield `Client` and publish. With RabbitMQ, start the consumer application first so its topology exists. With Cloudflare Queues, deploy the queues before publishing.

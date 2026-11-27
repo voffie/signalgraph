@@ -5,4 +5,4 @@ description: Connect your generated client to a message broker.
 
 A broker adapter provides the Effect layer that the generated client uses for publishing, consumption, and shutdown. The adapter translates your message and consumer declarations into broker-specific topology.
 
-[RabbitMQ](/adapters/rabbitmq/) is the supported adapter. Applications that implement their own adapter can import the `Broker` contract from `signalgraph/broker`.
+Use [RabbitMQ](/adapters/rabbitmq/) for Node processes or [Cloudflare Queues](/adapters/cloudflare/) for Workers. Applications that implement their own adapter can import the `Broker` contract from `signalgraph/broker`.

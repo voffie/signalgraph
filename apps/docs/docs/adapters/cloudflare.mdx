@@ -1,0 +1,122 @@
+---
+title: Cloudflare Queues
+description: Provision Cloudflare Queues with Alchemy and use a generated SignalGraph client in a Worker.
+---
+
+Use the Cloudflare adapter to publish and consume messages in a Worker. Your Alchemy stack owns the Worker. SignalGraph declares a queue for each consumer and attaches those queues to the Worker you provide.
+
+## Install and generate the client
+
+In your Worker project, install the runtime packages, the Alchemy packages for deployment, and the Cloudflare Worker types.
+
+```sh
+npm install signalgraph effect @signalgraph/adapter-cloudflare
+npm install --save-dev alchemy@2.0.0-beta.87 @alchemy.run/cloudflare@2.0.0-beta.87 @cloudflare/workers-types@^5.20261123.1
+```
+
+Declare your [messages and consumers](/schema/) and [configure the generator](/config/). The snippets below use a message named `order.created`, with a numeric `orderId`, and consumers named `analytics` and `billing`. They assume the generator output directory is `generated`.
+
+```sh
+npx signalgraph generate
+```
+
+The generated module exports `Client` and `messageGraph`. Use a SignalGraph CLI that generates both exports. Regenerate after changing the schema so the stack and Worker use the same declarations.
+
+## Declare the queues and Worker
+
+Import `declareCloudflareQueues` from `@signalgraph/adapter-cloudflare/alchemy` in your stack. Give its `workerBindings` to your Worker, then call `attachConsumers` with that Worker.
+
+```ts title="alchemy.run.ts"
+/// <reference types="@cloudflare/workers-types" />
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import { declareCloudflareQueues, type DeclaredCloudflareQueues } from "@signalgraph/adapter-cloudflare/alchemy";
+import * as Alchemy from "alchemy";
+import { Effect } from "effect";
+
+import { messageGraph } from "./generated/index.ts";
+
+const ordersWorker = (queues: DeclaredCloudflareQueues) =>
+  Cloudflare.Worker("Orders", {
+    main: "./src/worker.ts",
+    env: { ...queues.workerBindings }
+  });
+
+export type WorkerEnv = Cloudflare.InferEnv<ReturnType<typeof ordersWorker>>;
+
+export default Alchemy.Stack(
+  "Orders",
+  { providers: Cloudflare.providers(), state: Alchemy.localState() },
+  Effect.gen(function* () {
+    const queues = yield* declareCloudflareQueues(messageGraph).pipe(Effect.orDie);
+    const worker = yield* ordersWorker(queues);
+    yield* queues.attachConsumers(worker);
+    return { url: worker.url };
+  })
+);
+```
+
+Add your own Worker bindings alongside `queues.workerBindings` to include them in `WorkerEnv`. The generated queue bindings include a sender and a physical queue name for each consumer. For example, Billing gets `SIGNALGRAPH_QUEUE_BILLING` and `SIGNALGRAPH_QUEUE_NAME_BILLING`. The adapter matches the second binding against the queue named on the incoming batch.
+
+## Publish and handle deliveries
+
+Import the runtime layers from `@signalgraph/adapter-cloudflare`. Use `cloudflareBrokerLayer` in an invocation that only needs to publish. In the Worker's `queue` handler, pass the batch to `cloudflareBatchBrokerLayer`. Register the handlers before calling `client.start()`, which processes and settles that batch before returning.
+
+```ts title="src/worker.ts"
+import type { MessageBatch } from "@cloudflare/workers-types";
+import { cloudflareBatchBrokerLayer, cloudflareBrokerLayer } from "@signalgraph/adapter-cloudflare";
+import { Effect } from "effect";
+
+import type { WorkerEnv } from "../alchemy.run.ts";
+import { Client, messageGraph } from "../generated/index.ts";
+
+export default {
+  async fetch(request: Request, env: WorkerEnv) {
+    if (request.method !== "POST" || new URL(request.url).pathname !== "/orders") {
+      return new Response("Send POST /orders to publish an example order.", { status: 404 });
+    }
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const client = yield* Client;
+        yield* client.orderCreated.publish({ orderId: 1 });
+      }).pipe(Effect.provide(cloudflareBrokerLayer(messageGraph, env)))
+    );
+
+    return new Response("Order queued.", { status: 202 });
+  },
+
+  queue(batch: MessageBatch, env: WorkerEnv) {
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const client = yield* Client;
+        yield* client.analytics.handle(({ payload }) => Effect.logInfo("Analytics received", payload.orderId));
+        yield* client.billing.handle(({ payload }) => Effect.logInfo("Billing received", payload.orderId));
+        yield* client.start();
+      }).pipe(Effect.provide(cloudflareBatchBrokerLayer(messageGraph, env, batch)))
+    );
+  }
+};
+```
+
+Cloudflare invokes `queue` for each batch. This setup attaches every consumer in the graph to one Worker, so register every consumer's handler in that Worker. The batch layer also supports publishing from a handler.
+
+## Run locally or deploy
+
+Run `npx alchemy dev --stage local` to try the stack locally. Run `npx alchemy deploy --stage smoke` to try it on Cloudflare. If Alchemy reports missing or expired Cloudflare credentials, follow the instructions it prints. Send a test order to the Worker URL Alchemy prints. Replace the local URL below when you deploy.
+
+```sh
+curl -i -X POST http://localhost:1337/orders
+```
+
+Expect HTTP `202` after the queues accept the publish. Check the local terminal or the deployed Worker's **Observability > Live logs** for both handler messages. To remove the deployed example resources, run `npx alchemy destroy --stage smoke` using the same stage and state.
+
+The demo endpoint accepts unauthenticated requests and publishes a fixed order ID.
+
+The [repository example](https://github.com/voffie/signalgraph/tree/main/examples/adapter-cloudflare) includes the schema, config, and equivalent pnpm scripts.
+
+## Delivery, retries, and dead-letter queues
+
+- A publish sends a copy to each subscribed consumer's queue. If one send fails, a `ConnectionError` reports the queue names whose sends were confirmed and those whose outcome is uncertain. Reconcile delivery before publishing the same logical message again. Make handlers idempotent because Cloudflare Queues deliver at least once.
+- The adapter acknowledges each successful message individually. When a delivery fails, the adapter asks Cloudflare to retry that message. `maxAttempts` includes the initial delivery. The adapter supports up to 101 total attempts, rounds retry delays up to whole seconds, and rejects delays above 24 hours. See [Retry](/schema/retry/) for fixed and exponential policies.
+- The adapter creates a dead-letter queue by default, including for consumers without a retry policy. Cloudflare sends exhausted deliveries there. Set `dlq: false` to discard them after the final attempt.
+- Omit `prefetch` for Cloudflare. Cloudflare controls [delivery batching](https://developers.cloudflare.com/queues/configuration/batching-retries/).

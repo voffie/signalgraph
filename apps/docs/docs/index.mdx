@@ -7,7 +7,7 @@ sidebar:
   order: 0
 ---
 
-SignalGraph generates a typed messaging client from Effect schemas. Declare your messages and consumers before running the generator. When the consumer starts, the RabbitMQ adapter declares the exchanges, queues, and bindings.
+SignalGraph generates a typed messaging client from Effect schemas. Declare your messages and consumers before running the generator. See the [adapter guides](/adapters/) for how each broker sets up its queues.
 
 ```ts title="src/schema/schema.ts"
 import { Schema } from "effect";
@@ -24,8 +24,9 @@ export const Billing = consumer({
 });
 ```
 
-The generated client exposes `client.ordersCreated.publish(...)` and `client.billing.handle(...)`, both typed from the same schema. The adapter handles transport and delivery. RabbitMQ is the supported broker.
+The generated client exposes `client.ordersCreated.publish(...)` and `client.billing.handle(...)`, both typed from the same schema. The adapter handles transport and delivery. SignalGraph supports RabbitMQ and Cloudflare Queues.
 
 - [Quickstart](/getting-started/quickstart/) shows how to generate the client and run a publisher and consumer.
 - [RabbitMQ adapter](/adapters/rabbitmq/) covers connection settings, delivery guarantees, and shutdown.
+- [Cloudflare Queues adapter](/adapters/cloudflare/) covers Alchemy deployment and Worker handlers.
 - [Devtools](/integrations/devtools/) shows how OpenTelemetry traces connect publishers and handlers.

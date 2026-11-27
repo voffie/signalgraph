@@ -5,5 +5,5 @@ export default defineMeta({
   icon: "gpu",
   order: 6,
   collapsed: false,
-  pages: ["rabbitmq"]
+  pages: ["rabbitmq", "cloudflare"]
 });

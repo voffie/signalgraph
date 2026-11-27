@@ -60,7 +60,7 @@ See the [RabbitMQ example](examples/adapter-rabbitmq) for both runnable processe
 
 ## Development
 
-`pnpm test` compiles the CLI and runs the full suite. RabbitMQ integration tests require Docker. Run `pnpm test:run --project signalgraph` after building the CLI to run the core tests alone. After a full build, `pnpm check:examples` regenerates and checks both examples, including declaration output.
+`pnpm test` compiles the CLI and runs the full suite. RabbitMQ integration tests require Docker. Run `pnpm test:run --project signalgraph` after building the CLI to run the core tests alone. `pnpm check` regenerates the example clients and type-checks the examples with the rest of the workspace.
 
 ## Links
 

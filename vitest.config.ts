@@ -37,7 +37,8 @@ export default defineConfig({
     projects: [
       project("signalgraph", "packages/signalgraph"),
       project("@signalgraph/devtools", "packages/devtools", ["src/lib/test/**/*.test.ts"]),
-      project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq")
+      project("@signalgraph/adapter-rabbitmq", "packages/adapter/rabbitmq"),
+      project("@signalgraph/adapter-cloudflare", "packages/adapter/cloudflare")
     ]
   }
 });

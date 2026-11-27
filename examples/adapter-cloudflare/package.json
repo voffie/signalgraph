@@ -1,0 +1,22 @@
+{
+  "name": "@signalgraph/adapter-cloudflare-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "signalgraph generate",
+    "dev": "alchemy dev --stage local",
+    "deploy": "alchemy deploy --stage smoke",
+    "destroy": "alchemy destroy --stage smoke"
+  },
+  "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
+    "@effect/platform-node": "4.1.5",
+    "@signalgraph/adapter-cloudflare": "workspace:^",
+    "alchemy": "2.0.0-beta.87",
+    "effect": "^4.1.5",
+    "signalgraph": "workspace:^"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261123.1"
+  }
+}

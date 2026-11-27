@@ -41,4 +41,4 @@ The four retries wait 1, 2, 4, and 5 seconds. The factor defaults to `2` and `ma
 
 ## After the last attempt
 
-With RabbitMQ, failed deliveries go to `<consumer-name>.dlq` by default. Set `dlq: false` to discard them after the final attempt. Check the reason and reconcile any side effects before replaying a dead-lettered message. Design handlers to tolerate duplicate deliveries, including when replaying.
+The adapter creates a dead-letter queue for each consumer by default. RabbitMQ names it `<consumer-name>.dlq`. For Cloudflare Queues, Alchemy assigns the physical name. Set `dlq: false` to discard failed deliveries after the final attempt. Check the reason and reconcile any side effects before replaying a dead-lettered message. Design handlers to tolerate duplicate deliveries, including when replaying.

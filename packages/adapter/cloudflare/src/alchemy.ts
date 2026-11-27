@@ -26,11 +26,11 @@ export const declareCloudflareQueues: (
 
   const resources = yield* Effect.forEach(topology, (entry) =>
     Effect.gen(function* () {
-      const queue = yield* Queues.Queue(`SignalGraphQueue-${entry.consumer.name}`);
+      const queue = yield* Queues.Queue(`signalgraph-queue-${entry.consumer.name}`);
 
       const deadLetters =
         entry.consumer.dlq === true
-          ? Option.some(yield* Queues.Queue(`SignalGraphDeadLetters-${entry.consumer.name}`))
+          ? Option.some(yield* Queues.Queue(`signalgraph-dlq-${entry.consumer.name}`))
           : Option.none();
 
       return { entry, queue, deadLetters };
